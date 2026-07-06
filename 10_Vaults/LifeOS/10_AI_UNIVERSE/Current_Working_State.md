@@ -31,6 +31,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Initial clean scaffold/control-plane commit created: `85acdb7 Initialize LifeOS V3 scaffold`.
 - Git branch renamed to `main`.
 - Local bare Git backup remote created at `/home/lifeos/70_Backups/git/lifeos.git` and `main` pushed.
+- Obsidian installed as a user Flatpak: `md.obsidian.Obsidian`.
 
 ## Current Decisions
 
