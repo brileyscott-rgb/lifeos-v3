@@ -30,6 +30,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Safe `.gitignore` added for secrets, service data, backups, raw imports, migration work, local state, and copied reference/vendor trees.
 - Initial clean scaffold/control-plane commit created: `85acdb7 Initialize LifeOS V3 scaffold`.
 - Git branch renamed to `main`.
+- Local bare Git backup remote created at `/home/lifeos/70_Backups/git/lifeos.git` and `main` pushed.
 
 ## Current Decisions
 
@@ -49,10 +50,9 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Add a Git remote for `/home/lifeos` when the remote target is chosen.
-2. Push branch `main` after remote verification.
-3. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
-4. Prepare n8n compose/config scaffolding only after Git remote backup exists.
+1. Add an off-machine Git remote when the hosting target is chosen.
+2. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
+3. Prepare n8n compose/config scaffolding only after off-machine Git backup is available or explicitly deferred.
 
 ## Do Not Do Yet
 
@@ -60,6 +60,7 @@ Foundation Lock-In:
 - Do not start Docker services yet.
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
+- Do not treat the local bare Git remote as a substitute for off-machine backup.
 
 ## Required First Reads
 
