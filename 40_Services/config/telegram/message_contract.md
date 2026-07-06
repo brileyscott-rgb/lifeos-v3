@@ -3,11 +3,12 @@
 ## Commands
 
 | Command | Purpose | Capture Type | Event Type |
-|---|---|---|---|
+|---|---|---|---|---|
 | `/capture <text>` | Quick capture a note | notes | chatops.telegram.capture_received |
 | `/link <url> [note]` | Save a link | links | chatops.telegram.link_received |
 | `/idea <text>` | Log an idea | ideas | chatops.telegram.idea_received |
 | `/project <name>: <update>` | Post a project update | project_updates | chatops.telegram.project_update_received |
+| `/list_pending` | List pending captures awaiting review | none | chatops.telegram.pending_list_requested |
 | `/approve <capture_id>` | Approve a pending capture | approved | chatops.telegram.approval_received |
 | `/reject <capture_id>` | Reject a pending capture | rejected | chatops.telegram.rejection_received |
 | `/status` | Request system status | none | chatops.telegram.status_requested |

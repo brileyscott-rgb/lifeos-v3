@@ -3,8 +3,9 @@
 ## Purpose
 
 Local manual-test Telegram bot handler for LifeOS V3. Polls the Telegram API,
-validates the sender, processes `/capture`, `/help`, and `/status` commands,
-writes capture files, and appends events.
+validates the sender, processes `/capture`, `/list_pending`, `/approve`,
+`/reject`, `/help`, and `/status` commands, writes capture files, moves
+reviewed files to approved/rejected folders, and appends events.
 
 ## Prerequisites
 
@@ -33,12 +34,35 @@ python3 telegram_capture_bot.py --poll --interval 3
 3. Send `/capture test message` to your bot on Telegram.
 4. Run `python3 telegram_capture_bot.py --once` to process it.
 
+## Review Lifecycle
+
+After a capture is created, it sits in `30_Capture/pending_review/`.
+You can review and close it from Telegram:
+
+1. Send `/list_pending` to your bot to see pending captures.
+2. Run `python3 telegram_capture_bot.py --once` to process.
+3. Send `/approve cap_<capture_id>` to approve, or
+   `/reject cap_<capture_id>` to reject.
+4. Run `python3 telegram_capture_bot.py --once` to process.
+
+What happens:
+- **Approve**: pending file moves to `30_Capture/approved/`, frontmatter
+  `status` set to `approved`, `processed_at` timestamp added, event logged.
+- **Reject**: pending file moves to `30_Capture/rejected/`, frontmatter
+  `status` set to `rejected`, `processed_at` timestamp added, event logged.
+
+**Note**: Approve/reject only moves the review file. It does **not** write
+into the main vault (`10_Vaults/LifeOS/`). Approval means queued for later
+processing, not automatic vault integration.
+
 ## What Gets Written
 
 | Path | Description |
 |------|-------------|
 | `30_Capture/notes/YYYYMMDD_HHMMSS_*.md` | Source capture file |
 | `30_Capture/pending_review/YYYYMMDD_HHMMSS_*.md` | Pending review file with frontmatter |
+| `30_Capture/approved/YYYYMMDD_HHMMSS_*.md` | Approved capture (moved from pending_review) |
+| `30_Capture/rejected/YYYYMMDD_HHMMSS_*.md` | Rejected capture (moved from pending_review) |
 | `50_Event_Log/events.jsonl` | Appended event for each action |
 
 Runtime state (gitignored):
@@ -79,7 +103,6 @@ git ls-files 40_Services/chatops/telegram \
 
 ## Not Implemented Yet
 
-- `/approve` and `/reject` commands
 - `/link`, `/idea`, `/project` command routing
 - File/photo attachment handling
 - Unrecognized text inbox routing

@@ -32,6 +32,12 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
   - No token committed, no n8n activation, no Docker service started.
 - Next step: first real `/capture` test after cleanup commit.
 
+- Telegram review lifecycle commands added: `/list_pending`, `/approve`, `/reject`.
+- Approve/reject moves pending review files to `approved/` or `rejected/` folders.
+- Frontmatter `status` updated to `approved` or `rejected` with `processed_at` timestamp.
+- Events logged: `chatops.telegram.approval_received`, `chatops.telegram.rejection_received`, `chatops.telegram.pending_list_requested`.
+- All operations stay in `30_Capture/` and `50_Event_Log/`. No direct vault writes.
+- No n8n activation, no Docker services started.
 - LifeOS V3 source-of-truth plan created.
 - Phase 1 scaffold created.
 - Phase 1B decisions encoded.
@@ -83,12 +89,13 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Send a `/capture test` message to the bot on Telegram.
-2. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --once` to process.
-3. Review generated files under `30_Capture/notes/` and `30_Capture/pending_review/`.
-4. Verify GitHub off-machine remote during routine backup checks.
-5. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
-6. Review n8n compose/config scaffold before any service activation.
+1. Test review lifecycle: `/list_pending`, then `/approve` or `/reject` on test capture.
+2. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --once` after each command.
+3. Verify approved/rejected files under `30_Capture/approved/` or `30_Capture/rejected/`.
+4. Verify approval/rejection events in `50_Event_Log/events.jsonl`.
+5. Verify GitHub off-machine remote during routine backup checks.
+6. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
+7. Review n8n compose/config scaffold before any service activation.
 
 ## Do Not Do Yet
 
