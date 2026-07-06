@@ -1,0 +1,24 @@
+{
+  "update_id": 123456789,
+  "message": {
+    "message_id": 42,
+    "date": 1820332800,
+    "text": "/link https://example.com/lifeos-docs LifeOS documentation link",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 5,
+        "type": "bot_command"
+      }
+    ],
+    "from": {
+      "id": 123456789,
+      "first_name": "LifeOS",
+      "is_bot": false
+    },
+    "chat": {
+      "id": 123456789,
+      "type": "private"
+    }
+  }
+}

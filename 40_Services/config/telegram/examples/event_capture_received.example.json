@@ -1,0 +1,32 @@
+{
+  "event_id": "evt_20260706T143000Z_telegram_capture_received",
+  "event_type": "chatops.telegram.link_received",
+  "occurred_at": "2026-07-06T14:30:00Z",
+  "actor": {
+    "type": "human",
+    "id": "bdoss08"
+  },
+  "approval_tier": "A1",
+  "status": "completed",
+  "summary": "Received Telegram link capture: LifeOS documentation link.",
+  "source_refs": [
+    "/home/lifeos/30_Capture/links/20260706_143000_telegram_link_lifeos-docs.md"
+  ],
+  "target_refs": [
+    "/home/lifeos/50_Event_Log/events.jsonl"
+  ],
+  "correlation_id": "corr_20260706_telegram_capture_example",
+  "details": {
+    "capture_id": "cap_20260706_143000_telegram_link_lifeos_docs",
+    "command": "/link",
+    "capture_type": "link",
+    "status": "pending_review",
+    "telegram_user_id": 123456789,
+    "telegram_chat_type": "private",
+    "bot_token_used": false,
+    "docker_services_started": false,
+    "docker_images_pulled_or_built": false,
+    "real_secrets_added": false,
+    "old_lifeos_migration_started": false
+  }
+}

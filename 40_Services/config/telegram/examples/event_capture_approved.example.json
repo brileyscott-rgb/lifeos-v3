@@ -1,0 +1,31 @@
+{
+  "event_id": "evt_20260706T144500Z_telegram_capture_approved",
+  "event_type": "chatops.telegram.approval_received",
+  "occurred_at": "2026-07-06T14:45:00Z",
+  "actor": {
+    "type": "human",
+    "id": "bdoss08"
+  },
+  "approval_tier": "A1",
+  "status": "completed",
+  "summary": "Approved capture cap_20260706_143000_telegram_link_lifeos_docs.",
+  "source_refs": [
+    "/home/lifeos/30_Capture/pending_review/20260706_143000_telegram_link_lifeos-docs.md"
+  ],
+  "target_refs": [
+    "/home/lifeos/30_Capture/approved/20260706_143000_telegram_link_lifeos-docs.md",
+    "/home/lifeos/50_Event_Log/events.jsonl"
+  ],
+  "correlation_id": "corr_20260706_telegram_capture_example",
+  "details": {
+    "capture_id": "cap_20260706_143000_telegram_link_lifeos_docs",
+    "approval_command": "/approve",
+    "previous_status": "pending_review",
+    "new_status": "approved",
+    "bot_token_used": false,
+    "docker_services_started": false,
+    "docker_images_pulled_or_built": false,
+    "real_secrets_added": false,
+    "old_lifeos_migration_started": false
+  }
+}

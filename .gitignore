@@ -68,6 +68,16 @@ Videos/
 
 # Temporary files
 *.tmp
+
+# Telegram ChatOps local secrets/runtime
+40_Services/config/telegram/.env
+40_Services/config/telegram/*.secret
+40_Services/config/telegram/*token*
+40_Services/config/telegram/runtime/
+40_Services/config/telegram/cache/
+
+# Capture intake working files
+30_Capture/**/*.tmp
 *.bak
 .DS_Store
 Thumbs.db

@@ -38,6 +38,11 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Inert n8n compose/config scaffold created without starting services, pulling images, or configuring real secrets.
 - Dedicated SSH key created locally for off-machine Git backup; private key remains under ignored `/home/lifeos/.ssh/`.
 - Off-machine Git remote `offsite` configured for GitHub repo `brileyscott-rgb/lifeos-v3` and `main` pushed.
+- Telegram ChatOps capture scaffold created under `40_Services/config/telegram/` with message contracts, routing rules, approval format, security notes, and BotFather setup instructions.
+- Capture intake folder structure created under `30_Capture/` with typed subdirectories and README conventions.
+- Inert n8n Telegram capture workflow placeholder created under `40_Services/config/n8n/workflows/telegram_capture_placeholder.md`.
+- `.gitignore` updated to protect Telegram local secrets and capture working files.
+- All scaffold-only: no real Telegram token, no Docker services, no live bot.
 
 ## Current Decisions
 
@@ -61,16 +66,18 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Verify GitHub off-machine remote during routine backup checks.
-2. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
-3. Restart OpenCode so the new Agency subagents are loaded.
+1. Create a Telegram bot via BotFather (manual, external) — see `40_Services/config/telegram/manual_setup_botfather.md` for instructions.
+2. Verify GitHub off-machine remote during routine backup checks.
+3. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
 4. Review n8n compose/config scaffold before any service activation.
+5. Review Telegram config scaffold before any bot handler is created.
 
 ## Do Not Do Yet
 
 - Do not migrate old LifeOS files yet.
 - Do not start Docker services yet.
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
+- Do not start a Telegram bot handler (Python script, n8n workflow, or other) without explicit LifeOS approval.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
 - Do not treat the local bare Git remote as a substitute for off-machine backup.
 - Do not install the full Agency roster into OpenCode unless the OpenCode agent registration limit is resolved or the selection remains below the known limit.
