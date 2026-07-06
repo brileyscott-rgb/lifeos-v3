@@ -10,6 +10,7 @@
 .npm/
 .pki/
 .profile
+.ssh/
 .var/
 .Xauthority
 .xsession-errors

@@ -36,6 +36,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Curated Agency OpenCode subagents installed under `/home/lifeos/.config/opencode/agents/`.
 - Off-machine Git backup explicitly deferred by user approval so inert service scaffolding may proceed.
 - Inert n8n compose/config scaffold created without starting services, pulling images, or configuring real secrets.
+- Dedicated SSH key created locally for off-machine Git backup; private key remains under ignored `/home/lifeos/.ssh/`.
+- Off-machine Git remote `offsite` configured for GitHub repo `brileyscott-rgb/lifeos-v3` and `main` pushed.
 
 ## Current Decisions
 
@@ -53,13 +55,13 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 ## Active Deferrals
 
-- Off-machine Git backup is explicitly deferred by the user as of `2026-07-06T01:46:07Z`; the local bare remote remains rollback-only and is not considered off-machine backup.
+- None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
 ## Next Milestone
 
 Foundation Lock-In:
 
-1. Add an off-machine Git remote when the hosting target is chosen; currently deferred by user approval.
+1. Verify GitHub off-machine remote during routine backup checks.
 2. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
 3. Restart OpenCode so the new Agency subagents are loaded.
 4. Review n8n compose/config scaffold before any service activation.
