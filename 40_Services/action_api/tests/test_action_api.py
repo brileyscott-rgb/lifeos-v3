@@ -2,10 +2,16 @@
 
 import json
 import os
+import sys
+import threading
 import tempfile
 import unittest
+from http.server import HTTPServer
 from pathlib import Path
 from unittest.mock import patch
+
+# Ensure action_api package dir is on sys.path for unittest discovery
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import server
 
@@ -253,26 +259,39 @@ class TestActionAPI(unittest.TestCase):
         self.assertIn("telegram_capture_created", eid)
 
     def test_event_id_collision_avoided(self):
-        # Manually add an event with the same base ID
-        existing = server._load_event_ids()
-        now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
-        base = f"evt_{now.strftime('%Y%m%dT%H%M%SZ')}_telegram_capture_created"
-        self.event_log_path.write_text(
-            json.dumps({"event_id": base}) + "\n", "utf-8"
-        )
         eid = server._make_event_id("telegram.capture_created")
-        self.assertNotEqual(eid, base)
-        self.assertTrue(eid.startswith(base))
+        self.event_log_path.write_text(
+            json.dumps({"event_id": eid}) + "\n", "utf-8"
+        )
+        eid2 = server._make_event_id("telegram.capture_created")
+        self.assertNotEqual(eid, eid2)
 
     # --- Security ---
 
     def test_path_traversal_rejected(self):
-        handler = server.ActionHandler
-        self.assertFalse(handler._check_path_security(None, "/absolute/path"))
-        self.assertFalse(handler._check_path_security(None, "../outside"))
-        self.assertFalse(handler._check_path_security(None, "pending/../../../etc/passwd"))
-        self.assertTrue(handler._check_path_security(None, "valid_capture_id"))
-        self.assertTrue(handler._check_path_security(None, "cap_2026_some_id"))
+        check = server.ActionHandler._check_path_security
+        self.assertFalse(check("/absolute/path"))
+        self.assertFalse(check("../outside"))
+        self.assertFalse(check("pending/../../../etc/passwd"))
+        self.assertFalse(check("valid_capture_id"))
+        self.assertTrue(check("cap_2026_some_id"))
+
+    def test_strict_capture_id_validation(self):
+        check = server.ActionHandler._check_path_security
+        self.assertTrue(check("cap_test_valid"))
+        self.assertTrue(check("cap_2026_some_id"))
+        self.assertTrue(check("cap_CapZ0-9_-"))
+        self.assertFalse(check("/etc/passwd"))
+        self.assertFalse(check("../outside"))
+        self.assertFalse(check("pending/../../../etc/passwd"))
+        self.assertFalse(check("cap_test/approve"))
+        self.assertFalse(check("http://example.com"))
+        self.assertFalse(check(""))
+        self.assertFalse(check("cap_test\\backslash"))
+        self.assertFalse(check("valid_capture_id"))
+        self.assertFalse(check(None))
+        self.assertFalse(check("."))
+        self.assertFalse(check(".."))
 
     def test_safe_resolve_rejects_traversal(self):
         result = server._safe_resolve(Path("/etc/passwd"))
@@ -302,6 +321,14 @@ class TestActionAPI(unittest.TestCase):
         cid = server._make_capture_id("Hello World Test")
         self.assertTrue(cid.startswith("cap_"))
         self.assertIn("hello-world-test", cid)
+        self.assertNotIn("/", cid)
+        self.assertNotIn("\\", cid)
+        self.assertNotIn("..", cid)
+
+    def test_capture_id_uniqueness(self):
+        cid1 = server._make_capture_id("same text")
+        cid2 = server._make_capture_id("same text")
+        self.assertNotEqual(cid1, cid2)
 
     def test_approved_list(self):
         self._add_file("approved", "approved_test.md", "cap_approved_test", status="approved")
@@ -328,6 +355,234 @@ class TestActionAPI(unittest.TestCase):
         ids = server._load_event_ids()
         self.assertIn("evt_test_1", ids)
         self.assertIn("evt_test_2", ids)
+
+    def test_event_append_failure_returns_none(self):
+        bad_path = Path(self.tmp) / "nonexistent" / "events.jsonl"
+        with patch("server.EVENT_LOG", bad_path):
+            eid = server._append_event("test.event", {"test": True})
+            self.assertIsNone(eid)
+
+
+class TestActionAPIHTTP(TestActionAPI):
+    """HTTP endpoint tests using in-process HTTPServer."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.http_server = HTTPServer(("localhost", 0), server.ActionHandler)
+        cls.port = cls.http_server.server_address[1]
+        cls.thread = threading.Thread(
+            target=cls.http_server.serve_forever, daemon=True
+        )
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.http_server.shutdown()
+        super().tearDownClass()
+
+    def _get(self, path):
+        import urllib.request
+        try:
+            resp = urllib.request.urlopen(
+                f"http://localhost:{self.port}{path}"
+            )
+            return json.loads(resp.read()), resp.status
+        except urllib.request.HTTPError as e:
+            return json.loads(e.read()), e.code
+
+    def _post(self, path, data=None):
+        import urllib.request
+        body = json.dumps(data).encode() if data is not None else b"{}"
+        req = urllib.request.Request(
+            f"http://localhost:{self.port}{path}",
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            resp = urllib.request.urlopen(req)
+            return json.loads(resp.read()), resp.status
+        except urllib.request.HTTPError as e:
+            return json.loads(e.read()), e.code
+
+    # --- GET /health ---
+
+    def test_health_endpoint(self):
+        data, status = self._get("/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["service"], "lifeos-action-api")
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["mode"], "read_write")
+
+    # --- GET /captures/pending ---
+
+    def test_pending_endpoint_empty(self):
+        data, status = self._get("/captures/pending")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["count"], 0)
+        self.assertEqual(data["pending"], [])
+
+    def test_pending_endpoint_with_captures(self):
+        self._create_capture("Capture A")
+        self._create_capture("Capture B")
+        data, status = self._get("/captures/pending")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["count"], 2)
+        self.assertEqual(data["pending"][0]["index"], 1)
+        self.assertEqual(data["pending"][1]["index"], 2)
+
+    def test_pending_endpoint_excludes_readme(self):
+        self._create_capture("Capture C")
+        readme = self.capture_base / "pending_review" / "README.md"
+        readme.write_text("# README", "utf-8")
+        data, status = self._get("/captures/pending")
+        names = [f["file_name"] for f in data["pending"]]
+        self.assertNotIn("README.md", names)
+
+    def test_pending_endpoint_excludes_dirs(self):
+        self._create_capture("Capture D")
+        subdir = self.capture_base / "pending_review" / "subdir"
+        subdir.mkdir(exist_ok=True)
+        data, status = self._get("/captures/pending")
+        self.assertEqual(data["count"], 1)
+
+    def test_pending_endpoint_sorts_oldest_first(self):
+        self._add_file("pending_review", "alpha.md", "cap_aa")
+        self._add_file("pending_review", "beta.md", "cap_bb")
+        data, status = self._get("/captures/pending")
+        self.assertEqual(data["pending"][0]["capture_id"], "cap_aa")
+        self.assertEqual(data["pending"][1]["capture_id"], "cap_bb")
+
+    # --- GET /captures/pending/1 ---
+
+    def test_pending_by_index(self):
+        self._create_capture("First")
+        f2 = self._create_capture("Second")
+        data, status = self._get("/captures/pending/1")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertIn("content", data["capture"])
+
+    def test_pending_by_index_404(self):
+        data, status = self._get("/captures/pending/999")
+        self.assertEqual(status, 404)
+        self.assertFalse(data["success"])
+
+    # --- GET /captures/pending/latest ---
+
+    def test_pending_latest(self):
+        self._create_capture("AAA")
+        f2 = self._create_capture("BBB")
+        data, status = self._get("/captures/pending/latest")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["capture"]["file_name"], f2)
+
+    def test_pending_latest_empty(self):
+        data, status = self._get("/captures/pending/latest")
+        self.assertEqual(status, 404)
+        self.assertFalse(data["success"])
+
+    # --- GET /captures/<id> ---
+
+    def test_capture_by_id(self):
+        self._add_file("pending_review", "byid.md", "cap_http_byid")
+        data, status = self._get("/captures/cap_http_byid")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["capture"]["capture_id"], "cap_http_byid")
+
+    def test_capture_by_id_missing(self):
+        data, status = self._get("/captures/nonexistent")
+        self.assertEqual(status, 404)
+        self.assertFalse(data["success"])
+
+    # --- GET /captures/approved ---
+
+    def test_approved_endpoint(self):
+        self._add_file("approved", "app.md", "cap_app", status="approved")
+        data, status = self._get("/captures/approved")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["approved"][0]["capture_id"], "cap_app")
+
+    def test_approved_endpoint_empty(self):
+        data, status = self._get("/captures/approved")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["count"], 0)
+
+    # --- POST /captures ---
+
+    def test_post_captures_valid_text(self):
+        data, status = self._post("/captures", {"text": "Hello via HTTP"})
+        self.assertEqual(status, 201)
+        self.assertTrue(data["success"])
+        self.assertTrue(data["capture_id"].startswith("cap_"))
+        self.assertIn("file_name", data)
+        self.assertIn("event_id", data)
+        pending = self.capture_base / "pending_review"
+        self.assertTrue((pending / data["file_name"]).exists())
+        content = self.event_log_path.read_text("utf-8")
+        self.assertIn("telegram.capture_created", content)
+
+    def test_post_captures_empty_text(self):
+        data, status = self._post("/captures", {"text": ""})
+        self.assertEqual(status, 400)
+        self.assertFalse(data["success"])
+        pending = self.capture_base / "pending_review"
+        files = list(pending.iterdir())
+        self.assertEqual(len([f for f in files if f.is_file()]), 0)
+
+    def test_post_captures_missing_text(self):
+        data, status = self._post("/captures", {})
+        self.assertEqual(status, 400)
+        self.assertFalse(data["success"])
+
+    # --- POST /captures/<id>/approve ---
+
+    def test_post_approve(self):
+        self._add_file("pending_review", "toapprove.md", "cap_approve_me",
+                       status="pending_review", content="Approve this")
+        data, status = self._post("/captures/cap_approve_me/approve")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertFalse(
+            (self.capture_base / "pending_review" / "toapprove.md").exists()
+        )
+        self.assertTrue(
+            (self.capture_base / "approved" / "toapprove.md").exists()
+        )
+        content = self.event_log_path.read_text("utf-8")
+        self.assertIn("telegram.capture_approved", content)
+
+    # --- POST /captures/<id>/reject ---
+
+    def test_post_reject(self):
+        self._add_file("pending_review", "toreject.md", "cap_reject_me",
+                       status="pending_review", content="Reject this")
+        data, status = self._post("/captures/cap_reject_me/reject")
+        self.assertEqual(status, 200)
+        self.assertTrue(data["success"])
+        self.assertFalse(
+            (self.capture_base / "pending_review" / "toreject.md").exists()
+        )
+        self.assertTrue(
+            (self.capture_base / "rejected" / "toreject.md").exists()
+        )
+        content = self.event_log_path.read_text("utf-8")
+        self.assertIn("telegram.capture_rejected", content)
+
+    def test_post_approve_invalid_id(self):
+        data, status = self._post("/captures/invalid/approve")
+        self.assertEqual(status, 400)
+        self.assertFalse(data["success"])
+
+    def test_post_approve_missing(self):
+        data, status = self._post("/captures/cap_nonexistent/approve")
+        self.assertEqual(status, 404)
+        self.assertFalse(data["success"])
 
 
 if __name__ == "__main__":

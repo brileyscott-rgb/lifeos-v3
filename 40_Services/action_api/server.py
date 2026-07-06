@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import secrets
 import shutil
 import time
 from datetime import datetime, timezone
@@ -23,6 +24,7 @@ MODE = "read_write"
 ALLOWED_DIRS = {PENDING_DIR, APPROVED_DIR, REJECTED_DIR, PROCESSED_DIR}
 _SUBDIRS = {PENDING_DIR, APPROVED_DIR, REJECTED_DIR, PROCESSED_DIR}
 _ALL_PARENT = CAPTURE_BASE
+_VALID_CAPTURE_ID_RE = re.compile(r'^cap_[A-Za-z0-9_-]+$')
 
 
 def _ensure_dirs():
@@ -41,8 +43,9 @@ def _slugify(text):
 def _make_capture_id(text):
     now = datetime.now(timezone.utc)
     date_part = now.strftime('%Y%m%d_%H%M%S')
+    rand_suffix = secrets.token_hex(3)
     slug = _slugify(text)
-    return f"cap_{date_part}_{slug}"
+    return f"cap_{date_part}_{rand_suffix}_{slug}"
 
 
 def _load_event_ids():
@@ -103,9 +106,9 @@ def _append_event(event_type, details):
             if needs_newline:
                 f.write("\n")
             f.write(json.dumps(event, ensure_ascii=False))
+        return event_id
     except (OSError, PermissionError):
-        pass
-    return event_id
+        return None
 
 
 def _safe_resolve(path):
@@ -253,6 +256,8 @@ def _move_capture(file_name, source_dir, target_dir, new_status, processor_type)
             details["capture_id"] = line.split(":", 1)[1].strip()
             break
     event_id = _append_event(event_type, details)
+    if event_id is None:
+        return None, "event_append_failed"
     return {"capture_id": details["capture_id"], "file_name": file_name, "event_id": event_id}, None
 
 
@@ -324,13 +329,11 @@ class ActionHandler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, OSError):
             return None
 
-    def _check_path_security(self, path_str):
-        p = Path(path_str)
-        if p.is_absolute():
+    @staticmethod
+    def _check_path_security(path_str):
+        if not path_str or not isinstance(path_str, str):
             return False
-        if ".." in path_str.split("/"):
-            return False
-        return True
+        return bool(_VALID_CAPTURE_ID_RE.match(path_str))
 
     # --- GET handlers ---
 
@@ -406,6 +409,9 @@ class ActionHandler(BaseHTTPRequestHandler):
             "file_name": file_name,
             "source": "telegram_operator",
         })
+        if event_id is None:
+            self._send_json({"success": False, "error": "event_append_failed"}, 500)
+            return
         self._send_json({
             "success": True,
             "capture_id": capture_id,
