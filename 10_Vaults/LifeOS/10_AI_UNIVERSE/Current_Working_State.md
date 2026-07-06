@@ -106,7 +106,7 @@ Foundation Lock-In:
 
 LifeOS V3 Automation Foundation Setup:
 
-- n8n local Docker scaffold added under `40_Services/n8n/`.
+- n8n local Docker instance running under `40_Services/n8n/`.
 - AI worker dry-run scaffold added under `40_Services/ai_worker/`.
 - Planned workflows documented under `40_Services/n8n/workflows/planned/`.
 - No public webhooks configured.
@@ -115,26 +115,24 @@ LifeOS V3 Automation Foundation Setup:
 - No n8n production workflows active yet.
 
 Completed:
-- Read-only LifeOS status script created at `40_Services/scripts/lifeos_status.py`.
-- Supports `--text` (default) and `--json` output modes.
-- Reports capture queue counts, event log status, git dirty state, disk usage,
-  n8n container status, and scaffold presence.
-- Read-only by design: no file modification, no git writes, no secret reads.
-- n8n planned workflow `lifeos_status_digest.md` updated with explicit manual-trigger
-  Execute Command step calling `python3 /home/lifeos/40_Services/scripts/lifeos_status.py --json`.
-- Activation checklist updated with first-workflow steps.
-- n8n verified running in Docker.
+- Read-only LifeOS Status API created at `40_Services/status_api/`.
+- Python stdlib HTTP server on port 8787, joins `n8n_default` Docker network.
+- Endpoints: `GET /health` and `GET /status` returning JSON.
+- Reads only `30_Capture/` and `50_Event_Log/events.jsonl` via read-only mounts.
+- Hardened container: `read_only: true`, `cap_drop: ALL`, `no-new-privileges`, non-root user.
+- No Docker socket, no vault access, no secrets access, no shell commands.
+- Unit tests cover capture counting, event log parsing, and path checks.
+- n8n direct filesystem mounts removed; n8n now routes status queries through the API.
+- n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
+- Activation checklist updated with HTTP Request workflow instructions.
 
 Next:
-1. Manual test: `python3 40_Services/scripts/lifeos_status.py --json`
-2. Open n8n UI, create manual-trigger Execute Command workflow.
-3. Capture queue processing (approved captures remain unprocessed).
-4. After status workflow verified, discuss schedule/notification additions.
+1. Capture queue processing (approved captures remain unprocessed).
+2. After status workflow verified, discuss schedule/notification additions.
 
 ## Do Not Do Yet
 
 - Do not migrate old LifeOS files yet.
-- Do not start Docker services yet (n8n scaffold is ready but inactive).
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
 - Do not treat the local bare Git remote as a substitute for off-machine backup.

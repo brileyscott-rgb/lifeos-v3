@@ -34,12 +34,14 @@ cd /home/lifeos/40_Services/n8n
 1. Open n8n UI at `http://localhost:5678`
 2. Create a new workflow
 3. Add a "Manual Trigger" node
-4. Add an "Execute Command" node
-5. Set command: `python3 /home/lifeos/40_Services/scripts/lifeos_status.py --json`
-6. Execute the workflow manually
-7. Inspect the JSON output in the n8n output panel
-8. If successful, optionally save as `40_Services/n8n/workflows/exported/lifeos_status_digest.json`
-9. Get explicit user approval before adding schedule or Telegram notification
+4. Add an "HTTP Request" node
+5. Set Method: `GET`
+6. Set URL: `http://lifeos-status-api:8787/status`
+7. Authentication: None (internal Docker network only)
+8. Click "Execute Workflow" to run manually
+9. Inspect the returned JSON in the n8n output panel
+10. If successful, optionally save as `40_Services/n8n/workflows/exported/lifeos_status_digest.json`
+11. Get explicit user approval before adding schedule or Telegram notification
 
 ## Never
 

@@ -1,0 +1,21 @@
+services:
+  lifeos-status-api:
+    build: .
+    container_name: lifeos-status-api
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=1m
+    networks:
+      - n8n_default
+    volumes:
+      - ../../30_Capture:/lifeos/capture:ro
+      - ../../50_Event_Log:/lifeos/event-log:ro
+
+networks:
+  n8n_default:
+    external: true

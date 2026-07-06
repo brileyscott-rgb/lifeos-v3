@@ -11,9 +11,15 @@
 
 ## Allowed Reads
 
-- `50_Event_Log/events.jsonl` (read-only)
-- `30_Capture/` directory listings (read-only)
-- Git status output (via command node, no write)
+- `50_Event_Log/events.jsonl` via Status API (read-only HTTP)
+- `30_Capture/` directory listings via Status API (read-only HTTP)
+
+Direct filesystem mounts will be removed in favor of Status API calls.
+
+## Disallowed Reads
+
+- Direct filesystem access to `30_Capture/` or `50_Event_Log/` — route through Status API instead.
+- Git status output — not available without repo mount inside container.
 
 ## Prohibited Writes
 
