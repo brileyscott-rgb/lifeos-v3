@@ -36,6 +36,21 @@ Telegram message
 -> vault integration after approval
 ```
 
+## Local Bot Handler
+
+A minimal local Telegram capture bot test handler is available at:
+
+`40_Services/chatops/telegram/telegram_capture_bot.py`
+
+See the README there for usage:
+
+```bash
+python3 40_Services/chatops/telegram/telegram_capture_bot.py --help
+```
+
+This is a manual foreground test tool, not a daemon or service. n8n integration
+is not yet active.
+
 ## Safe to Send
 
 - links, quick notes, project updates, ideas, non-sensitive reminders

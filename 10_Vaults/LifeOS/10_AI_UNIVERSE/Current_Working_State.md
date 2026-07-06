@@ -15,6 +15,15 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 ## Completed
 
+- Minimal local Telegram bot handler created under `40_Services/chatops/telegram/telegram_capture_bot.py`.
+- Supports `--check`, `--once`, and `--poll` CLI modes.
+- Supports `/capture`, `/help`, and `/status` commands.
+- Reads ignored local `.env` for bot token and allowed user ID.
+- Source notes written to `30_Capture/notes/`, pending review files to `30_Capture/pending_review/`.
+- Events appended to `50_Event_Log/events.jsonl`.
+- No token committed, no n8n activation, no Docker service started.
+- Next step: run a real `/capture` test manually and review generated pending file.
+
 - LifeOS V3 source-of-truth plan created.
 - Phase 1 scaffold created.
 - Phase 1B decisions encoded.
@@ -44,9 +53,13 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - `.gitignore` updated to protect Telegram local secrets and capture working files.
 - All scaffold-only: no real Telegram token, no Docker services, no live bot.
 
+## Active Deferrals
+
+- None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
+
 ## Current Decisions
 
-- ChatOps: Telegram
+- ChatOps: Telegram (local bot handler created)
 - Alerts later: Gotify or ntfy
 - Vault sync: Git first
 - Capture sync later: Syncthing if needed
@@ -58,26 +71,22 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Backup strategy: Git plus restic later
 - Service order: Git, n8n, Telegram, Paperless-ngx, Qdrant, monitoring, MCP
 
-## Active Deferrals
-
-- None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
-
 ## Next Milestone
 
 Foundation Lock-In:
 
-1. Create a Telegram bot via BotFather (manual, external) — see `40_Services/config/telegram/manual_setup_botfather.md` for instructions.
-2. Verify GitHub off-machine remote during routine backup checks.
-3. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
-4. Review n8n compose/config scaffold before any service activation.
-5. Review Telegram config scaffold before any bot handler is created.
+1. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --check` to verify connectivity.
+2. Send a `/capture test` message to the bot and run `--once` to process.
+3. Review the generated pending review file under `30_Capture/pending_review/`.
+4. Verify GitHub off-machine remote during routine backup checks.
+5. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
+6. Review n8n compose/config scaffold before any service activation.
 
 ## Do Not Do Yet
 
 - Do not migrate old LifeOS files yet.
 - Do not start Docker services yet.
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
-- Do not start a Telegram bot handler (Python script, n8n workflow, or other) without explicit LifeOS approval.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
 - Do not treat the local bare Git remote as a substitute for off-machine backup.
 - Do not install the full Agency roster into OpenCode unless the OpenCode agent registration limit is resolved or the selection remains below the known limit.

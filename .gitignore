@@ -66,6 +66,9 @@ Videos/
 10_Vaults/LifeOS/.obsidian/cache/
 10_Vaults/LifeOS/.trash/
 
+# Python bytecode cache
+__pycache__/
+
 # Temporary files
 *.tmp
 
@@ -75,6 +78,9 @@ Videos/
 40_Services/config/telegram/*token*
 40_Services/config/telegram/runtime/
 40_Services/config/telegram/cache/
+
+# Local runtime/cache directories
+.bun/
 
 # Capture intake working files
 30_Capture/**/*.tmp
