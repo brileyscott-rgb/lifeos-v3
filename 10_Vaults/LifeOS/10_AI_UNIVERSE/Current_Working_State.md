@@ -125,10 +125,11 @@ Completed:
 - n8n direct filesystem mounts removed; n8n now routes status queries through the API on `lifeos_internal` network.
 - n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
 - Activation checklist updated with HTTP Request workflow instructions.
+- **First manual n8n status workflow test passed**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only (`status: ok`, `mode: read_only`, `event_log_valid: true`, all `limitations` fields present). Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model node, or file-write nodes added.
 
 Next:
 1. Capture queue processing (approved captures remain unprocessed).
-2. After status workflow verified, discuss schedule/notification additions.
+2. Decide whether to keep manual-only, add a schedule later, or add Telegram notification later — requires explicit user approval.
 
 ## Do Not Do Yet
 

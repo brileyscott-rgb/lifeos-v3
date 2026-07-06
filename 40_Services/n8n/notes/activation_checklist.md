@@ -25,7 +25,7 @@ cd /home/lifeos/40_Services/n8n
 
 - [ ] Review `notes/security_boundaries.md`
 - [ ] Review planned workflow documents in `workflows/planned/`
-- [ ] Test with a simple manual-trigger workflow first
+- [x] Test with a simple manual-trigger workflow first (LifeOS Status API — completed 2026-07-06)
 - [ ] Never store credentials in workflow JSON
 - [ ] Get explicit user approval per workflow
 

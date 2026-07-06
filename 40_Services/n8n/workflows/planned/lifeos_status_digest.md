@@ -2,7 +2,7 @@
 
 ## Status
 
-**Not active.** Scaffold ready. Manual trigger only. No Telegram sending yet.
+**Verified — inactive.** Manual workflow test passed. The workflow is created, saved as inactive, and produces valid read-only JSON output. No schedule, Telegram, webhook, or Execute Command nodes.
 
 ## Trigger
 
@@ -45,3 +45,11 @@ Only after explicit user approval:
 - n8n parses the JSON automatically with the HTTP Request node.
 - The Status API does not need environment variables or secrets.
 - The API runs in a separate container on the shared `lifeos_internal` Docker network.
+
+## Verification
+
+- [x] Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status` returns 200
+- [x] Returned JSON is valid and read-only
+- [x] Workflow saved as inactive (no activation toggle)
+- [ ] Future schedule trigger (requires explicit user approval)
+- [ ] Future Telegram notification (requires explicit user approval)
