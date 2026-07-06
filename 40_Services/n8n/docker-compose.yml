@@ -32,6 +32,20 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
 
+  lifeos-action-api:
+    build: ../action_api
+    container_name: lifeos-action-api
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - lifeos_internal
+    volumes:
+      - ../../30_Capture:/lifeos/capture:rw
+      - ../../50_Event_Log:/lifeos/event-log:rw
+
 volumes:
   n8n_data:
 

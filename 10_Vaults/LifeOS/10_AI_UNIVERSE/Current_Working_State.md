@@ -126,10 +126,13 @@ Completed:
 - n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
 - Activation checklist updated with HTTP Request workflow instructions.
 - **First manual n8n status workflow test passed**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only (`status: ok`, `mode: read_only`, `event_log_valid: true`, all `limitations` fields present). Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model node, or file-write nodes added.
+- **LifeOS Action API created at `40_Services/action_api/`**: Read-write sibling to Status API. Python stdlib HTTP server on port 8788, joins `lifeos_internal` network. Endpoints for capture create, pending list, approve, reject. Event log append for all operations. Mounts `30_Capture/` and `50_Event_Log/` as read-write. Hardened container: `cap_drop: ALL`, `no-new-privileges`, non-root user. 32 unit tests pass. Added to n8n compose stack. No shell execution, no Docker socket, no vault access, no secrets.
 
 Next:
-1. Capture queue processing (approved captures remain unprocessed).
-2. Decide whether to keep manual-only, add a schedule later, or add Telegram notification later — requires explicit user approval.
+1. Phase B: Caddy reverse proxy for Telegram webhook ingress (DNS, TLS).
+2. Phase C: Create n8n Telegram bot webhook workflow in UI.
+3. Phase D: Register Telegram webhook, end-to-end testing, documentation closeout.
+4. All phases require explicit step-by-step approval.
 
 ## Do Not Do Yet
 
