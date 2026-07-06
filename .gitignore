@@ -87,3 +87,14 @@ __pycache__/
 *.bak
 .DS_Store
 Thumbs.db
+
+# n8n runtime data and secrets
+40_Services/n8n/.env
+40_Services/n8n/data/
+40_Services/n8n/.n8n/
+40_Services/n8n/logs/
+
+# AI worker runtime data
+40_Services/ai_worker/logs/*.log
+40_Services/ai_worker/job_queue.sqlite
+40_Services/ai_worker/job_queue.sqlite-*

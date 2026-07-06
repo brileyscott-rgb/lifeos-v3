@@ -100,14 +100,34 @@ Foundation Lock-In:
 7. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
 8. Review n8n compose/config scaffold before any service activation.
 
+## Active Milestone
+
+LifeOS V3 Automation Foundation Setup:
+
+- n8n local Docker scaffold added under `40_Services/n8n/`.
+- AI worker dry-run scaffold added under `40_Services/ai_worker/`.
+- Planned workflows documented under `40_Services/n8n/workflows/planned/`.
+- No public webhooks configured.
+- No direct vault writes allowed.
+- No model API calls active.
+- No n8n production workflows active yet.
+
+Next:
+1. Live-test Telegram numbered review queue.
+2. Start n8n locally and verify UI loads.
+3. Create first read-only status workflow.
+4. Add capture shortcuts after queue is verified.
+
 ## Do Not Do Yet
 
 - Do not migrate old LifeOS files yet.
-- Do not start Docker services yet.
+- Do not start Docker services yet (n8n scaffold is ready but inactive).
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
 - Do not treat the local bare Git remote as a substitute for off-machine backup.
 - Do not install the full Agency roster into OpenCode unless the OpenCode agent registration limit is resolved or the selection remains below the known limit.
+- Do not enable n8n Telegram webhook triggers.
+- Do not give n8n or AI worker direct vault-write or git-commit authority.
 
 ## Required First Reads
 
