@@ -23,6 +23,13 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Scaffold copied into `/home/lifeos`.
 - Event log contains scaffold, decision, and login repair events.
 - OpenCode handoff/config package prepared for `lifeos`.
+- OpenCode verified running as `lifeos` from `/home/lifeos`.
+- Groups verified: `docker`, `video`, `render`.
+- Git, Docker CLI, Node/npm, and OpenCode availability verified.
+- Git initialized safely for `/home/lifeos`.
+- Safe `.gitignore` added for secrets, service data, backups, raw imports, migration work, local state, and copied reference/vendor trees.
+- Initial clean scaffold/control-plane commit created: `85acdb7 Initialize LifeOS V3 scaffold`.
+- Git branch renamed to `main`.
 
 ## Current Decisions
 
@@ -42,13 +49,10 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Verify OpenCode runs as `lifeos` from `/home/lifeos`.
-2. Verify groups include `docker`, `video`, and `render`.
-3. Verify Git, Docker, Node/npm, and OpenCode availability.
-4. Initialize Git safely for `/home/lifeos`.
-5. Exclude secrets, service data, backups, raw imports, and migration working folders.
-6. Commit the clean scaffold.
-7. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
+1. Add a Git remote for `/home/lifeos` when the remote target is chosen.
+2. Push branch `main` after remote verification.
+3. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
+4. Prepare n8n compose/config scaffolding only after Git remote backup exists.
 
 ## Do Not Do Yet
 
