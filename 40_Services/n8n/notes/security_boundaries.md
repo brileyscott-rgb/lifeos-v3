@@ -33,6 +33,18 @@ Direct filesystem mounts removed in favor of Status API calls.
 - `40_Services/secrets/` — no credential file writes
 - `.env` files — no environment file modification
 
+## Cloudflare Tunnel
+
+- Cloudflared scaffold exists at `40_Services/n8n/cloudflared/` — no active tunnel yet.
+- cloudflared must expose only `/webhook/*` paths where practical.
+- Catch-all ingress rule must return 404 to prevent public n8n UI exposure.
+- n8n UI must remain local-only (bound to 127.0.0.1:5678).
+- Status API (`lifeos-status-api:8787`) must not be publicly routed.
+- Action API (`lifeos-action-api:8788`) must not be publicly routed.
+- Cloudflare credentials, tunnel tokens, and credentials JSON are never committed.
+- Cloudflare Access interactive login must not protect Telegram webhook path — Telegram cannot complete login challenges.
+- Telegram `secret_token` + n8n allowlist provide app-layer protection instead.
+
 ## Workflow Review Policy
 
 Before any workflow is activated:

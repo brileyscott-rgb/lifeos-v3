@@ -130,12 +130,23 @@ Completed:
 
 - **Telegram Operator capture vision locked in design doc**: Telegram Operator will become LifeOS mobile capture intake. `/capture` supports immediate text/link capture and future capture mode (multi-message, timeout, /cancel). Initially supported payloads: text, links, thoughts, ideas, notes. Planned later: photos, voice memos, documents/files. Review flow remains `/pending`, `/view`, `/approve`, `/reject`. Future AI extraction will produce approval-gated proposals, not direct writes. File creation will go through a controlled processor — never from n8n or AI directly. All captures land in `pending_review` first. Separation of capture, extraction, and file creation is enforced architecturally.
 
+- **Phase B1 Cloudflare Tunnel scaffold/runbook created at `40_Services/n8n/cloudflared/`**:
+  - `config.example.yml` with placeholder tunnel ID and domain
+  - `docker-compose.cloudflared.example.yml` — safe template, no real secrets
+  - `README.md` — setup outline, generic webhook test plan, Telegram webhook docs (later), Cloudflare Access warning, rollback steps
+  - No tunnel activated yet.
+  - No Telegram webhook registered.
+  - No n8n Telegram workflow created or activated.
+  - Security boundaries and activation checklist updated with Cloudflare Tunnel prerequisites.
+  - Next step after Phase B1: user-provided Cloudflare/domain readiness, then controlled implementation of active tunnel config.
+
 Next:
-1. Phase B: Caddy reverse proxy or alternate webhook ingress for Telegram (DNS, TLS).
-2. Phase C: Create n8n Telegram bot webhook workflow in UI.
-3. Phase D: Register Telegram webhook, end-to-end testing, documentation closeout.
-4. All phases require explicit step-by-step approval.
-5. Do not implement AI extraction or file creation processor until raw capture/review flow is stable.
+1. Phase B2: User provides Cloudflare domain readiness and tunnel credentials (out of band).
+2. Phase B3: Controlled activation of cloudflared with real config (token-free validation first).
+3. Phase C: Create n8n Telegram bot webhook workflow in UI.
+4. Phase D: Register Telegram webhook, end-to-end testing, documentation closeout.
+5. All phases require explicit step-by-step approval.
+6. Do not implement AI extraction or file creation processor until raw capture/review flow is stable.
 
 ## Do Not Do Yet
 

@@ -51,10 +51,25 @@ cd /home/lifeos/40_Services/n8n
 - Do not give n8n git commit authority
 - Do not commit `.env` or any file containing real secrets
 
+## Cloudflare Tunnel (Phase B1 Prerequisite)
+
+Before Telegram webhook registration:
+
+- [ ] Cloudflare Tunnel setup completed (cloudflared container running)
+- [ ] Generic webhook test passed at `https://telegram.<your-domain>/webhook/test`
+- [ ] n8n UI is NOT publicly reachable at `https://telegram.<your-domain>/`
+- [ ] Status API is NOT publicly reachable via tunnel
+- [ ] Action API is NOT publicly reachable via tunnel
+- [ ] Catch-all returns 404 for non-webhook paths
+
 ## Future Checklist Notes (Do Not Act Yet)
 
 The following items are placeholders for when the Telegram capture workflow is ready:
 
+- [ ] Cloudflare Tunnel setup is a prerequisite for public webhook mode.
+- [ ] Use `secret_token` when setting Telegram webhook later.
+- [ ] `allowed_updates` starts as `["message"]` — expand later only for callback buttons, photos, voice, documents.
+- [ ] No Telegram workflow activation until checklist is satisfied.
 - [ ] Do not enable capture mode until the basic command router (start, help, capture, pending, view, approve, reject) works end-to-end.
 - [ ] Do not enable AI extraction until raw capture and review flow is stable and tested.
 - [ ] Do not enable file creation until a controlled proposal/approval processor is designed, implemented, and security-reviewed.

@@ -1,0 +1,39 @@
+# Cloudflare Tunnel compose example for LifeOS n8n webhook ingress
+#
+# This is a TEMPLATE file. It must NOT contain real secrets.
+# Create a separate cloudflared config.yml (gitignored) from config.example.yml.
+#
+# Requirements before activation:
+#   - Cloudflare Tunnel created in Zero Trust dashboard
+#   - Tunnel token or credentials JSON generated
+#   - config.yml placed in ./cloudflared/ (gitignored)
+#   - Credentials JSON placed at the path referenced in config.yml
+#   - Public hostname telegram.<your-domain> configured in Cloudflare dashboard
+#
+# WARNING:
+#   - Do not mount Docker socket, /home/lifeos, 10_Vaults, or secrets
+#   - Do not expose n8n UI publicly
+#   - Do not commit real config.yml or credentials JSON
+
+version: "3.8"
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: lifeos-cloudflared
+    restart: unless-stopped
+    networks:
+      - lifeos_internal
+    volumes:
+      # Mount the cloudflared config directory (not the whole project root)
+      - ./cloudflared:/home/nonroot/.cloudflared:ro
+    command: tunnel --config /home/nonroot/.cloudflared/config.yml run
+    # No host ports — tunnel connects outbound from the container
+    # No Docker socket — prevents container escape
+    # No /home/lifeos mount — prevents vault/secrets exposure
+    # No 10_Vaults mount — prevents vault exposure
+    # No n8n database/credential mount — prevents credential theft
+
+networks:
+  lifeos_internal:
+    external: true

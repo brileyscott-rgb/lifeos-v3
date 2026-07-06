@@ -1,0 +1,26 @@
+# Cloudflare Tunnel config example for LifeOS n8n webhook ingress
+#
+# Usage:
+#   1. Copy this file to config.yml (DO NOT commit config.yml)
+#   2. Replace <cloudflare-tunnel-id> with your actual tunnel ID
+#   3. Replace telegram.<your-domain> with your actual public hostname
+#   4. Copy the tunnel credentials JSON to the expected credentials-file path
+#   5. Run docker compose -f docker-compose.cloudflared.example.yml up -d
+#
+# WARNING:
+#   - Never commit config.yml, credentials JSON, or tunnel tokens to git
+#   - The catch-all 404 is critical: it prevents accidental public n8n UI exposure
+#   - Only the /webhook/* path should be publicly routable
+
+tunnel: <cloudflare-tunnel-id>
+credentials-file: /home/nonroot/.cloudflared/<cloudflare-tunnel-id>.json
+
+ingress:
+  # Public webhook path for Telegram — only this path is routed to n8n
+  - hostname: telegram.<your-domain>
+    path: /webhook/*
+    service: http://n8n:5678
+
+  # Catch-all: return 404 for all other paths
+  # This prevents public access to the n8n UI, Status API, or Action API
+  - service: http_status:404
