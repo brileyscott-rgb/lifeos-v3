@@ -1,0 +1,20 @@
+# Cloudflare Tunnel — do not commit real tunnel material
+#
+# config.example.yml is safe to commit (template with placeholders)
+# docker-compose.cloudflared.example.yml is safe to commit (template with placeholders)
+#
+# config.yml must never be committed — contains real tunnel ID and credentials path
+# *.json must never be committed — contains Cloudflare tunnel credentials
+# *.pem and *.key must never be committed — contain private key material
+# *.token must never be committed — contain authentication tokens
+# .env and *.env must never be committed — contain environment secrets
+
+config.yml
+*.json
+*.pem
+*.key
+*.token
+.env
+*.env
+logs/
+*.log

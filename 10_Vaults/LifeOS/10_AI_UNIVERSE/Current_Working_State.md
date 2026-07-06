@@ -89,31 +89,6 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Backup strategy: Git plus restic later
 - Service order: Git, n8n, Telegram, Paperless-ngx, Qdrant, monitoring, MCP
 
-## Next Milestone
-
-Foundation Lock-In:
-
-1. Test the new numbered review queue end-to-end: send `/p`, `/view 1`, `/a 1`, `/r 1` via Telegram.
-2. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --once` after each command.
-3. Test edge cases: `/a` with zero/one/multiple pending; `/a 999`; `/a abc`.
-4. Verify approved/rejected files under `30_Capture/approved/` or `30_Capture/rejected/`.
-5. Verify approval/rejection events in `50_Event_Log/events.jsonl`.
-6. Verify GitHub off-machine remote during routine backup checks.
-7. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
-8. Review n8n compose/config scaffold before any service activation.
-
-## Active Milestone
-
-LifeOS V3 Automation Foundation Setup:
-
-- n8n local Docker instance running under `40_Services/n8n/`.
-- AI worker dry-run scaffold added under `40_Services/ai_worker/`.
-- Planned workflows documented under `40_Services/n8n/workflows/planned/`.
-- No public webhooks configured.
-- No direct vault writes allowed.
-- No model API calls active.
-- No n8n production workflows active yet.
-
 Completed:
 - Read-only LifeOS Status API created at `40_Services/status_api/`.
 - Python stdlib HTTP server on port 8787, joins shared `lifeos_internal` Docker network.
@@ -126,7 +101,7 @@ Completed:
 - n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
 - Activation checklist updated with HTTP Request workflow instructions.
 - **First manual n8n status workflow test passed**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only (`status: ok`, `mode: read_only`, `event_log_valid: true`, all `limitations` fields present). Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model node, or file-write nodes added.
-- **LifeOS Action API created at `40_Services/action_api/`**: Read-write sibling to Status API. Python stdlib HTTP server on port 8788, joins `lifeos_internal` network. Endpoints for capture create, pending list, approve, reject. Event log append for all operations. Mounts `30_Capture/` and `50_Event_Log/` as read-write. Hardened container: `cap_drop: ALL`, `no-new-privileges`, non-root user. 32 unit tests pass. Added to n8n compose stack. No shell execution, no Docker socket, no vault access, no secrets.
+- **LifeOS Action API created at `40_Services/action_api/`**: Read-write sibling to Status API. Python stdlib HTTP server on port 8788, joins `lifeos_internal` network. Endpoints for capture create, pending list, approve, reject. Event log append for all operations. Mounts `30_Capture/` and `50_Event_Log/` as read-write. Hardened container: `cap_drop: ALL`, `no-new-privileges`, non-root user. Hardened Action API test suite passes per d5a0042; latest reported count 91/91. Added to n8n compose stack. No shell execution, no Docker socket, no vault access, no secrets.
 
 - **Telegram Operator capture vision locked in design doc**: Telegram Operator will become LifeOS mobile capture intake. `/capture` supports immediate text/link capture and future capture mode (multi-message, timeout, /cancel). Initially supported payloads: text, links, thoughts, ideas, notes. Planned later: photos, voice memos, documents/files. Review flow remains `/pending`, `/view`, `/approve`, `/reject`. Future AI extraction will produce approval-gated proposals, not direct writes. File creation will go through a controlled processor — never from n8n or AI directly. All captures land in `pending_review` first. Separation of capture, extraction, and file creation is enforced architecturally.
 
@@ -141,12 +116,12 @@ Completed:
   - Next step after Phase B1: user-provided Cloudflare/domain readiness, then controlled implementation of active tunnel config.
 
 Next:
-1. Phase B2: User provides Cloudflare domain readiness and tunnel credentials (out of band).
-2. Phase B3: Controlled activation of cloudflared with real config (token-free validation first).
-3. Phase C: Create n8n Telegram bot webhook workflow in UI.
-4. Phase D: Register Telegram webhook, end-to-end testing, documentation closeout.
-5. All phases require explicit step-by-step approval.
-6. Do not implement AI extraction or file creation processor until raw capture/review flow is stable.
+1. Phase B2: Cloudflare Tunnel activation readiness and user domain/Cloudflare confirmation.
+2. Phase B3: Controlled active tunnel setup with real values handled manually/out of band.
+3. Phase C: n8n Telegram command workflow design/build in n8n UI.
+4. Phase D: Telegram webhook registration and end-to-end test.
+5. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor.
+6. All phases require explicit step-by-step approval.
 
 ## Do Not Do Yet
 

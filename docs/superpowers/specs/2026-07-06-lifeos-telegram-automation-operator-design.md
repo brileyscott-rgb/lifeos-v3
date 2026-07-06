@@ -5,7 +5,7 @@
 The LifeOS Telegram Automation Operator replaces the offline Python Telegram bot with a persistent n8n-based webhook service. Telegram messages arrive via HTTPS webhook, n8n authenticates the sender against an allowlist, routes commands to controlled LifeOS API endpoints, and replies back through Telegram — all without shell execution, vault writes, Docker socket exposure, or broad AI capabilities.
 
 The system adds two new components to the existing hardened stack:
-- **Caddy reverse proxy** — provides TLS termination for Telegram webhook ingress
+- **Cloudflare Tunnel (primary)** — provides TLS-terminated webhook ingress via cloudflared
 - **LifeOS Action API** — provides controlled read-write operations for captures and event log
 
 The existing LifeOS Status API stays read-only. n8n orchestrates the flow between Telegram, the Status API, and the Action API.
@@ -25,7 +25,7 @@ The existing LifeOS Status API stays read-only. n8n orchestrates the flow betwee
 
 ## 3. Final Feature List
 
-1. Public HTTPS webhook ingress for Telegram via Caddy reverse proxy
+1. Public HTTPS webhook ingress for Telegram via Cloudflare Tunnel (cloudflared)
 2. Telegram user allowlist (n8n variables, checked per message)
 3. `/start` — welcome message with available commands
 4. `/help` — list all commands with descriptions
@@ -60,19 +60,19 @@ The existing LifeOS Status API stays read-only. n8n orchestrates the flow betwee
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Internet                                 │
-│  Telegram (mobile) ─── HTTPS webhook ───→ bot.example.com:443   │
+│  Telegram (mobile) ─── HTTPS webhook ───→ Cloudflare Edge      │
 └─────────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │  Host (lifeos user)                                             │
 │                                                                  │
-│  ┌──────────────────────┐     ┌──────────────────────────────┐  │
-│  │  Caddy (container)   │────→│  n8n (container)             │  │
-│  │  Port 443 → TLS      │     │  127.0.0.1:5678             │  │
-│  │  lifeos_internal     │     │  Webhook node + routing      │  │
-│  └──────────────────────┘     │  Variable: allowlist         │  │
-│                               │  HTTP Request → APIs          │  │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐ │
+│  │  cloudflared (container) │──→│  n8n (container)            │ │
+│  │  tunnel to Cloudflare    │  │  127.0.0.1:5678             │ │
+│  │  lifeos_internal         │  │  Webhook node + routing      │ │
+│  └──────────────────────────┘  │  Variable: allowlist         │ │
+│                                │  HTTP Request → APIs          │ │
 │                               └──────────┬───────────────────┘  │
 │                                          │                       │
 │                    ┌─────────────────────┼──────────────┐       │
@@ -147,42 +147,44 @@ All replies go through n8n's Telegram Send Message node.
 
 ## 8. Webhook Ingress Design Options
 
-### Option A: Caddy Reverse Proxy (Recommended)
+### Option A: Cloudflare Tunnel (Primary — Selected)
 
-A Caddy v2 container on `lifeos_internal`, bound to host port 443, terminates TLS via Let's Encrypt, and proxies `https://telegram.lifeos.example.com/` → `http://n8n:5678/`.
+`cloudflared` container creates a tunnel to Cloudflare's edge, proxying `telegram.<your-domain>` → `http://n8n:5678`. No open firewall ports required.
 
-- **Pros**: Production-grade TLS, auto-renewal, no third-party tunnel dependency
-- **Cons**: Requires DNS (public `A` record pointing to the host), port 443 reachable
-- **Config**: Caddyfile with `reverse_proxy` to `n8n:5678`
-- **DNS requirement**: `telegram.lifeos.example.com` → host public IP
+- **Pros**: No open firewall ports, works behind NAT, built-in DDoS protection, TLS termination at Cloudflare edge
+- **Cons**: Requires Cloudflare DNS management, additional `cloudflared` setup
+- **Config**: `config.example.yml` at `40_Services/n8n/cloudflared/`
+- **DNS requirement**: Domain managed by Cloudflare (orange-cloud/proxied)
 
-### Option B: n8n Built-in Tunnel (Simplest for Testing)
+### Option B: n8n Built-in Tunnel (Fallback for Temporary Validation)
 
 Run n8n with `N8N_TUNNEL_SUBDOMAIN` and `N8N_TUNNEL_SUBDOMAIN_TOKEN`. n8n creates a temporary `https://<subdomain>.n8n.cloud/` URL.
 
 - **Pros**: No DNS, no reverse proxy, instant public URL
 - **Cons**: Temporary URL, dependency on n8n cloud tunnel service, not suitable for production
-- **Use**: Initial testing only
+- **Use**: Initial testing only if Cloudflare is not yet available
 
-### Option C: Cloudflare Tunnel (No Open Ports)
+### Option C: Caddy Reverse Proxy (Secondary — Only if Cloudflare Unavailable)
 
-`cloudflared` container creates a tunnel to Cloudflare's edge, proxying `telegram.lifeos.example.com` → `localhost:5678`.
+A Caddy v2 container on `lifeos_internal`, bound to host port 443, terminates TLS via Let's Encrypt.
 
-- **Pros**: No open firewall ports, works behind NAT, built-in DDoS protection
-- **Cons**: Requires Cloudflare DNS management, additional `cloudflared` setup
-- **Use**: If Cloudflare is already the DNS provider
+- **Pros**: Production-grade TLS, auto-renewal, no third-party tunnel dependency
+- **Cons**: Requires DNS public A record, port 443 reachable
+- **Use**: Only if Cloudflare is unavailable or intentionally rejected
 
-### Option D: Direct Host Proxy (Simple if Port 443 Available)
+### Option D: ngrok (Temporary Validation Only)
 
-Run Caddy on the host (not in container), proxy to `127.0.0.1:5678`.
+ngrok creates a temporary public URL. For development validation only.
 
-- **Pros**: Simplest network topology, no container-for-proxy
-- **Cons**: Adds host-level dependency, manual Caddy install
-- **Use**: Minimalist alternative to Option A
+- **Pros**: No DNS, instant URL
+- **Cons**: Temporary URL, rate-limited, not for production
+- **Use**: Quick tunnel test if n8n tunnel is insufficient
 
 ### Recommendation
 
-**Option A** (Caddy container) for production. **Option B** (n8n tunnel) for initial testing and validation. Document both in the deployment checklist.
+**Primary**: Cloudflare Tunnel (Option A).
+**Fallback**: n8n tunnel or ngrok for temporary validation only.
+**Secondary**: Caddy container only if Cloudflare is unavailable or intentionally rejected.
 
 ## 9. User Allowlist Design
 
@@ -352,12 +354,12 @@ Events follow the existing `50_Event_Log/events.jsonl` schema (one JSON object p
 - `.git`
 - `40_Services/n8n/database/`
 
-### Caddy Reverse Proxy Hardening
+### Cloudflare Tunnel Hardening
 
-- Runs as non-root (Caddy v2 defaults to dropping capabilities)
-- TLS via Let's Encrypt (automatic certificates)
-- Only proxies known Host header (not an open relay)
-- Rate limiting on webhook endpoint (n8n webhook settings)
+- `cloudflared` runs as non-root container on `lifeos_internal` only
+- TLS termination at Cloudflare edge (automatic certificates)
+- Catch-all ingress returns 404 — prevents public n8n UI, Status API, Action API exposure
+- Telegram `secret_token` + n8n allowlist provide app-layer protection (Cloudflare Access login must NOT be used on webhook path)
 
 ## 13. Credential Model
 
@@ -382,14 +384,15 @@ None of these values appear in workflow JSON, git, `.env`, or container environm
 | `40_Services/action_api/README.md` | Action API documentation |
 | `40_Services/action_api/notes/security_boundaries.md` | Action API security boundaries |
 | `40_Services/n8n/workflows/planned/telegram_bot_webhook.md` | Planned Telegram bot webhook workflow doc |
-| `40_Services/n8n/compose/caddy/Caddyfile` | Caddy reverse proxy configuration |
-| `40_Services/n8n/compose/docker-compose.yml` or update `docker-compose.yml` | Add Action API and Caddy services |
+| `40_Services/n8n/cloudflared/config.example.yml` | Cloudflare Tunnel config template |
+| `40_Services/n8n/cloudflared/docker-compose.cloudflared.example.yml` | Cloudflare Tunnel compose example |
+| `40_Services/n8n/cloudflared/README.md` | Cloudflare Tunnel runbook and setup guide |
 
 ### Changed Files
 
 | File | Change |
 |---|---|
-| `40_Services/n8n/docker-compose.yml` | Add Action API service, add Caddy service, add `telegram` network or update ports |
+| `40_Services/n8n/docker-compose.yml` | Add Action API service, add cloudflared service when activating tunnel |
 | `40_Services/n8n/notes/activation_checklist.md` | Add Telegram webhook checklist items |
 | `40_Services/n8n/notes/security_boundaries.md` | Add webhook and Action API boundaries |
 | `40_Services/n8n/workflows/planned/lifeos_status_digest.md` | Reference Telegram bot workflow |
@@ -411,16 +414,20 @@ None of these values appear in workflow JSON, git, `.env`, or container environm
 - [ ] Action API unit tests pass (all endpoints, error cases)
 - [ ] Action API container builds
 - [ ] Action API starts correctly on `lifeos_internal`
-- [ ] DNS `A` record for webhook hostname resolves to host public IP
-- [ ] Port 443 reachable from internet (or tunnel functional)
+- [ ] Domain managed by Cloudflare (proxied/orange-cloud)
+- [ ] Cloudflare Tunnel created in Zero Trust dashboard
+- [ ] Tunnel credentials generated and placed locally (gitignored)
 
-### Caddy / Ingress
+### Cloudflare Tunnel / Ingress
 
-- [ ] Caddy reverse proxy starts and binds to host port 443
-- [ ] TLS certificate issued by Let's Encrypt
-- [ ] `https://telegram.lifeos.example.com/webhook/...` reaches n8n
+- [ ] cloudflared container starts and connects to Cloudflare edge
+- [ ] TLS certificate issued by Cloudflare (automatic)
+- [ ] `https://telegram.<your-domain>/webhook/...` reaches n8n
 - [ ] Direct `http://localhost:5678` still works (no regression)
 - [ ] Port 5678 remains bound to 127.0.0.1 (not publicly exposed)
+- [ ] Catch-all returns 404 for non-webhook paths
+- [ ] n8n UI is NOT reachable through public hostname
+- [ ] Status API and Action API are NOT reachable through public hostname
 
 ### Webhook Registration
 
@@ -467,10 +474,10 @@ None of these values appear in workflow JSON, git, `.env`, or container environm
 
 ## 16. Deployment Checklist
 
-- [ ] DNS record created: `telegram.lifeos.example.com` → host public IP
+- [ ] DNS record created: `telegram.<your-domain>` → Cloudflare (proxied/orange-cloud)
 - [ ] Port 443 allowed in host firewall (if applicable)
 - [ ] Action API implemented and tested
-- [ ] Caddy Dockerfile or compose service configured
+- [ ] Cloudflare Tunnel compose service configured (or fallback ingress)
 - [ ] n8n `docker-compose.yml` updated with new services
 - [ ] `telegram_allowed_user_ids` n8n variable created with admin user ID
 - [ ] Telegram bot token credential created in n8n UI
@@ -486,7 +493,7 @@ None of these values appear in workflow JSON, git, `.env`, or container environm
 
 - [ ] Disable Telegram webhook via `deleteWebhook` API call (one-time curl)
 - [ ] Deactivate n8n Telegram webhook workflow
-- [ ] Remove Caddy reverse proxy container (`docker-compose stop caddy`)
+- [ ] Remove cloudflared container (`docker-compose stop cloudflared`)
 - [ ] Remove Action API container (`docker-compose stop lifeos-action-api`)
 - [ ] Verify n8n still works on `http://localhost:5678`
 - [ ] Verify Status API still works on `lifeos_internal`
@@ -509,11 +516,11 @@ None of these values appear in workflow JSON, git, `.env`, or container environm
 
 ### Phase B: Webhook Ingress (network setup)
 
-7. Create `40_Services/n8n/compose/caddy/Caddyfile`
-8. Add Caddy service to `40_Services/n8n/docker-compose.yml`
-9. Configure DNS `telegram.lifeos.example.com` → host IP
-10. Start Caddy and verify TLS certificate
-11. Test webhook reachability
+7. Create Cloudflare Tunnel scaffold (`40_Services/n8n/cloudflared/`)
+8. User creates Cloudflare Tunnel in Zero Trust dashboard (out of band)
+9. User provides domain/credentials (out of band)
+10. Deploy cloudflared container with real config (token-free validation first)
+11. Test webhook reachability at `/webhook/test`
 
 ### Phase C: n8n Workflow (build in UI only, no automation import)
 
@@ -818,6 +825,6 @@ The AI extraction pipeline is future work. It must not be built until:
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Date**: 2026-07-06
-**Status**: Phase A (Action API) implemented. Vision locked (capture modes, AI pipeline, processor boundary, UX). Phase B (Caddy), C (n8n workflow), D (docs closeout) pending.
+**Status**: Phase A (Action API) implemented. Phase B1 (Cloudflare Tunnel scaffold/runbook) created. Vision locked (capture modes, AI pipeline, processor boundary, UX). Phase B2 (readiness cleanup), B3 (active tunnel), C (n8n workflow), D (docs closeout) pending.

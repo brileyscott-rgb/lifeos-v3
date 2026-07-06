@@ -51,16 +51,18 @@ cd /home/lifeos/40_Services/n8n
 - Do not give n8n git commit authority
 - Do not commit `.env` or any file containing real secrets
 
-## Cloudflare Tunnel (Phase B1 Prerequisite)
+## Cloudflare Tunnel (Phase B1/B2 Prerequisites)
 
 Before Telegram webhook registration:
 
 - [ ] Cloudflare Tunnel setup completed (cloudflared container running)
-- [ ] Generic webhook test passed at `https://telegram.<your-domain>/webhook/test`
+- [ ] Generic webhook test passed at `https://telegram.<your-domain>/webhook/test` (generic test path)
 - [ ] n8n UI is NOT publicly reachable at `https://telegram.<your-domain>/`
 - [ ] Status API is NOT publicly reachable via tunnel
 - [ ] Action API is NOT publicly reachable via tunnel
 - [ ] Catch-all returns 404 for non-webhook paths
+- [ ] `WEBHOOK_URL=https://telegram.<your-domain>/` added to n8n environment (future setup only, not now)
+- [ ] Telegram webhook target path documented: `https://telegram.<your-domain>/webhook/telegram`
 
 ## Future Checklist Notes (Do Not Act Yet)
 
