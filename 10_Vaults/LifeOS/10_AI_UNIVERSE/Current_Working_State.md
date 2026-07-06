@@ -128,11 +128,14 @@ Completed:
 - **First manual n8n status workflow test passed**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only (`status: ok`, `mode: read_only`, `event_log_valid: true`, all `limitations` fields present). Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model node, or file-write nodes added.
 - **LifeOS Action API created at `40_Services/action_api/`**: Read-write sibling to Status API. Python stdlib HTTP server on port 8788, joins `lifeos_internal` network. Endpoints for capture create, pending list, approve, reject. Event log append for all operations. Mounts `30_Capture/` and `50_Event_Log/` as read-write. Hardened container: `cap_drop: ALL`, `no-new-privileges`, non-root user. 32 unit tests pass. Added to n8n compose stack. No shell execution, no Docker socket, no vault access, no secrets.
 
+- **Telegram Operator capture vision locked in design doc**: Telegram Operator will become LifeOS mobile capture intake. `/capture` supports immediate text/link capture and future capture mode (multi-message, timeout, /cancel). Initially supported payloads: text, links, thoughts, ideas, notes. Planned later: photos, voice memos, documents/files. Review flow remains `/pending`, `/view`, `/approve`, `/reject`. Future AI extraction will produce approval-gated proposals, not direct writes. File creation will go through a controlled processor — never from n8n or AI directly. All captures land in `pending_review` first. Separation of capture, extraction, and file creation is enforced architecturally.
+
 Next:
-1. Phase B: Caddy reverse proxy for Telegram webhook ingress (DNS, TLS).
+1. Phase B: Caddy reverse proxy or alternate webhook ingress for Telegram (DNS, TLS).
 2. Phase C: Create n8n Telegram bot webhook workflow in UI.
 3. Phase D: Register Telegram webhook, end-to-end testing, documentation closeout.
 4. All phases require explicit step-by-step approval.
+5. Do not implement AI extraction or file creation processor until raw capture/review flow is stable.
 
 ## Do Not Do Yet
 

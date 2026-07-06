@@ -50,3 +50,12 @@ cd /home/lifeos/40_Services/n8n
 - Do not give n8n vault write authority
 - Do not give n8n git commit authority
 - Do not commit `.env` or any file containing real secrets
+
+## Future Checklist Notes (Do Not Act Yet)
+
+The following items are placeholders for when the Telegram capture workflow is ready:
+
+- [ ] Do not enable capture mode until the basic command router (start, help, capture, pending, view, approve, reject) works end-to-end.
+- [ ] Do not enable AI extraction until raw capture and review flow is stable and tested.
+- [ ] Do not enable file creation until a controlled proposal/approval processor is designed, implemented, and security-reviewed.
+- [ ] These features require explicit step-by-step approval before activation.
