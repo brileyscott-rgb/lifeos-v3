@@ -8,7 +8,9 @@
 .gtkrc-xfce
 .local/
 .npm/
+.pki/
 .profile
+.var/
 .Xauthority
 .xsession-errors
 Desktop/
