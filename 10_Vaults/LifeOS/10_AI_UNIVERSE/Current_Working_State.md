@@ -31,7 +31,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Initial clean scaffold/control-plane commit created: `85acdb7 Initialize LifeOS V3 scaffold`.
 - Git branch renamed to `main`.
 - Local bare Git backup remote created at `/home/lifeos/70_Backups/git/lifeos.git` and `main` pushed.
-- Obsidian Flatpak removed and official AppImage downloaded to ignored local path `/home/lifeos/Applications/Obsidian-1.12.7.AppImage`.
+- Obsidian Flatpak removed and official AppImage downloaded to ignored local path `/home/lifeos/Applications/Obsidian-1.12.7.AppImage`; user reported launch appears good.
 - Agency Agents reference updated from `https://github.com/msitarzewski/agency-agents.git` to commit `6f8d5e5`.
 - Curated Agency OpenCode subagents installed under `/home/lifeos/.config/opencode/agents/`.
 - Off-machine Git backup explicitly deferred by user approval so inert service scaffolding may proceed.
@@ -62,7 +62,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 Foundation Lock-In:
 
 1. Verify GitHub off-machine remote during routine backup checks.
-2. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS` from the desktop AppImage launcher; terminal launch reaches the callback but fails GPU initialization in this session.
+2. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
 3. Restart OpenCode so the new Agency subagents are loaded.
 4. Review n8n compose/config scaffold before any service activation.
 
