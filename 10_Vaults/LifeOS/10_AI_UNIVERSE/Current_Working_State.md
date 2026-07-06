@@ -32,6 +32,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Git branch renamed to `main`.
 - Local bare Git backup remote created at `/home/lifeos/70_Backups/git/lifeos.git` and `main` pushed.
 - Obsidian installed as a user Flatpak: `md.obsidian.Obsidian`.
+- Agency Agents reference updated from `https://github.com/msitarzewski/agency-agents.git` to commit `6f8d5e5`.
+- Curated Agency OpenCode subagents installed under `/home/lifeos/.config/opencode/agents/`.
 
 ## Current Decisions
 
@@ -53,7 +55,8 @@ Foundation Lock-In:
 
 1. Add an off-machine Git remote when the hosting target is chosen.
 2. Open Obsidian vault at `/home/lifeos/10_Vaults/LifeOS`.
-3. Prepare n8n compose/config scaffolding only after off-machine Git backup is available or explicitly deferred.
+3. Restart OpenCode so the new Agency subagents are loaded.
+4. Prepare n8n compose/config scaffolding only after off-machine Git backup is available or explicitly deferred.
 
 ## Do Not Do Yet
 
@@ -62,6 +65,7 @@ Foundation Lock-In:
 - Do not configure real Telegram/n8n/Paperless/Qdrant secrets yet.
 - Do not loosen `/home/lifeos/40_Services/secrets` permissions.
 - Do not treat the local bare Git remote as a substitute for off-machine backup.
+- Do not install the full Agency roster into OpenCode unless the OpenCode agent registration limit is resolved or the selection remains below the known limit.
 
 ## Required First Reads
 

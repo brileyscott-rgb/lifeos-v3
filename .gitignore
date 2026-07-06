@@ -28,6 +28,8 @@ Videos/
 !.config/opencode/
 !.config/opencode/opencode.json
 !.config/opencode/OPENCODE_WORKFLOW.md
+!.config/opencode/agents/
+!.config/opencode/agents/**
 
 # Secrets
 40_Services/secrets/*
