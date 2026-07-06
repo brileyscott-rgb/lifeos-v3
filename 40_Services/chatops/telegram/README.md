@@ -37,15 +37,44 @@ python3 telegram_capture_bot.py --poll --interval 3
 ## Review Lifecycle
 
 After a capture is created, it sits in `30_Capture/pending_review/`.
-You can review and close it from Telegram:
+You can review and close it from Telegram using numbered commands:
 
-1. Send `/list_pending` to your bot to see pending captures.
+### Quick commands (phone-friendly)
+
+```text
+/p           — list pending captures (numbered, oldest first)
+/view 1      — view full details of pending item #1
+/a 1         — approve pending item #1
+/r 1         — reject pending item #1
+/a latest    — approve the newest pending item
+/r latest    — reject the newest pending item
+/a           — safe shortcut (only works with exactly 1 pending)
+/r           — safe shortcut (only works with exactly 1 pending)
+```
+
+### Workflow
+
+1. Send `/p` to your bot to see the numbered pending queue.
 2. Run `python3 telegram_capture_bot.py --once` to process.
-3. Send `/approve cap_<capture_id>` to approve, or
-   `/reject cap_<capture_id>` to reject.
+3. Send `/view 1` to inspect, then `/a 1` or `/r 1` to decide.
 4. Run `python3 telegram_capture_bot.py --once` to process.
 
-What happens:
+### Long-form commands (still supported)
+
+```text
+/list_pending
+/approve cap_<capture_id>
+/reject cap_<capture_id>
+```
+
+### Safety behavior
+
+- `/a` and `/r` without a number only act when **exactly one** pending capture exists.
+- If multiple are pending, they refuse with a prompt to use `/p`.
+- `/a latest` and `/r latest` require the explicit word `latest`.
+
+### What happens
+
 - **Approve**: pending file moves to `30_Capture/approved/`, frontmatter
   `status` set to `approved`, `processed_at` timestamp added, event logged.
 - **Reject**: pending file moves to `30_Capture/rejected/`, frontmatter

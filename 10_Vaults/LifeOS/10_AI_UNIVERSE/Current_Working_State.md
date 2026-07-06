@@ -67,6 +67,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - `.gitignore` updated to protect Telegram local secrets and capture working files.
 - All scaffold-only: no real Telegram token, no Docker services, no live bot.
 
+- **Number-first pending review queue with safe phone-friendly commands**: Added `/p`, `/view`, `/a`, `/r` with numbered index (1‑based, oldest-first), `latest` keyword, and safe no-arg shortcuts. Existing `/list_pending`, `/approve <capture_id>`, `/reject <capture_id>` preserved. Helper functions: `list_pending_review_files()`, `load_pending_capture_summary()`, `format_pending_queue()`, `resolve_pending_index()`. Test payloads added for all new commands. Docs updated in README, approval_format.md, message_contract.md.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -89,13 +91,14 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Test review lifecycle: `/list_pending`, then `/approve` or `/reject` on test capture.
+1. Test the new numbered review queue end-to-end: send `/p`, `/view 1`, `/a 1`, `/r 1` via Telegram.
 2. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --once` after each command.
-3. Verify approved/rejected files under `30_Capture/approved/` or `30_Capture/rejected/`.
-4. Verify approval/rejection events in `50_Event_Log/events.jsonl`.
-5. Verify GitHub off-machine remote during routine backup checks.
-6. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
-7. Review n8n compose/config scaffold before any service activation.
+3. Test edge cases: `/a` with zero/one/multiple pending; `/a 999`; `/a abc`.
+4. Verify approved/rejected files under `30_Capture/approved/` or `30_Capture/rejected/`.
+5. Verify approval/rejection events in `50_Event_Log/events.jsonl`.
+6. Verify GitHub off-machine remote during routine backup checks.
+7. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
+8. Review n8n compose/config scaffold before any service activation.
 
 ## Do Not Do Yet
 

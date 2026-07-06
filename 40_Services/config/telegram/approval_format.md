@@ -67,11 +67,31 @@ What was done after approval (e.g., file moved, event logged, note created).
 
 ## Approval Commands
 
+### Quick numbered commands (phone-friendly)
+
+```
+/p
+/view 1
+/a 1
+/r 1
+/a latest
+/r latest
+/a
+/r
+```
+
+### Long-form commands (still supported)
+
 ```
 /list_pending
 /approve cap_YYYYMMDD_HHMMSS_source_type_short-title
 /reject cap_YYYYMMDD_HHMMSS_source_type_short-title
 ```
+
+### Safety
+
+- `/a` and `/r` (no arg) only act when exactly one pending capture exists.
+- With multiple pending, they refuse and direct to `/p`.
 
 On approval, the file should be moved from `pending_review/` to `approved/`
 with frontmatter `status` updated to `approved` and `processed_at` set.
