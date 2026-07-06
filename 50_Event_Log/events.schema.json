@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LifeOS Event",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "occurred_at",
+    "actor",
+    "approval_tier",
+    "status",
+    "summary",
+    "source_refs",
+    "target_refs",
+    "correlation_id",
+    "details"
+  ],
+  "properties": {
+    "event_id": { "type": "string" },
+    "event_type": { "type": "string" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "actor": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "enum": ["human", "agent", "service", "system"] },
+        "id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "approval_tier": { "type": "string", "enum": ["A0", "A1", "A2", "A3", "A4"] },
+    "status": { "type": "string", "enum": ["planned", "started", "completed", "failed", "cancelled", "deferred"] },
+    "summary": { "type": "string" },
+    "source_refs": { "type": "array", "items": { "type": "string" } },
+    "target_refs": { "type": "array", "items": { "type": "string" } },
+    "correlation_id": { "type": "string" },
+    "details": { "type": "object" }
+  },
+  "additionalProperties": false
+}

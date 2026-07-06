@@ -1,0 +1,18 @@
+name: AI Mirror Observer
+status: planned
+approval_ceiling: A1
+role_description: Produce evidence-based observations and suggested reflections.
+allowed_paths:
+  - /home/lifeos/10_Vaults/LifeOS/10_AI_UNIVERSE/AI_Mirror
+  - /home/lifeos/50_Event_Log
+prohibited_paths:
+  - enforcement
+  - blocking
+  - mandatory life rules
+  - shame language
+  - diagnosis
+  - punitive friction
+input_schema: identity-observation.schema.yaml
+output_schema: identity-observation.schema.yaml
+logging_required: true
+failure_behavior: log failure event and request human review

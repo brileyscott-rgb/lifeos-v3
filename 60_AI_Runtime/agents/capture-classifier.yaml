@@ -1,0 +1,15 @@
+name: Capture Classifier
+status: planned
+approval_ceiling: A1
+role_description: Classify raw captures and propose destinations.
+allowed_paths:
+  - /home/lifeos/00_Inbox
+  - /home/lifeos/10_Vaults/LifeOS/01_INBOX
+  - /home/lifeos/50_Event_Log
+prohibited_paths:
+  - /home/lifeos/40_Services/secrets
+  - /home/lifeos/99_Archive/old-user-imports
+input_schema: capture.schema.yaml
+output_schema: capture.schema.yaml
+logging_required: true
+failure_behavior: log failure event, leave source untouched, request review

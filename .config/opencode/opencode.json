@@ -1,0 +1,59 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "lifeos",
+  "instructions": [
+    "/home/lifeos/.config/opencode/OPENCODE_WORKFLOW.md"
+  ],
+  "skills": {
+    "paths": [
+      "/home/lifeos/60_AI_Runtime/references/superpowers/skills"
+    ]
+  },
+  "references": {
+    "lifeos-vault": {
+      "path": "/home/lifeos/10_Vaults/LifeOS",
+      "description": "Use for the LifeOS V3 Obsidian vault, AI Universe control plane, policies, decisions, schemas, prompts, dashboards, and project context."
+    },
+    "lifeos-runtime": {
+      "path": "/home/lifeos/60_AI_Runtime",
+      "description": "Use for LifeOS V3 AI runtime definitions, references, copied Superpowers skills, Agency agent references, context packs, schemas, and future MCP definitions."
+    },
+    "lifeos-source": {
+      "path": "/home/lifeos/LifeOS_V3_Source_of_Truth.md",
+      "description": "Use as the current high-level LifeOS V3 planning source of truth."
+    },
+    "agency-agents": {
+      "path": "/home/lifeos/60_AI_Runtime/references/agency-agents",
+      "description": "Use as reference-only Agency agent role specs and coordination guidance. Prefer installed OpenCode subagents for execution."
+    },
+    "superpowers": {
+      "path": "/home/lifeos/60_AI_Runtime/references/superpowers",
+      "description": "Use for Superpowers workflow skills, including using-superpowers, writing-plans, systematic-debugging, verification-before-completion, and multi-agent workflows."
+    }
+  },
+  "permission": {
+    "external_directory": {
+      "*": "ask",
+      "/home/lifeos/**": "allow",
+      "/home/lifeos/40_Services/secrets/**": "deny",
+      "/home/lifeos/99_Archive/old-user-imports/**": "deny",
+      "/home/bdoss08/**": "deny"
+    },
+    "bash": {
+      "*": "ask",
+      "git *": "allow",
+      "pwd": "allow",
+      "ls *": "allow",
+      "id *": "allow",
+      "groups": "allow",
+      "which *": "allow",
+      "test *": "allow",
+      "stat *": "allow",
+      "python3 *": "allow",
+      "rg *": "allow",
+      "docker ps*": "allow",
+      "rm *": "deny",
+      "sudo *": "ask"
+    }
+  }
+}

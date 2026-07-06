@@ -1,0 +1,67 @@
+# Local user/session state
+.bash_history
+.bash_logout
+.bashrc
+.cache/
+.dmrc
+.gtkrc-2.0
+.gtkrc-xfce
+.local/
+.npm/
+.profile
+.Xauthority
+.xsession-errors
+Desktop/
+Documents/
+Downloads/
+Music/
+Pictures/
+Public/
+Templates/
+Videos/
+
+# Keep only the LifeOS OpenCode handoff config from local config.
+.config/**
+!.config/
+!.config/opencode/
+!.config/opencode/opencode.json
+!.config/opencode/OPENCODE_WORKFLOW.md
+
+# Secrets
+40_Services/secrets/*
+!40_Services/secrets/README.md
+!40_Services/secrets/.env.example
+
+# Service runtime data
+40_Services/data/*
+!40_Services/data/README.md
+40_Services/backups/**
+
+# Backups
+70_Backups/**
+!70_Backups/
+!70_Backups/**/
+!70_Backups/**/README.md
+
+# Raw captures, documents, archives, and migration work can be large/private.
+00_Inbox/**
+30_Documents/**
+99_Archive/old-user-imports/**
+99_Archive/migration-staging/**
+!99_Archive/migration-staging/
+!99_Archive/migration-staging/deferred-delete/
+!99_Archive/migration-staging/deferred-delete/README.md
+
+# Copied upstream/vendor reference trees are reference-only, not scaffold source.
+60_AI_Runtime/references/**
+
+# Obsidian local workspace/cache state
+10_Vaults/LifeOS/.obsidian/workspace*.json
+10_Vaults/LifeOS/.obsidian/cache/
+10_Vaults/LifeOS/.trash/
+
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db

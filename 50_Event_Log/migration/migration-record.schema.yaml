@@ -1,0 +1,46 @@
+type: object
+required:
+  - source_path
+  - destination_path
+  - decision
+  - reason
+  - reviewed_by
+  - date
+  - event_id
+  - approval_required
+  - pre_action_snapshot
+properties:
+  source_path:
+    type: string
+  destination_path:
+    type:
+      - string
+      - "null"
+  decision:
+    type: string
+    enum:
+      - keep as-is
+      - revise
+      - summarize
+      - merge
+      - archive
+      - delete
+      - defer
+  reason:
+    type: string
+  reviewed_by:
+    type: string
+    enum:
+      - human
+      - agent
+      - human+agent
+  date:
+    type: string
+  event_id:
+    type: string
+  approval_required:
+    type: boolean
+  pre_action_snapshot:
+    type:
+      - string
+      - "null"

@@ -1,0 +1,15 @@
+name: Migration Reviewer
+status: planned
+approval_ceiling: A2
+role_description: Review old LifeOS content before migration and recommend keep, revise, summarize, merge, archive, delete, or defer.
+allowed_paths:
+  - /home/lifeos/99_Archive/migration-staging
+  - /home/lifeos/50_Event_Log/migration
+prohibited_paths:
+  - /home/lifeos/40_Services/secrets
+  - /home/lifeos/10_Vaults/LifeOS
+input_schema: migration-record.schema.yaml
+output_schema: migration-record.schema.yaml
+logging_required: true
+failure_behavior: log failure event, preserve source, request review
+destructive_action_rule: deletion is A4 and requires explicit human approval plus audit trail before action
