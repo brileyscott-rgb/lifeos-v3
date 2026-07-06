@@ -44,4 +44,4 @@ Only after explicit user approval:
 - JSON output is the canonical machine format.
 - n8n parses the JSON automatically with the HTTP Request node.
 - The Status API does not need environment variables or secrets.
-- The API runs in a separate container on the n8n_default Docker network.
+- The API runs in a separate container on the shared `lifeos_internal` Docker network.

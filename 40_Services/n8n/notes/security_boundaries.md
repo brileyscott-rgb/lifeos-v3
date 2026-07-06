@@ -9,12 +9,17 @@
 5. **No Telegram webhook triggers** — Telegram automation stays in the dedicated Python bot.
 6. **Read-only mount by default** — event log and capture directories are mounted `:ro`.
 
+## Network
+
+n8n and the Status API communicate over the shared `lifeos_internal` Docker network.
+The Status API is reachable at `http://lifeos-status-api:8787/status`.
+
 ## Allowed Reads
 
 - `50_Event_Log/events.jsonl` via Status API (read-only HTTP)
 - `30_Capture/` directory listings via Status API (read-only HTTP)
 
-Direct filesystem mounts will be removed in favor of Status API calls.
+Direct filesystem mounts removed in favor of Status API calls.
 
 ## Disallowed Reads
 

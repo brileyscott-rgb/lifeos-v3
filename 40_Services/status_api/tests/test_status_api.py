@@ -62,6 +62,18 @@ class TestCountFiles(unittest.TestCase):
     def test_missing_dir_returns_neg_one(self):
         self.assertEqual(_count_files(TEST_CAPTURE / "nonexistent"), -1)
 
+    def test_directory_not_counted(self):
+        (TEST_CAPTURE / "pending_review" / "subdir").mkdir()
+        self.assertEqual(_count_files(TEST_CAPTURE / "pending_review"), 0)
+
+    def test_readme_not_counted_in_pending(self):
+        (TEST_CAPTURE / "pending_review" / "README.md").write_text("readme", "utf-8")
+        self.assertEqual(_count_files(TEST_CAPTURE / "pending_review"), 0)
+
+    def test_regular_capture_file_counted(self):
+        (TEST_CAPTURE / "pending_review" / "capture1.md").write_text("a", "utf-8")
+        self.assertEqual(_count_files(TEST_CAPTURE / "pending_review"), 1)
+
 
 class TestParseEventLog(unittest.TestCase):
     def setUp(self):
@@ -112,7 +124,7 @@ class TestParseEventLog(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertEqual(eid, "evt_001")
 
-    def test_blank_lines_ignored(self):
+    def test_blank_lines_not_counted(self):
         _write_event_log([
             '{"event_id":"evt_001","event_type":"test.a","occurred_at":"2026-01-01T00:00:00Z"}',
             "",
@@ -120,8 +132,27 @@ class TestParseEventLog(unittest.TestCase):
         ])
         valid, count, eid, etype, etime = _parse_event_log()
         self.assertTrue(valid)
-        self.assertEqual(count, 3)
+        self.assertEqual(count, 2)
         self.assertEqual(eid, "evt_002")
+
+    def test_malformed_first_line_then_valid(self):
+        _write_event_log([
+            "not valid json",
+            '{"event_id":"evt_002","event_type":"test.b","occurred_at":"2026-01-02T00:00:00Z"}',
+        ])
+        valid, count, eid, etype, etime = _parse_event_log()
+        self.assertFalse(valid)
+        self.assertEqual(count, 2)
+
+    def test_malformed_middle_line_then_valid(self):
+        _write_event_log([
+            '{"event_id":"evt_001","event_type":"test.a","occurred_at":"2026-01-01T00:00:00Z"}',
+            "not valid json",
+            '{"event_id":"evt_003","event_type":"test.c","occurred_at":"2026-01-03T00:00:00Z"}',
+        ])
+        valid, count, eid, etype, etime = _parse_event_log()
+        self.assertFalse(valid)
+        self.assertEqual(count, 3)
 
 
 class TestCheckPathReadable(unittest.TestCase):

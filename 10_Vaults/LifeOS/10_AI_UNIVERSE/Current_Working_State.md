@@ -116,13 +116,13 @@ LifeOS V3 Automation Foundation Setup:
 
 Completed:
 - Read-only LifeOS Status API created at `40_Services/status_api/`.
-- Python stdlib HTTP server on port 8787, joins `n8n_default` Docker network.
+- Python stdlib HTTP server on port 8787, joins shared `lifeos_internal` Docker network.
 - Endpoints: `GET /health` and `GET /status` returning JSON.
 - Reads only `30_Capture/` and `50_Event_Log/events.jsonl` via read-only mounts.
 - Hardened container: `read_only: true`, `cap_drop: ALL`, `no-new-privileges`, non-root user.
 - No Docker socket, no vault access, no secrets access, no shell commands.
 - Unit tests cover capture counting, event log parsing, and path checks.
-- n8n direct filesystem mounts removed; n8n now routes status queries through the API.
+- n8n direct filesystem mounts removed; n8n now routes status queries through the API on `lifeos_internal` network.
 - n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
 - Activation checklist updated with HTTP Request workflow instructions.
 

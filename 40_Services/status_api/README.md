@@ -28,7 +28,7 @@ Returns capture queue counts, event log state, and path status.
 docker-compose up -d
 ```
 
-The container joins `n8n_default` network and is reachable as `http://lifeos-status-api:8787/`.
+The container joins `lifeos_internal` network and is reachable as `http://lifeos-status-api:8787/`.
 
 ## From n8n
 

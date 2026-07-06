@@ -11,11 +11,11 @@ services:
     tmpfs:
       - /tmp:noexec,nosuid,size=1m
     networks:
-      - n8n_default
+      - lifeos_internal
     volumes:
       - ../../30_Capture:/lifeos/capture:ro
       - ../../50_Event_Log:/lifeos/event-log:ro
 
 networks:
-  n8n_default:
+  lifeos_internal:
     external: true

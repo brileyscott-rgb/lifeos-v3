@@ -36,7 +36,7 @@ cd /home/lifeos/40_Services/n8n
 3. Add a "Manual Trigger" node
 4. Add an "HTTP Request" node
 5. Set Method: `GET`
-6. Set URL: `http://lifeos-status-api:8787/status`
+6. Set URL: `http://lifeos-status-api:8787/status` (shared `lifeos_internal` Docker network)
 7. Authentication: None (internal Docker network only)
 8. Click "Execute Workflow" to run manually
 9. Inspect the returned JSON in the n8n output panel

@@ -20,9 +20,12 @@ LIMITATIONS = {
 
 
 def _count_files(directory):
-    """Count non-README files in a directory."""
+    """Count non-README files in a directory. Does not count subdirectories."""
     try:
-        return sum(1 for f in directory.iterdir() if f.name != "README.md")
+        return sum(
+            1 for f in directory.iterdir()
+            if f.is_file() and f.name != "README.md"
+        )
     except (FileNotFoundError, PermissionError, OSError):
         return -1
 
@@ -33,32 +36,31 @@ def _check_path_readable(path):
 
 
 def _parse_event_log():
-    """Parse events.jsonl and return validity and last-event fields."""
+    """Parse events.jsonl and return validity and last-event fields.
+
+    Every non-empty line must be valid JSON for the log to be valid.
+    event_log_line_count counts only non-empty lines.
+    """
     if not EVENT_LOG.exists():
         return False, 0, None, None, None
 
     try:
-        lines = EVENT_LOG.read_text("utf-8").strip().splitlines()
+        raw = EVENT_LOG.read_text("utf-8")
     except (OSError, PermissionError):
         return False, 0, None, None, None
 
-    line_count = len(lines)
+    non_empty = [l.strip() for l in raw.splitlines() if l.strip()]
+    line_count = len(non_empty)
+
     if line_count == 0:
         return True, 0, None, None, None
 
     last_event = None
-    for line in reversed(lines):
-        stripped = line.strip()
-        if not stripped:
-            continue
+    for line in non_empty:
         try:
-            last_event = json.loads(stripped)
-            break
+            last_event = json.loads(line)
         except json.JSONDecodeError:
             return False, line_count, None, None, None
-
-    if last_event is None:
-        return True, line_count, None, None, None
 
     return (
         True,
