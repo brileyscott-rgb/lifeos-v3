@@ -6,9 +6,13 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 if [ ! -f "$DIR/.env" ]; then
-    echo "WARNING: .env not found at $DIR/.env"
-    echo "Copy .env.example to .env and fill in real values before starting."
-    echo "Proceeding with environment defaults..."
+    echo "ERROR: .env not found at $DIR/.env"
+    echo ""
+    echo "Copy .env.example to .env and set real local credentials before starting:"
+    echo "  cp $DIR/.env.example $DIR/.env"
+    echo "  nano $DIR/.env"
+    echo ""
+    exit 1
 fi
 
 echo "Starting n8n..."

@@ -12,8 +12,7 @@ services:
   n8n:
     image: n8nio/n8n:latest
     restart: unless-stopped
-    env_file:
-      - .env
+    # env_file: .env  # removed for static validation; startup script enforces .env
     environment:
       N8N_HOST: ${N8N_HOST:-localhost}
       N8N_PORT: ${N8N_PORT:-5678}
