@@ -101,15 +101,29 @@ def save_offset(offset):
         json.dump({'offset': offset}, f)
 
 
-def make_event_id(event_type):
+def make_event_id(event_type, existing_ids=None):
     now = datetime.now(timezone.utc)
     suffix = event_type.replace('.', '_')
-    return f"evt_{now.strftime('%Y%m%dT%H%M%S')}_{suffix}"
+    base = f"evt_{now.strftime('%Y%m%dT%H%M%SZ')}_{suffix}"
+    if existing_ids is None:
+        return base
+    candidate = base
+    counter = 1
+    while candidate in existing_ids:
+        candidate = f"{base}_{counter}"
+        counter += 1
+    return candidate
 
 
 def append_event(event_type, details):
     lines = validate_event_log()
-    event_id = make_event_id(event_type)
+    existing_ids = set()
+    for line in lines:
+        obj = json.loads(line)
+        eid = obj.get('event_id')
+        if eid:
+            existing_ids.add(eid)
+    event_id = make_event_id(event_type, existing_ids=existing_ids)
     event = {
         'event_id': event_id,
         'event_type': event_type,
@@ -162,7 +176,7 @@ def process_update(update):
         return
 
     if sender_id != ALLOWED_USER_ID:
-        print(f"Unauthorized sender: {sender_id}")
+        print("Unauthorized sender rejected")
         tg_api('sendMessage', {
             'chat_id': chat_id,
             'text': 'Unauthorized'
@@ -170,6 +184,7 @@ def process_update(update):
         append_event('chatops.telegram.unauthorized_sender_rejected', {
             'source': 'telegram',
             'sender_rejected': True,
+            'raw_message_logged': False,
         })
         return
 
@@ -217,7 +232,19 @@ def handle_capture(text, chat_id, sender_id, msg):
     with open(note_path, 'w') as f:
         f.write(note_content)
 
-    event_id = make_event_id('telegram_capture_received')
+    returned_event_id = append_event('chatops.telegram.capture_received', {
+        'capture_id': capture_id,
+        'source': 'telegram',
+        'capture_type': 'note',
+        'pending_review': True,
+        'bot_token_logged': False,
+        'docker_services_started': False,
+        'docker_images_pulled_or_built': False,
+        'real_secrets_added': False,
+        'old_lifeos_migration_started': False,
+        'n8n_workflow_activated': False,
+    })
+
     pending = f"""---
 capture_id: {capture_id}
 source: telegram
@@ -228,7 +255,7 @@ created_at: {now.isoformat()}
 processed_at:
 target_domain:
 target_project:
-event_id: {event_id}
+event_id: {returned_event_id}
 ---
 
 # Capture Summary
@@ -257,19 +284,6 @@ Captured by local Telegram bot handler.
 """
     with open(pending_path, 'w') as f:
         f.write(pending)
-
-    append_event('chatops.telegram.capture_received', {
-        'capture_id': capture_id,
-        'source': 'telegram',
-        'capture_type': 'note',
-        'pending_review': True,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'real_secrets_added': False,
-        'old_lifeos_migration_started': False,
-        'n8n_workflow_activated': False,
-    })
 
     tg_api('sendMessage', {
         'chat_id': chat_id,

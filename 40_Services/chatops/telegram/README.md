@@ -53,6 +53,30 @@ Runtime state (gitignored):
 - `--check` prints bot username only (never the token)
 - `.env` is in `.gitignore` and must never be staged
 
+## Secret Scan Rule
+
+Never scan or print `40_Services/config/telegram/.env`.
+
+Use these safe checks only:
+
+```bash
+git check-ignore -v /home/lifeos/40_Services/config/telegram/.env
+stat -c '%a %U %G %n' /home/lifeos/40_Services/config/telegram/.env
+```
+
+For tracked-file secret scans, explicitly scan tracked paths or use
+`--exclude='.env'`:
+
+```bash
+git ls-files 40_Services/chatops/telegram \
+  40_Services/config/telegram \
+  30_Capture \
+  50_Event_Log/events.jsonl \
+  .gitignore \
+| grep -v '40_Services/config/telegram/.env$' \
+| xargs grep -nE "([0-9]{8,}:[A-Za-z0-9_-]{20,}|ghp_|sk-|xox[baprs]-|AKIA|BEGIN OPENSSH|BEGIN RSA|BEGIN PRIVATE|TELEGRAM_BOT_TOKEN=[0-9])" 2>/dev/null || true
+```
+
 ## Not Implemented Yet
 
 - `/approve` and `/reject` commands

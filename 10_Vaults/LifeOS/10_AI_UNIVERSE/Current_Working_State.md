@@ -21,8 +21,16 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 - Reads ignored local `.env` for bot token and allowed user ID.
 - Source notes written to `30_Capture/notes/`, pending review files to `30_Capture/pending_review/`.
 - Events appended to `50_Event_Log/events.jsonl`.
-- No token committed, no n8n activation, no Docker service started.
-- Next step: run a real `/capture` test manually and review generated pending file.
+- Local Telegram capture bot security hardening completed:
+  - `.env` verified ignored and mode `600`
+  - Previous run printed old token during bad secret scan (now excluded from future scans)
+  - Capture frontmatter `event_id` now matches appended event exactly
+  - Event ID format standardized to `evt_YYYYMMDDTHHMMSSZ_<slug>` with UTC timestamps
+  - JSONL append collision detection added
+  - Unauthorized sender logging hardened (no raw text logged)
+  - Secret scan guidance added to README
+  - No token committed, no n8n activation, no Docker service started.
+- Next step: first real `/capture` test after cleanup commit.
 
 - LifeOS V3 source-of-truth plan created.
 - Phase 1 scaffold created.
@@ -75,9 +83,9 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 Foundation Lock-In:
 
-1. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --check` to verify connectivity.
-2. Send a `/capture test` message to the bot and run `--once` to process.
-3. Review the generated pending review file under `30_Capture/pending_review/`.
+1. Send a `/capture test` message to the bot on Telegram.
+2. Run `python3 40_Services/chatops/telegram/telegram_capture_bot.py --once` to process.
+3. Review generated files under `30_Capture/notes/` and `30_Capture/pending_review/`.
 4. Verify GitHub off-machine remote during routine backup checks.
 5. Continue manual Obsidian vault verification at `/home/lifeos/10_Vaults/LifeOS` from the AppImage launcher.
 6. Review n8n compose/config scaffold before any service activation.
