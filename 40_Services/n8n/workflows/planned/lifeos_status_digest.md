@@ -1,36 +1,49 @@
 # Planned Workflow: LifeOS Status Digest
 
+## Status
+
+**Not active.** Scaffold ready. Manual trigger only. No Telegram sending yet.
+
 ## Trigger
 
-Manual trigger or schedule (e.g., daily at 08:00).
+Manual trigger (n8n workflow editor "Workflow" → "Execute Workflow" button).
+
+No schedule, no webhook, no Telegram trigger.
 
 ## Flow
 
 ```
-Manual trigger or schedule
-  → execute safe status script
-  → collect metrics:
-     - pending captures count
-     - approved unprocessed count
-     - last event timestamp
-     - git dirty/clean status
-     - disk space
-  → format summary message
-  → send Telegram notification (future)
+Manual Trigger
+  → Execute Command node
+  → Command: python3 /home/lifeos/40_Services/scripts/lifeos_status.py --json
+  → inspect returned JSON in n8n output panel
 ```
 
 ## Reads
 
-- `30_Capture/pending_review/` — file count
-- `30_Capture/approved/` — file count
-- `50_Event_Log/events.jsonl` — last event timestamp
-- `git status --short` — dirty/clean
-- `df -h /` — disk space
+- `30_Capture/` file counts via `lifeos_status.py`
+- `50_Event_Log/events.jsonl` via `lifeos_status.py`
+- Git status via `lifeos_status.py`
+- Disk usage via `lifeos_status.py`
+- Docker n8n container status via `lifeos_status.py`
 
 ## Writes
 
-None yet. Future: Telegram message only.
+None. The status script is read-only.
 
-## Status
+## Future Steps
 
-**Not active.** No Telegram send credentials configured. No schedule enabled.
+Only after explicit user approval:
+
+- [ ] Schedule trigger (e.g., daily at 08:00)
+- [ ] Telegram notification of status digest
+- [ ] Dashboard panel in n8n
+- [ ] Event log summary aggregation
+- [ ] Capture queue alerts (pending count threshold)
+
+## Implementation Notes
+
+- The status script uses Python standard library only (no pip dependencies).
+- JSON output is the canonical machine format.
+- n8n can parse the JSON with a `Code` node or use the `Execute Command` node's built-in JSON parsing.
+- The script does not need environment variables or secrets.

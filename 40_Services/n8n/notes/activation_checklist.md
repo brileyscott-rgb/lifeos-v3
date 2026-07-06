@@ -29,6 +29,18 @@ cd /home/lifeos/40_Services/n8n
 - [ ] Never store credentials in workflow JSON
 - [ ] Get explicit user approval per workflow
 
+## First Workflow: LifeOS Status Digest
+
+1. Open n8n UI at `http://localhost:5678`
+2. Create a new workflow
+3. Add a "Manual Trigger" node
+4. Add an "Execute Command" node
+5. Set command: `python3 /home/lifeos/40_Services/scripts/lifeos_status.py --json`
+6. Execute the workflow manually
+7. Inspect the JSON output in the n8n output panel
+8. If successful, optionally save as `40_Services/n8n/workflows/exported/lifeos_status_digest.json`
+9. Get explicit user approval before adding schedule or Telegram notification
+
 ## Never
 
 - Do not expose n8n publicly

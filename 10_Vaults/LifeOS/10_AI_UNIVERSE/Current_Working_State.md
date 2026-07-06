@@ -69,6 +69,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Number-first pending review queue with safe phone-friendly commands**: Added `/p`, `/view`, `/a`, `/r` with numbered index (1‑based, oldest-first), `latest` keyword, and safe no-arg shortcuts. Existing `/list_pending`, `/approve <capture_id>`, `/reject <capture_id>` preserved. Helper functions: `list_pending_review_files()`, `load_pending_capture_summary()`, `format_pending_queue()`, `resolve_pending_index()`. Test payloads added for all new commands. Docs updated in README, approval_format.md, message_contract.md.
 
+- **Read-only LifeOS status script created**: `40_Services/scripts/lifeos_status.py` reports capture queue counts, event log status, git dirty state, disk usage, n8n container status, and scaffold presence. Supports `--text` and `--json` output. n8n planned workflow `lifeos_status_digest.md` updated with manual-trigger Execute Command step. Activation checklist updated with first-workflow steps.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -112,11 +114,22 @@ LifeOS V3 Automation Foundation Setup:
 - No model API calls active.
 - No n8n production workflows active yet.
 
+Completed:
+- Read-only LifeOS status script created at `40_Services/scripts/lifeos_status.py`.
+- Supports `--text` (default) and `--json` output modes.
+- Reports capture queue counts, event log status, git dirty state, disk usage,
+  n8n container status, and scaffold presence.
+- Read-only by design: no file modification, no git writes, no secret reads.
+- n8n planned workflow `lifeos_status_digest.md` updated with explicit manual-trigger
+  Execute Command step calling `python3 /home/lifeos/40_Services/scripts/lifeos_status.py --json`.
+- Activation checklist updated with first-workflow steps.
+- n8n verified running in Docker.
+
 Next:
-1. Live-test Telegram numbered review queue.
-2. Start n8n locally and verify UI loads.
-3. Create first read-only status workflow.
-4. Add capture shortcuts after queue is verified.
+1. Manual test: `python3 40_Services/scripts/lifeos_status.py --json`
+2. Open n8n UI, create manual-trigger Execute Command workflow.
+3. Capture queue processing (approved captures remain unprocessed).
+4. After status workflow verified, discuss schedule/notification additions.
 
 ## Do Not Do Yet
 
