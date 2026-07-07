@@ -76,7 +76,7 @@ Inactive/future:
 Non-operational status banner:
 
 - `/view`, `/a`, and `/r` are not live-validated.
-- Telegram button review UX is not implemented.
+- Telegram Review Button UX V1 is implemented/offline-tested but not live-validated and not active in the live capture-first service.
 - n8n Telegram workflows are not active.
 - Telegram webhooks are not registered.
 - Cloudflare tunnels are not active.

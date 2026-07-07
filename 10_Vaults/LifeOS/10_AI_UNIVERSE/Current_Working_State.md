@@ -119,6 +119,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
   - **Not live-validated.** Not active in the running capture-first service (`--poll --interval 3`, no `--allow-review`). Review commands and callback buttons are blocked in default capture-first mode. Live polling remains capture-first. Activating review mode requires `--allow-review` flag or `TELEGRAM_ALLOW_REVIEW=1` plus service restart.
   - No n8n, Docker, Cloudflare, webhook, AI proposal, controlled file processor, or service changes performed.
 
+- **Unified Docker Compose baseline created (2026-07-07)**: Single `40_Services/compose/lifeos.yaml` consolidates Status API, Action API, and n8n (scaffold-only) service definitions. Healthchecks, logging limits, `.env.example`, and security hardening applied uniformly across all services. n8n uses `manual-start-disabled` profile and `${VAR:-default}` env substitution — no `env_file`, no `WEBHOOK_URL`. Network uses `external: true` — existing `lifeos_internal` is preserved. Existing compose files at `40_Services/n8n/`, `40_Services/status_api/`, and `40_Services/compose/automation/` marked as legacy/reference. No containers started, built, or pulled. No service migration. Telegram bot remains systemd user service outside compose. Cloudflare tunnel, Telegram webhook, AI proposal pipeline, controlled file processor, n8n workflow activation, Telegram bot containerization, and Kubernetes/homelab expansion remain explicitly deferred.
+
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
 - **Telegram `/view`, `/a`, `/r` live validation deferred (2026-07-07)**: By user decision, live validation of `/view`, `/a`, and `/r` review commands was deferred to avoid blocking capture-first operating mode. Review commands are API-backed in code. If they fail in practice, they may be fixed later.
@@ -207,7 +209,7 @@ Next:
 2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Event_id now displayed in mutation response receipts.
 3. ~~**/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.~~ **Resolved (2026-07-07).** ALLOW_REVIEW_COMMANDS guard added; capture-first default enforced.
 4. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).** Inline Review Buttons V1 implemented and offline-tested.
-5. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
+5. ~~**Docker Compose baseline** — Stabilize docker-compose.yml for local services.~~ **Resolved (2026-07-07).** Unified `40_Services/compose/lifeos.yaml` created. Legacy compose files marked as reference. No containers started, built, or pulled.
 6. **n8n internal workflow design** — Build n8n workflows for internal automation.
 7. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
@@ -226,7 +228,7 @@ recorded here for visibility but are **not yet fixed**:
 8. ~~**Add Telegram bot offline tests** — No offline test suite exists for `telegram_capture_bot.py`. Unit tests would reduce risk during refactoring.~~ **Resolved (2026-07-07).** Offline unittest coverage exists under `40_Services/chatops/telegram/tests/`.
 9. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Successful mutation responses from Action API display the returned `event_id` in Telegram bot replies.
 10. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).** Inline Review Buttons V1 implemented and offline-tested via commits de76015, 797c127, 22616fb, f382bb9, 210dd83. 107/107 Telegram tests passing. Not live-validated; requires `--allow-review` to activate.
-11. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
+11. ~~**Docker Compose baseline** — Stabilize docker-compose.yml for local services.~~ **Resolved (2026-07-07).** Unified `40_Services/compose/lifeos.yaml` created. Legacy compose files marked as reference. No containers started, built, or pulled.
 12. **n8n internal workflow design** — Build n8n workflows for internal automation.
 13. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
