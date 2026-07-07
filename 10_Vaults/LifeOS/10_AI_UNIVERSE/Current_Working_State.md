@@ -121,6 +121,16 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Unified Docker Compose baseline created (2026-07-07)**: Single `40_Services/compose/lifeos.yaml` consolidates Status API, Action API, and n8n (scaffold-only) service definitions. Healthchecks, logging limits, `.env.example`, and security hardening applied uniformly across all services. n8n uses `manual-start-disabled` profile and `${VAR:-default}` env substitution — no `env_file`, no `WEBHOOK_URL`. Network uses `external: true` — existing `lifeos_internal` is preserved. Existing compose files at `40_Services/n8n/`, `40_Services/status_api/`, and `40_Services/compose/automation/` marked as legacy/reference. Static validation runbook at `40_Services/compose/README.md`. No containers started, built, or pulled. No service migration. Telegram bot remains systemd user service outside compose. Cloudflare tunnel, Telegram webhook, AI proposal pipeline, controlled file processor, n8n workflow activation, Telegram bot containerization, and Kubernetes/homelab expansion remain explicitly deferred.
 
+- **Docker runtime drift discovered during provenance audit (2026-07-07)**: The actual Docker runtime is ahead of the documented Compose activation plan. No Docker/systemd/service action was taken during the audit.
+  - `lifeos-status-api` is running from legacy `status_api` compose project (`40_Services/status_api/docker-compose.yml`), container-only 8787/tcp with no `127.0.0.1:8787` host mapping. `localhost:8787` is free and health check fails. Restart policy: `unless-stopped`.
+  - `lifeos-action-api` is running as a likely manual Docker container with no compose labels (compose project/name are empty). Healthy on `localhost:8788/health` returning `ok/read_write`. No restart policy (`restart: no`). This currently serves the live Telegram capture path.
+  - `n8n_n8n_1` is running from legacy `n8n` compose project, bound to `127.0.0.1:5678`. Restart policy: `unless-stopped`. n8n workflow activation status was not verified.
+  - `lifeos_internal` Docker network exists and contains all three containers: `lifeos-status-api` (172.20.0.2), `n8n_n8n_1` (172.20.0.3), `lifeos-action-api` (172.20.0.4).
+  - Ports: `127.0.0.1:5678` (n8n), `127.0.0.1:8788` (Action API) are bound. `127.0.0.1:8787` is free.
+  - Telegram bot remains capture-first systemd user service (`--poll --interval 3`, no `--allow-review`). Active and enabled on login.
+  - Unified compose baseline (`40_Services/compose/lifeos.yaml`) exists but does not yet own the running containers.
+  - **Action:** Do not build/start/stop/recreate any container until the drift reconciliation plan (`docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.md`) is reviewed and approved. Docs-only correction recorded in this entry and compose README.
+
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
 - **Telegram `/view`, `/a`, `/r` live validation deferred (2026-07-07)**: By user decision, live validation of `/view`, `/a`, and `/r` review commands was deferred to avoid blocking capture-first operating mode. Review commands are API-backed in code. If they fail in practice, they may be fixed later.
