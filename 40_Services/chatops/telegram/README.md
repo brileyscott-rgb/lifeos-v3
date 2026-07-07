@@ -170,7 +170,8 @@ files. It only calls Action API endpoints and formats replies.
 |---------|-------------------|--------|
 | `/p` | `GET /captures/pending` | GET |
 | `/list_pending` | `GET /captures/pending` | GET |
-| `/view <n>` | `GET /captures/pending/<n>` | GET |
+| `/view <n>` | `GET /captures/pending/<n>` | GET (summary + inline buttons) |
+| View Full Text (button) | `GET /captures/pending` → `GET /captures/<id>` | GET + GET (cap_ref resolved) |
 | `/view latest` | `GET /captures/pending/latest` | GET |
 | `/view <capture_id>` | `GET /captures/<capture_id>` | GET |
 | `/a <n>` or `/a latest` | `GET /captures/pending/<n>` then `POST /captures/<id>/approve` | GET + POST |
@@ -465,6 +466,47 @@ live capture validation.
 `--capture-test` updates the Telegram offset for the single processed update,
 same as `--once` and `--receive-test`. This prevents re-processing the same
 update in subsequent test runs.
+
+### Inline Review Buttons (V1)
+
+When review mode is active (`--allow-review` or `TELEGRAM_ALLOW_REVIEW=1`),
+`/view <n>` now sends a summary with inline keyboard buttons instead of the
+full capture content:
+
+```text
+Capture: cap_20260707_120000_a1b2c3_slug
+Status: pending_review
+Created: 2026-07-07T12:00:00Z
+Preview: My quick note about...
+
+[View Full Text]  [Approve]  [Reject]
+```
+
+Button flow (all stateless, HMAC-signed callback tokens, 10-minute expiry):
+
+- **[View Full Text]** — sends the complete capture content as a separate
+  message with no approve/reject buttons.
+- **[Approve]** — shows a confirmation prompt with [Confirm Approve] and
+  [Cancel]. No mutation occurs at this stage.
+- **[Reject]** — same confirmation pattern with [Confirm Reject] and [Cancel].
+- **[Confirm Approve]** — calls `POST /captures/<id>/approve` on the Action
+  API and shows the result with `event_id`.
+- **[Confirm Reject]** — calls `POST /captures/<id>/reject` on the Action API
+  and shows the result with `event_id`.
+- **[Cancel]** — removes the inline keyboard, no mutation.
+
+**Boundary enforcement:**
+- Every button path calls `answerCallbackQuery` exactly once.
+- Stale buttons tapped after review mode is disabled receive:
+  `Review mode is disabled. Please /p to refresh.`
+- Expired or invalid tokens receive:
+  `Invalid or expired button. Please /p to refresh.`
+- Captures that are no longer pending receive:
+  `Capture no longer pending. Please /p to refresh.`
+- All mutations route through the Action API — the Telegram bot never
+  directly reads, moves, or writes capture files.
+- Callback tokens are sender-bound (different user → MAC mismatch) and
+  action-bound (approve token cannot be reused as reject).
 
 ## Review Test Mode (`--review-test`)
 
