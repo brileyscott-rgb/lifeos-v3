@@ -131,7 +131,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
   - Unified compose baseline (`40_Services/compose/lifeos.yaml`) exists but does not yet own the running containers.
   - **Action:** Do not build/start/stop/recreate any container until the drift reconciliation plan (`docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.md`) is reviewed and approved. Docs-only correction recorded in this entry and compose README.
 
-- **Status API localhost mapping/adoption plan created (2026-07-07)**: `docs/superpowers/plans/2026-07-07-status-api-localhost-mapping-plan.md` documents how to reconcile the running `lifeos-status-api` container to make it reachable at `localhost:8787` via unified compose adoption. No runtime changes made. Future approved action should recreate/adopt Status API under unified compose to expose `localhost:8787`. Action API remains untouched. n8n remains tolerated temporary drift.
+- **Status API adopted under unified compose with localhost:8787 mapping (2026-07-07)**: Legacy `lifeos-status-api` (from `status_api` compose project) was stopped, removed, and replaced with a unified compose container built from `40_Services/compose/lifeos.yaml`. Status API is now reachable at `localhost:8787/health` and `localhost:8787/status`. Action API was not touched. n8n remains tolerated localhost-only drift. Telegram bot remained capture-first and was not restarted. No public ingress, no WEBHOOK_URL, no Cloudflare. Unified compose now owns Status API. Action API adoption remains a future gated phase requiring separate approval.
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
