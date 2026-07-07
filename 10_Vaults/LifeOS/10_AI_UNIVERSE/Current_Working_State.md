@@ -107,7 +107,17 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram stabilization activation complete (2026-07-07)**: Restarted `lifeos-telegram-bot.service` after HEAD `6aeabd2` — all 5 reviewed commits (bf79a53, 0f1cff9, 9785064, b9e075f, 6aeabd2) are now active in the live polling service. Service remains capture-first (`--poll --interval 3`, no `--allow-review`). Review commands are blocked in live polling by default. Event_id receipt code is active on successful mutation responses. No live `/view`, `/a`, `/r` review command validation performed. n8n/Docker/Cloudflare remain deferred. 189 offline tests passing. All preflight checks clean.
 
-## Active Deferrals
+- **Telegram Review Button UX V1 implemented and offline-tested (2026-07-07)**: Inline keyboard buttons added to the Telegram review flow. `/view <n>` now sends a summary with inline buttons ([View Full Text], [Approve], [Reject]) instead of full capture content. Button flow uses stateless HMAC-signed callback tokens (10-minute expiry, sender-bound, action-bound, capture-bound) embedded in `callback_data` under 64 bytes. All mutations route through the Action API — the Telegram bot never directly reads, moves, or writes capture files. Implemented across 4 commits:
+  - `de76015` — stateless callback token helpers (`_hmac_key`, `_make_cap_ref`, `_make_token`, `_verify_token`) with 13 offline tests
+  - `797c127` — callback query dispatch (`process_callback_query`) with auth, review-mode guard, cancel handler, and 6 dispatch tests + 2 boundary tests
+  - `22616fb` — `/view` summary + buttons and view-full flow with 7 UI tests
+  - `f382bb9` — approve/reject confirmation intent and confirm mutation flow with 11 intent/confirm tests
+  - `210dd83` — README docs documenting inline review button flow
+  - Design spec: `docs/superpowers/specs/2026-07-07-telegram-review-button-ux-design.md` (status: Final/Implemented)
+  - Implementation plan: `docs/superpowers/plans/2026-07-07-telegram-review-button-ux-v1.md`
+  - Offline tests: 107/107 Telegram bot tests passing (17 new for buttons, 90 existing still passing)
+  - **Not live-validated.** Not active in the running capture-first service (`--poll --interval 3`, no `--allow-review`). Review commands and callback buttons are blocked in default capture-first mode. Live polling remains capture-first. Activating review mode requires `--allow-review` flag or `TELEGRAM_ALLOW_REVIEW=1` plus service restart.
+  - No n8n, Docker, Cloudflare, webhook, AI proposal, controlled file processor, or service changes performed.
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
@@ -195,8 +205,8 @@ Completed:
 Next:
 1. ~~**Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.~~ **Resolved (2026-07-07).** Centralized `append_event` in bot to enforce local operational/telemetry logging only.
 2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Event_id now displayed in mutation response receipts.
-3. **/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.
-4. **Telegram review button UX** — Add inline button-based review UI.
+3. ~~**/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.~~ **Resolved (2026-07-07).** ALLOW_REVIEW_COMMANDS guard added; capture-first default enforced.
+4. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).** Inline Review Buttons V1 implemented and offline-tested.
 5. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
 6. **n8n internal workflow design** — Build n8n workflows for internal automation.
 7. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
@@ -215,7 +225,7 @@ recorded here for visibility but are **not yet fixed**:
 7. ~~**Validate /view, /a, /r or add capture-only polling guard** — Until review commands are validated, a guard could prevent the polling service from processing review commands (capture-only mode).~~ **Resolved (2026-07-07).** Added `ALLOW_REVIEW_COMMANDS` guard (default: False) and `--allow-review` CLI flag to enforce capture-first polling by default.
 8. ~~**Add Telegram bot offline tests** — No offline test suite exists for `telegram_capture_bot.py`. Unit tests would reduce risk during refactoring.~~ **Resolved (2026-07-07).** Offline unittest coverage exists under `40_Services/chatops/telegram/tests/`.
 9. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Successful mutation responses from Action API display the returned `event_id` in Telegram bot replies.
-10. **Telegram review button UX** — Add inline button-based review UI.
+10. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).** Inline Review Buttons V1 implemented and offline-tested via commits de76015, 797c127, 22616fb, f382bb9, 210dd83. 107/107 Telegram tests passing. Not live-validated; requires `--allow-review` to activate.
 11. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
 12. **n8n internal workflow design** — Build n8n workflows for internal automation.
 13. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
