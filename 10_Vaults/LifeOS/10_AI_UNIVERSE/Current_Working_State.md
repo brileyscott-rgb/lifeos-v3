@@ -97,6 +97,12 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Action API mutation contract hardened (2026-07-07)**: ca41db0 — event_id envelope added, capture filename collision safety added, request size limits added, symbolic errors added, best-effort rollback added. event_id response contract is partly resolved at API level. Telegram receipts still need to display event_id if not already done. Action API tests: 103 passing.
 
+- **Telegram bot event_id receipts added (2026-07-07)**: Successful mutation responses from Action API display the returned `event_id` receipt in Telegram bot replies for `/capture`, `/approve`, `/reject`, `/a`, and `/r` commands. Offline tests cover presence and absence of event_id.
+
+- **Telegram bot telemetry boundary cleaned up (2026-07-07)**: Centralized local logging via `append_event` in the bot to enforce local operational/telemetry logging only (unauthorized sender rejected, help requested), raising `ValueError` on mutation events. Extracted co_names assertion tests to ensure no active command handler calls `append_event` directly.
+
+- **Telegram polling mode decision implemented (2026-07-07)**: Enforced capture-first default polling mode. Added `ALLOW_REVIEW_COMMANDS` guard (default: False) and `--allow-review` CLI flag. In default mode, all review commands are blocked with a safe no-action message. Added offline tests verifying review command blocking by default and authorization when explicitly enabled.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -201,10 +207,10 @@ recorded here for visibility but are **not yet fixed**:
 3. ~~**Harden Action API mutation/event atomicity** — Action API capture creation and event logging are not wrapped in an atomic transaction. A crash between file write and event append could leave inconsistent state.~~ **Resolved (2026-07-07).** Critical Phase 3 added best-effort rollback and success-only-after-file-and-event semantics for create/approve/reject.
 4. ~~**Fix filename collision risk in Action API capture creation** — The current timestamp-based capture filename scheme could collide if two captures arrive within the same second.~~ **Resolved (2026-07-07).** Capture filenames now include random suffixes and use exclusive create semantics.
 5. ~~**Clarify Action API localhost vs Docker-network deployment contract** — The Action API README describes a Docker-based deployment while the current operating mode runs it outside Docker on localhost. The deployment contract needs clarification.~~ **Resolved (2026-07-07).** Action API docs now state the active local Telegram contract is `http://localhost:8788`; Docker service DNS is future/inactive until Compose/n8n contract finalization.
-6. **Reconcile bot telemetry event logging with docs** — The docs claim the Telegram bot never writes event log entries, but some bot telemetry events may still be written by legacy/local paths. The code and docs need alignment.
-7. **Validate /view, /a, /r or add capture-only polling guard** — Until review commands are validated, a guard could prevent the polling service from processing review commands (capture-only mode).
+6. ~~**Reconcile bot telemetry event logging with docs** — The docs claim the Telegram bot never writes event log entries, but some bot telemetry events may still be written by legacy/local paths.~~ **Resolved (2026-07-07).** Centralized `append_event` in bot to strictly enforce local operational/telemetry logging only, raising `ValueError` on any mutation.
+7. ~~**Validate /view, /a, /r or add capture-only polling guard** — Until review commands are validated, a guard could prevent the polling service from processing review commands (capture-only mode).~~ **Resolved (2026-07-07).** Added `ALLOW_REVIEW_COMMANDS` guard (default: False) and `--allow-review` CLI flag to enforce capture-first polling by default.
 8. ~~**Add Telegram bot offline tests** — No offline test suite exists for `telegram_capture_bot.py`. Unit tests would reduce risk during refactoring.~~ **Resolved (2026-07-07).** Offline unittest coverage exists under `40_Services/chatops/telegram/tests/`.
-9. **Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.
+9. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Successful mutation responses from Action API display the returned `event_id` in Telegram bot replies.
 10. **Telegram review button UX** — Add inline button-based review UI.
 11. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
 12. **n8n internal workflow design** — Build n8n workflows for internal automation.
