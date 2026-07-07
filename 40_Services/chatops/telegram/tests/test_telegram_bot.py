@@ -794,5 +794,98 @@ class TestCallbackTokenHelpers(unittest.TestCase):
         self.assertIsNone(result)
 
 
+
+class TestCallbackQueryDispatch(unittest.TestCase):
+    """Callback query handler dispatch and safety gates."""
+
+    def make_callback_update(self, callback_data, sender_id=AUTHORIZED_SENDER, chat_id=CHAT_ID, msg_id=100):
+        return {
+            "update_id": 2,
+            "callback_query": {
+                "id": "cb_test_1",
+                "from": {"id": sender_id, "first_name": "TestUser"},
+                "message": {
+                    "message_id": msg_id,
+                    "chat": {"id": chat_id},
+                },
+                "data": callback_data,
+            }
+        }
+
+    def make_valid_token(self, action, sender_id=AUTHORIZED_SENDER):
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            cap_ref = bot._make_cap_ref("cap_test_123")
+            return bot._make_token(action, sender_id, cap_ref)
+
+    @patch.object(bot, 'tg_api')
+    def test_unauthorized_callback_answers_and_returns(self, mock_tg):
+        cb_data = self.make_valid_token("n")
+        update = self.make_callback_update(cb_data, sender_id=UNAUTHORIZED_SENDER)
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_callback_query(update)
+        mock_tg.assert_called_once_with("answerCallbackQuery", {"callback_query_id": "cb_test_1"})
+
+    @patch.object(bot, 'tg_api')
+    def test_review_disabled_answers_with_text_and_returns(self, mock_tg):
+        cb_data = self.make_valid_token("n")
+        update = self.make_callback_update(cb_data)
+        bot.ALLOW_REVIEW_COMMANDS = False
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_callback_query(update)
+        mock_tg.assert_called_once_with("answerCallbackQuery", {
+            "callback_query_id": "cb_test_1",
+            "text": "Review mode is disabled. Please /p to refresh."
+        })
+
+    @patch.object(bot, 'tg_api')
+    def test_invalid_token_answers_with_text_and_returns(self, mock_tg):
+        update = self.make_callback_update("invalid|data|here|too|short")
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_callback_query(update)
+        mock_tg.assert_called_once_with("answerCallbackQuery", {
+            "callback_query_id": "cb_test_1",
+            "text": "Invalid or expired button. Please /p to refresh."
+        })
+
+    @patch.object(bot, 'tg_api')
+    def test_cancel_action_answers_no_text_and_handles(self, mock_tg):
+        cb_data = self.make_valid_token("n")
+        update = self.make_callback_update(cb_data)
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'BOT_TOKEN', "test_token"):
+                with patch.object(bot, '_handle_cancel') as mock_cancel:
+                    bot.process_callback_query(update)
+                    mock_cancel.assert_called_once_with(CHAT_ID, 100)
+                    mock_tg.assert_called_once_with("answerCallbackQuery", {"callback_query_id": "cb_test_1"})
+
+    @patch.object(bot, 'tg_api')
+    def test_success_path_answers_once_no_text(self, mock_tg):
+        """Valid token + review enabled = answerCallbackQuery called once with no text."""
+        cb_data = self.make_valid_token("n")
+        update = self.make_callback_update(cb_data)
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'BOT_TOKEN', "test_token"):
+                with patch.object(bot, '_handle_cancel'):
+                    bot.process_callback_query(update)
+        self.assertEqual(mock_tg.call_count, 1)
+        args = mock_tg.call_args[0]
+        self.assertEqual(args[0], "answerCallbackQuery")
+        self.assertNotIn("text", args[1])
+
+    @patch.object(bot, 'tg_api')
+    def test_process_update_dispatches_callback_query(self, mock_tg):
+        """process_update routes callback_query updates to process_callback_query."""
+        cb_data = self.make_valid_token("n")
+        update = self.make_callback_update(cb_data)
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'process_callback_query') as mock_dispatch:
+                bot.process_update(update)
+                mock_dispatch.assert_called_once_with(update)
+
+
 if __name__ == '__main__':
     unittest.main()

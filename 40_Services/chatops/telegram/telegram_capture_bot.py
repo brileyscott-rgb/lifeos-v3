@@ -286,7 +286,110 @@ def slugify(text):
     return s[:40]
 
 
+def _resolve_cap_ref(cap_ref):
+    """Resolve cap_ref to capture_id via GET /captures/pending.
+    Returns (capture_id | None, error_text | None).
+    """
+    result = call_action_api("/captures/pending")
+    if result is None or not result.get("success"):
+        return None, "Capture list unavailable."
+    pending = result.get("pending", [])
+    matches = []
+    for item in pending:
+        cid = item.get("capture_id", "")
+        if _make_cap_ref(cid) == cap_ref:
+            matches.append(cid)
+    if len(matches) == 0:
+        return None, "Capture no longer pending. Please /p to refresh."
+    if len(matches) > 1:
+        return None, "Ambiguous capture reference. Please /p to refresh."
+    return matches[0], None
+
+
+def _handle_cancel(chat_id, msg_id):
+    tg_api("editMessageReplyMarkup", {
+        "chat_id": chat_id,
+        "message_id": msg_id,
+        "reply_markup": {"inline_keyboard": []},
+    })
+
+
+def process_callback_query(update):
+    cb = update.get("callback_query", {})
+    sender_id = cb.get("from", {}).get("id")
+    chat_id = cb.get("message", {}).get("chat", {}).get("id")
+    msg_id = cb.get("message", {}).get("message_id")
+    callback_data = cb.get("data", "")
+    cb_id = cb.get("id")
+
+    # 1. Authorization gate
+    if not is_authorized_sender(sender_id):
+        tg_api("answerCallbackQuery", {"callback_query_id": cb_id})
+        return
+
+    # 2. Review-mode guard — protects against stale buttons
+    if not ALLOW_REVIEW_COMMANDS:
+        tg_api("answerCallbackQuery", {
+            "callback_query_id": cb_id,
+            "text": "Review mode is disabled. Please /p to refresh.",
+        })
+        return
+
+    # 3. Token verification (expiry, sender mismatch, etc.)
+    token = _verify_token(sender_id, callback_data)
+    if token is None:
+        tg_api("answerCallbackQuery", {
+            "callback_query_id": cb_id,
+            "text": "Invalid or expired button. Please /p to refresh.",
+        })
+        return
+
+    # 4. Answer the callback (no text) to stop the loading spinner.
+    tg_api("answerCallbackQuery", {"callback_query_id": cb_id})
+
+    action = token["action"]
+    cap_ref = token["cap_ref"]
+
+    if action == "n":
+        _handle_cancel(chat_id, msg_id)
+    elif action == "v":
+        _handle_view_full(chat_id, cap_ref)
+    elif action == "a":
+        _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref)
+    elif action == "r":
+        _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref)
+    elif action == "ca":
+        _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref)
+    elif action == "cr":
+        _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref)
+
+
+def _handle_view_full(chat_id, cap_ref):
+    pass
+
+
+def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
+    pass
+
+
+def _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref):
+    pass
+
+
+def _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref):
+    pass
+
+
+def _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref):
+    pass
+
+
 def process_update(update):
+    # Callback queries are dispatched before message commands
+    if "callback_query" in update:
+        process_callback_query(update)
+        return
+
     sender_id, chat_id = extract_sender_id(update)
     if sender_id is None or chat_id is None:
         return

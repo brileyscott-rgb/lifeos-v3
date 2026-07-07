@@ -216,5 +216,41 @@ class TelegramBoundaryTests(unittest.TestCase):
                     self.assertNotIn(token, source)
 
 
+
+class TestCallbackBoundaries(unittest.TestCase):
+    def make_callback_update(self, callback_data, sender_id=AUTHORIZED_SENDER):
+        return {
+            "update_id": 2,
+            "callback_query": {
+                "id": "cb_test_1",
+                "from": {"id": sender_id, "first_name": "TestUser"},
+                "message": {
+                    "message_id": 100,
+                    "chat": {"id": CHAT_ID},
+                },
+                "data": callback_data,
+            }
+        }
+
+    def test_callback_handler_does_not_contain_filesystem_ops(self):
+        source = inspect.getsource(bot.process_callback_query)
+        forbidden = [
+            "open(", "os.rename", "shutil.move", "CAPTURE_DIR",
+            "PENDING_DIR", "APPROVED_DIR", "REJECTED_DIR",
+        ]
+        for token in forbidden:
+            with self.subTest(token=token):
+                self.assertNotIn(token, source)
+
+    @patch.object(bot, 'tg_api')
+    def test_cancel_handler_uses_editMessageReplyMarkup(self, mock_tg):
+        bot._handle_cancel(CHAT_ID, 100)
+        mock_tg.assert_called_once_with("editMessageReplyMarkup", {
+            "chat_id": CHAT_ID,
+            "message_id": 100,
+            "reply_markup": {"inline_keyboard": []},
+        })
+
+
 if __name__ == '__main__':
     unittest.main()
