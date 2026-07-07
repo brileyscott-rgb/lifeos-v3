@@ -107,6 +107,9 @@ Thumbs.db
 40_Services/n8n/.n8n/
 40_Services/n8n/logs/
 
+# Docker Compose runtime state
+40_Services/compose/.env
+
 # AI worker runtime data
 40_Services/ai_worker/logs/*.log
 40_Services/ai_worker/job_queue.sqlite
