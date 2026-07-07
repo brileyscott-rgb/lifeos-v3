@@ -81,6 +81,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram `/status` made fully read-only (2026-07-06)**: Removed the `append_event('chatops.telegram.status_requested')` call from `handle_status()` in `telegram_capture_bot.py`. `/status` no longer mutates the event log from the Telegram bot side. README corrected to state "No event log mutation" instead of "Appends event".
 
+- **Telegram receive-test live validation passed (2026-07-06)**: Validated `--receive-test` end-to-end against live Telegram bot `@my_lifeOS_08bot`. Sent `/receive_test` from Telegram mobile. `--receive-test` safely acknowledged the update without dispatching normal commands (`/capture`, `/status`, `/approve`, `/reject`, `/list_pending`, etc.). Bot replied: `LifeOS receive test OK. No action was taken.` `30_Capture/` file list unchanged (0 diff). `50_Event_Log/events.jsonl` stayed at 25 lines — no capture files created, no event log entries appended. `--check` and `py_compile` passed. No `/capture`, `/status`, n8n, Docker, tunnel, webhook, AI, proposal, or file processor actions invoked. Commit: `46e1f0c`.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
