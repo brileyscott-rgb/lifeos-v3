@@ -538,6 +538,11 @@ def process_update(update):
     if '@' in cmd:
         cmd = cmd.split('@')[0]
 
+    m = re.match(r'^/(r|a|view)(\d+)$', cmd)
+    if m:
+        text = f'/{m.group(1)} {m.group(2)}'
+        cmd = f'/{m.group(1)}'
+
     review_cmds = {'/p', '/view', '/a', '/r', '/list_pending', '/approve', '/reject'}
     if cmd in review_cmds and not ALLOW_REVIEW_COMMANDS:
         tg_api('sendMessage', {
@@ -681,7 +686,7 @@ def handle_approve(text, chat_id):
         return
     if not result.get('success'):
         error = result.get('error', 'unknown')
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_review_failed(error)})
         return
     cid = result.get("capture_id", capture_id)
     event_id = result.get('event_id')
@@ -710,7 +715,7 @@ def handle_reject(text, chat_id):
         return
     if not result.get('success'):
         error = result.get('error', 'unknown')
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_review_failed(error)})
         return
     cid = result.get("capture_id", capture_id)
     event_id = result.get('event_id')
@@ -832,7 +837,7 @@ def handle_a(text, chat_id):
         return
     if not approve_result.get('success'):
         error = approve_result.get('error', 'unknown')
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_review_failed(error)})
         return
     cid = approve_result.get("capture_id", capture_id)
     event_id = approve_result.get('event_id')
@@ -884,7 +889,7 @@ def handle_r(text, chat_id):
         return
     if not reject_result.get('success'):
         error = reject_result.get('error', 'unknown')
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_review_failed(error)})
         return
     cid = reject_result.get("capture_id", capture_id)
     event_id = reject_result.get('event_id')
@@ -994,6 +999,11 @@ def process_capture_test_update(update):
     if '@' in cmd:
         cmd = cmd.split('@')[0]
 
+    m = re.match(r'^/(r|a|view)(\d+)$', cmd)
+    if m:
+        text = f'/{m.group(1)} {m.group(2)}'
+        cmd = f'/{m.group(1)}'
+
     if cmd == '/capture':
         handle_capture(text, chat_id, sender_id, msg)
     else:
@@ -1022,6 +1032,11 @@ def process_review_test_update(update):
     cmd = (text or '').strip().lower().split()[0] if text else ''
     if '@' in cmd:
         cmd = cmd.split('@')[0]
+
+    m = re.match(r'^/(r|a|view)(\d+)$', cmd)
+    if m:
+        text = f'/{m.group(1)} {m.group(2)}'
+        cmd = f'/{m.group(1)}'
 
     if cmd == '/p':
         handle_p(chat_id)

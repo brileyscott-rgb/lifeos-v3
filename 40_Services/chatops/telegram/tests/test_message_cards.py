@@ -138,6 +138,26 @@ class TestFormatUnauthorized(unittest.TestCase):
         self.assertNotIn("TELEGRAM", result.upper())
 
 
+class TestFormatReviewFailed(unittest.TestCase):
+    def test_says_no_action(self):
+        result = cards.format_review_failed("not_found")
+        self.assertIn("NO ACTION", result)
+        self.assertIn("LIFEOS", result)
+
+    def test_shows_reason(self):
+        result = cards.format_review_failed("capture_not_found")
+        self.assertIn("capture not found", result.lower())
+
+    def test_converts_underscores_to_spaces(self):
+        result = cards.format_review_failed("mutation_failed")
+        self.assertIn("mutation failed", result.lower())
+
+    def test_says_no_files_moved(self):
+        result = cards.format_review_failed("not_found")
+        self.assertIn("No capture was rejected", result)
+        self.assertIn("No files were moved", result)
+
+
 class TestFormatApiUnavailable(unittest.TestCase):
     def test_action_api_unavailable_says_no_action(self):
         result = cards.format_action_api_unavailable()

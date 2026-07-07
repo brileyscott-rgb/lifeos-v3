@@ -284,6 +284,39 @@ class TestReviewTestBlocksNonReview(unittest.TestCase):
 
     @patch.object(bot, 'tg_api')
     @patch.object(bot, 'append_event')
+    def test_review_test_allows_view_compact(self, mock_evt, mock_tg):
+        update = make_update('/view1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_view') as mock_v:
+                bot.process_review_test_update(update)
+                mock_v.assert_called_once()
+                text_arg = mock_v.call_args[0][0]
+                self.assertEqual(text_arg, '/view 1')
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'append_event')
+    def test_review_test_allows_a_compact(self, mock_evt, mock_tg):
+        update = make_update('/a1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_a') as mock_a:
+                bot.process_review_test_update(update)
+                mock_a.assert_called_once()
+                text_arg = mock_a.call_args[0][0]
+                self.assertEqual(text_arg, '/a 1')
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'append_event')
+    def test_review_test_allows_r_compact(self, mock_evt, mock_tg):
+        update = make_update('/r1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_review_test_update(update)
+                mock_r.assert_called_once()
+                text_arg = mock_r.call_args[0][0]
+                self.assertEqual(text_arg, '/r 1')
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'append_event')
     def test_review_test_allows_a(self, mock_evt, mock_tg):
         update = make_update('/a 1')
         with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
@@ -570,7 +603,8 @@ class TestPollingModeControls(unittest.TestCase):
     @patch.object(bot, 'tg_api')
     def test_review_commands_blocked_by_default(self, mock_tg):
         bot.ALLOW_REVIEW_COMMANDS = False
-        review_commands = ['/p', '/view 1', '/a 1', '/r 1', '/approve cap_1', '/reject cap_1', '/list_pending']
+        review_commands = ['/p', '/view 1', '/a 1', '/r 1', '/view1', '/a1', '/r1',
+                           '/approve cap_1', '/reject cap_1', '/list_pending']
 
         for cmd in review_commands:
             mock_tg.reset_mock()

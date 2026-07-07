@@ -257,5 +257,134 @@ class TestCallbackBoundaries(unittest.TestCase):
         })
 
 
+class TestCompactAliases(unittest.TestCase):
+    """Compact mobile aliases: /r1 == /r 1, /a1 == /a 1, /view1 == /view 1."""
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_r1_dispatches_to_handle_r(self, mock_api, mock_tg):
+        update = make_update('/r1')
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_update(update)
+                mock_r.assert_called_once()
+                text_arg = mock_r.call_args[0][0]
+                self.assertEqual(text_arg, '/r 1')
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_a1_dispatches_to_handle_a(self, mock_api, mock_tg):
+        update = make_update('/a1')
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_a') as mock_a:
+                bot.process_update(update)
+                mock_a.assert_called_once()
+                text_arg = mock_a.call_args[0][0]
+                self.assertEqual(text_arg, '/a 1')
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_view1_dispatches_to_handle_view(self, mock_api, mock_tg):
+        update = make_update('/view1')
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_view') as mock_v:
+                bot.process_update(update)
+                mock_v.assert_called_once()
+                text_arg = mock_v.call_args[0][0]
+                self.assertEqual(text_arg, '/view 1')
+
+    @patch.object(bot, 'tg_api')
+    def test_r1_review_test_dispatches_to_handle_r(self, mock_tg):
+        update = make_update('/r1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_review_test_update(update)
+                mock_r.assert_called_once()
+                text_arg = mock_r.call_args[0][0]
+                self.assertEqual(text_arg, '/r 1')
+
+    @patch.object(bot, 'tg_api')
+    def test_a1_review_test_dispatches_to_handle_a(self, mock_tg):
+        update = make_update('/a1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_a') as mock_a:
+                bot.process_review_test_update(update)
+                mock_a.assert_called_once()
+                text_arg = mock_a.call_args[0][0]
+                self.assertEqual(text_arg, '/a 1')
+
+    @patch.object(bot, 'tg_api')
+    def test_view1_review_test_dispatches_to_handle_view(self, mock_tg):
+        update = make_update('/view1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_view') as mock_v:
+                bot.process_review_test_update(update)
+                mock_v.assert_called_once()
+                text_arg = mock_v.call_args[0][0]
+                self.assertEqual(text_arg, '/view 1')
+
+    @patch.object(bot, 'tg_api')
+    def test_r1_still_blocked_when_review_disabled(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/r1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_update(update)
+                mock_r.assert_not_called()
+
+
+class TestErrorMessagesUseCards(unittest.TestCase):
+    """Error messages in approve/reject handlers use Operator Cards."""
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_handle_approve_error_uses_card(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': False, 'error': 'not_found'}
+        bot.handle_approve('/approve cap_xxx', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+        self.assertIn('not found', text.lower())
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_handle_reject_error_uses_card(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': False, 'error': 'capture_not_found'}
+        bot.handle_reject('/reject cap_xxx', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+        self.assertIn('capture not found', text.lower())
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_handle_r_error_uses_card(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_1'}},
+            {'success': False, 'error': 'not_found'},
+        ]
+        bot.handle_r('/r 1', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+        self.assertIn('not found', text.lower())
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_handle_a_error_uses_card(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_1'}},
+            {'success': False, 'error': 'mutation_failed'},
+        ]
+        bot.handle_a('/a 1', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+        self.assertIn('mutation failed', text.lower())
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -147,6 +147,13 @@ def format_pending_queue(items, count=None, mode="capture-first", now=None):
     return format_box("REVIEW QUEUE", rows=rows, body=body, footer=footer)
 
 
+def format_review_failed(reason):
+    reason_label = reason.replace("_", " ")
+    rows = [("STATE", "NO ACTION"), ("REASON", reason_label)]
+    footer = "No capture was rejected. No files were moved."
+    return format_box("REVIEW FAILED", rows=rows, footer=footer)
+
+
 def format_review_disabled():
     """Message shown when review commands are blocked in capture-first mode."""
     body = "Review commands are disabled in capture-first mode."
