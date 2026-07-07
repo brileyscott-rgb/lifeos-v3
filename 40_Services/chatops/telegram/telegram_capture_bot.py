@@ -365,7 +365,26 @@ def process_callback_query(update):
 
 
 def _handle_view_full(chat_id, cap_ref):
-    pass
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    result = call_action_api(f"/captures/{capture_id}")
+    if result is None or not result.get("success"):
+        tg_api("sendMessage", {
+            "chat_id": chat_id,
+            "text": "Capture not found or unavailable. No action was taken.",
+        })
+        return
+
+    capture = result["capture"]
+    content = capture.get("content", "")
+    max_len = 3500
+    if len(content) > max_len:
+        content = content[:max_len] + "\n... (truncated)"
+
+    tg_api("sendMessage", {"chat_id": chat_id, "text": content})
 
 
 def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
@@ -635,32 +654,60 @@ def handle_p(chat_id):
 def handle_view(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip():
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /view <number> or /view latest or /view <capture_id>'})
+        tg_api("sendMessage", {"chat_id": chat_id, "text": "Usage: /view <number> or /view latest or /view <capture_id>"})
         return
     ref = parts[1].strip()
-    if ref == 'latest':
-        endpoint = '/captures/pending/latest'
+    if ref == "latest":
+        endpoint = "/captures/pending/latest"
     elif ref.isdigit():
-        endpoint = f'/captures/pending/{ref}'
-    elif ref.startswith('cap_'):
-        endpoint = f'/captures/{ref}'
+        endpoint = f"/captures/pending/{ref}"
+    elif ref.startswith("cap_"):
+        endpoint = f"/captures/{ref}"
     else:
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Invalid argument. Use a number, "latest", or a capture_id.'})
+        tg_api("sendMessage", {"chat_id": chat_id, "text": "Invalid argument. Use a number, \"latest\", or a capture_id."})
         return
     result = call_action_api(endpoint)
-    if result is None or not result.get('success'):
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found or unavailable. No action was taken.'})
+    if result is None or not result.get("success"):
+        tg_api("sendMessage", {"chat_id": chat_id, "text": "Capture not found or unavailable. No action was taken."})
         return
-    capture = result['capture']
-    cid = capture.get('capture_id', '')
-    ctype = capture.get('status', '')
-    created = capture.get('created_at', '')
-    content = capture.get('content', '')
-    max_len = 3500
-    if len(content) > max_len:
-        content = content[:max_len] + '\n... (truncated)'
-    view_text = f"Capture: {cid}\nStatus: {ctype}\nCreated: {created}\n\n{content}"
-    tg_api('sendMessage', {'chat_id': chat_id, 'text': view_text})
+
+    capture = result["capture"]
+    cid = capture.get("capture_id", "")
+    ctype = capture.get("status", "")
+    created = capture.get("created_at", "")
+    content = capture.get("content", "")
+
+    # Build summary (first non-empty content line, truncated to 120 chars)
+    preview = _extract_preview_line(content)[:120]
+
+    summary = (
+        f"Capture: {cid}\n"
+        f"Status: {ctype}\n"
+        f"Created: {created}\n"
+        f"Preview: {preview}"
+    )
+
+    # Generate tokens for view-full, approve-intent, reject-intent
+    cap_ref = _make_cap_ref(cid)
+    token_v = _make_token("v", ALLOWED_USER_ID, cap_ref)
+    token_a = _make_token("a", ALLOWED_USER_ID, cap_ref)
+    token_r = _make_token("r", ALLOWED_USER_ID, cap_ref)
+
+    inline_kb = {
+        "inline_keyboard": [
+            [{"text": "View Full Text", "callback_data": token_v}],
+            [
+                {"text": "Approve", "callback_data": token_a},
+                {"text": "Reject", "callback_data": token_r},
+            ],
+        ]
+    }
+
+    tg_api("sendMessage", {
+        "chat_id": chat_id,
+        "text": summary,
+        "reply_markup": inline_kb,
+    })
 
 
 def handle_a(text, chat_id):

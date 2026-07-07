@@ -351,7 +351,8 @@ class TestActiveHandlersCallActionAPI(unittest.TestCase):
     @patch.object(bot, 'append_event')
     def test_handle_view_calls_action_api(self, mock_evt, mock_tg, mock_api):
         mock_api.return_value = {'success': True, 'capture': {'capture_id': 'cap_1'}}
-        bot.handle_view('/view 1', CHAT_ID)
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view('/view 1', CHAT_ID)
         self.assertEqual(mock_api.call_args[0][0], '/captures/pending/1')
 
 
@@ -581,13 +582,15 @@ class TestOfflineReviewValidation(unittest.TestCase):
                 'content': 'Test note content text.'
             }
         }
-        bot.handle_view('/view 1', CHAT_ID)
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view('/view 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
         self.assertIn('Capture: cap_123', text)
         self.assertIn('Status: pending_review', text)
         self.assertIn('Created: 2026-07-07T00:00:00Z', text)
         self.assertIn('Test note content text.', text)
+        self.assertIn('Preview:', text)
         # Verify no file path is exposed (e.g. 30_Capture or pending_review or .md)
         self.assertNotIn('30_Capture', text)
         self.assertNotIn('.md', text)
@@ -885,6 +888,145 @@ class TestCallbackQueryDispatch(unittest.TestCase):
             with patch.object(bot, 'process_callback_query') as mock_dispatch:
                 bot.process_update(update)
                 mock_dispatch.assert_called_once_with(update)
+
+
+class TestViewSummaryAndButtons(unittest.TestCase):
+    """Modified /view sends summary + inline keyboard with tokens."""
+
+    SAMPLE_CAPTURE = {
+        "capture_id": "cap_20260707_120000_a1b2c3_slug",
+        "status": "pending_review",
+        "created_at": "2026-07-07T12:00:00Z",
+        "content": "My quick note about something important.\n\nSecond line.",
+    }
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_sends_summary_instead_of_full_content(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "capture": self.SAMPLE_CAPTURE}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view("/view 1", CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]["text"]
+        # Should contain summary fields but NOT full content body
+        self.assertIn("Capture: cap_20260707_120000_a1b2c3_slug", text)
+        self.assertIn("Status: pending_review", text)
+        self.assertIn("Created: 2026-07-07T12:00:00Z", text)
+        # Should contain preview line
+        self.assertIn("My quick note about something important.", text)
+        # Should NOT contain full second line
+        self.assertNotIn("Second line.", text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_includes_inline_keyboard(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "capture": self.SAMPLE_CAPTURE}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view("/view 1", CHAT_ID)
+        args = mock_tg.call_args[0]
+        self.assertEqual(args[0], "sendMessage")
+        payload = args[1]
+        self.assertIn("reply_markup", payload)
+        kb = payload["reply_markup"]
+        self.assertIn("inline_keyboard", kb)
+        buttons = kb["inline_keyboard"]
+        # Should have 2 rows: [View Full Text], [Approve] [Reject]
+        self.assertEqual(len(buttons), 2)
+        self.assertEqual(len(buttons[0]), 1)  # View Full Text
+        self.assertEqual(len(buttons[1]), 2)  # Approve + Reject
+        self.assertEqual(buttons[0][0]["text"], "View Full Text")
+        self.assertEqual(buttons[1][0]["text"], "Approve")
+        self.assertEqual(buttons[1][1]["text"], "Reject")
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_keyboard_has_callback_data(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "capture": self.SAMPLE_CAPTURE}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view("/view 1", CHAT_ID)
+        payload = mock_tg.call_args[0][1]
+        buttons = payload["reply_markup"]["inline_keyboard"]
+        # All buttons should have callback_data
+        for row in buttons:
+            for btn in row:
+                self.assertIn("callback_data", btn)
+                data = btn["callback_data"]
+                self.assertGreater(len(data), 0)
+                self.assertLessEqual(len(data), 64)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_keyboard_action_chars(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "capture": self.SAMPLE_CAPTURE}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view("/view 1", CHAT_ID)
+        payload = mock_tg.call_args[0][1]
+        buttons = payload["reply_markup"]["inline_keyboard"]
+        # View Full Text should have action 'v'
+        v_data = buttons[0][0]["callback_data"]
+        self.assertTrue(v_data.startswith("rv1|v|"))
+        # Approve should have action 'a'
+        a_data = buttons[1][0]["callback_data"]
+        self.assertTrue(a_data.startswith("rv1|a|"))
+        # Reject should have action 'r'
+        r_data = buttons[1][1]["callback_data"]
+        self.assertTrue(r_data.startswith("rv1|r|"))
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_full_resolves_and_sends_content(self, mock_tg, mock_api):
+        """_handle_view_full resolves cap_ref and sends full content as new message."""
+        cap_ref = bot._make_cap_ref("cap_test_123")
+        mock_api.side_effect = [
+            # First call for _resolve_cap_ref: GET /captures/pending
+            {"success": True, "pending": [
+                {"capture_id": "cap_test_123", "index": 1, "status": "pending_review", "created_at": "", "preview": ""},
+            ], "count": 1},
+            # Second call for full capture data
+            {"success": True, "capture": {
+                "capture_id": "cap_test_123",
+                "status": "pending_review",
+                "created_at": "2026-07-07T12:00:00Z",
+                "content": "Full content line 1.\nLine 2.\nLine 3.",
+            }},
+        ]
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot._handle_view_full(CHAT_ID, cap_ref)
+        self.assertEqual(mock_tg.call_count, 1)
+        text = mock_tg.call_args[0][1]["text"]
+        self.assertIn("Full content line 1.", text)
+        self.assertIn("Line 2.", text)
+        self.assertIn("Line 3.", text)
+        # Should NOT have approve/reject buttons
+        payload = mock_tg.call_args[0][1]
+        self.assertNotIn("reply_markup", payload)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_full_no_matches_sends_error(self, mock_tg, mock_api):
+        cap_ref = bot._make_cap_ref("nonexistent")
+        mock_api.return_value = {"success": True, "pending": [], "count": 0}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot._handle_view_full(CHAT_ID, cap_ref)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]["text"]
+        self.assertIn("no longer pending", text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_truncates_preview_line(self, mock_tg, mock_api):
+        long_text = "A" * 200
+        mock_api.return_value = {"success": True, "capture": {
+            "capture_id": "cap_long",
+            "status": "pending_review",
+            "created_at": "2026-07-07T12:00:00Z",
+            "content": long_text,
+        }}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view("/view 1", CHAT_ID)
+        text = mock_tg.call_args[0][1]["text"]
+        # Preview should not contain the full 200-char line — it will be truncated
+        self.assertLessEqual(len(text.split("\n")[-1]) if "\n" in text else len(text), 130)
 
 
 if __name__ == '__main__':

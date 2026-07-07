@@ -129,7 +129,8 @@ class TelegramBoundaryTests(unittest.TestCase):
 
         mock_api.reset_mock()
         mock_api.return_value = {'success': True, 'capture': {'capture_id': 'cap_1', 'content': ''}}
-        bot.handle_view('/view 1', CHAT_ID)
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            bot.handle_view('/view 1', CHAT_ID)
         mock_api.assert_called_with('/captures/pending/1')
 
         mock_api.reset_mock()
@@ -172,7 +173,8 @@ class TelegramBoundaryTests(unittest.TestCase):
                 bot.handle_p(CHAT_ID)
 
                 mock_api.return_value = {'success': True, 'capture': {'capture_id': 'cap_1', 'content': ''}}
-                bot.handle_view('/view 1', CHAT_ID)
+                with patch.object(bot, 'BOT_TOKEN', "test_token"):
+                    bot.handle_view('/view 1', CHAT_ID)
 
                 mock_api.return_value = {'success': True, 'capture_id': 'cap_1'}
                 bot.handle_approve('/approve cap_1', CHAT_ID)
