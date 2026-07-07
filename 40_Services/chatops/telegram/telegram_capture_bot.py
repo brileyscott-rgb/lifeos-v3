@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -26,6 +28,12 @@ ACTION_API_URL = "http://localhost:8788"
 ALLOWED_USER_ID = None
 BOT_TOKEN = None
 ALLOW_REVIEW_COMMANDS = False
+
+# --- Callback token constants ---
+TOKEN_VERSION = "rv1"
+TOKEN_TTL = 600       # 10 minutes
+MAC_TRUNC = 12        # hex chars
+ALL_ACTIONS = ("v", "a", "r", "ca", "cr", "n")
 
 
 def load_env():
@@ -105,6 +113,50 @@ def call_action_api(endpoint, payload=None):
         return json.loads(e.read())
     except Exception:
         return None
+
+
+def _hmac_key():
+    return hashlib.sha256(BOT_TOKEN.encode("utf-8")).digest()
+
+
+def _make_cap_ref(capture_id):
+    return hashlib.sha256(capture_id.encode("utf-8")).hexdigest()[:12]
+
+
+def _make_token(action, sender_id, cap_ref):
+    exp_ts = int(time.time()) + TOKEN_TTL
+    exp_hex = format(exp_ts, "x")
+    payload = f"{TOKEN_VERSION}|{action}|{sender_id}|{cap_ref}|{exp_hex}"
+    key = _hmac_key()
+    mac = hmac.new(key, payload.encode("utf-8"), hashlib.sha256).hexdigest()[:MAC_TRUNC]
+    return f"{TOKEN_VERSION}|{action}|{cap_ref}|{exp_hex}|{mac}"
+
+
+def _verify_token(callback_sender_id, callback_data):
+    parts = callback_data.split("|")
+    if len(parts) != 5:
+        return None
+    version, action, cap_ref, exp_hex, mac = parts
+
+    if version != TOKEN_VERSION:
+        return None
+    if action not in ALL_ACTIONS:
+        return None
+
+    try:
+        exp_ts = int(exp_hex, 16)
+    except ValueError:
+        return None
+    if time.time() > exp_ts:
+        return None
+
+    payload = f"{version}|{action}|{callback_sender_id}|{cap_ref}|{exp_hex}"
+    key = _hmac_key()
+    expected = hmac.new(key, payload.encode("utf-8"), hashlib.sha256).hexdigest()[:MAC_TRUNC]
+    if not hmac.compare_digest(mac, expected):
+        return None
+
+    return {"action": action, "cap_ref": cap_ref, "version": version}
 
 
 def action_api_unavailable_reply(chat_id):

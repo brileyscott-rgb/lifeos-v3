@@ -1,8 +1,11 @@
 """Offline tests for Telegram Capture Bot — never connects to live Telegram or APIs."""
 
+import hashlib
+import hmac
 import json
 import os
 import sys
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call
@@ -676,6 +679,119 @@ class TestStaleHelpersRemoved(unittest.TestCase):
             with self.subTest(helper=name):
                 self.assertFalse(hasattr(bot, name),
                                  f"Stale helper {name} still exists in module")
+
+
+class TestCallbackTokenHelpers(unittest.TestCase):
+    """Offline token generation and verification tests."""
+
+    TOKEN_TTL = 600
+
+    def setUp(self):
+        self.sender_id = 12345
+        self.capture_id = "cap_20260707_120000_a1b2c3"
+        self.cap_ref = "a1b2c3d4e5f6"   # first 12 hex of SHA256(capture_id)
+        self.action = "a"
+        # Fixed HMAC key for deterministic test output
+        self.patcher = patch.object(bot, 'BOT_TOKEN', "test_token_12345")
+        self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def test_make_cap_ref_is_first_12_hex_chars(self):
+        ref = bot._make_cap_ref(self.capture_id)
+        self.assertEqual(len(ref), 12)
+        self.assertTrue(all(c in "0123456789abcdef" for c in ref))
+
+    def test_make_cap_ref_is_deterministic(self):
+        self.assertEqual(
+            bot._make_cap_ref(self.capture_id),
+            bot._make_cap_ref(self.capture_id),
+        )
+
+    def test_make_cap_ref_differs_for_different_ids(self):
+        ref2 = bot._make_cap_ref("cap_other")
+        self.assertNotEqual(bot._make_cap_ref(self.capture_id), ref2)
+
+    def test_token_format_has_5_parts(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token = bot._make_token(self.action, self.sender_id, cap_ref)
+        parts = token.split("|")
+        self.assertEqual(len(parts), 5)
+
+    def test_token_starts_with_version(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token = bot._make_token(self.action, self.sender_id, cap_ref)
+        self.assertTrue(token.startswith("rv1|"))
+
+    def test_token_contains_action_and_cap_ref(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token = bot._make_token(self.action, self.sender_id, cap_ref)
+        self.assertIn(f"|{self.action}|{cap_ref}|", token)
+
+    def test_token_under_64_bytes(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        for act in ("v", "a", "r", "ca", "cr", "n"):
+            token = bot._make_token(act, self.sender_id, cap_ref)
+            self.assertLessEqual(len(token), 64, f"token for action {act} exceeds 64 bytes")
+
+    def test_verify_token_valid(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token = bot._make_token(self.action, self.sender_id, cap_ref)
+        result = bot._verify_token(self.sender_id, token)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["action"], self.action)
+        self.assertEqual(result["cap_ref"], cap_ref)
+
+    def test_verify_token_rejects_wrong_sender(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token = bot._make_token(self.action, self.sender_id, cap_ref)
+        result = bot._verify_token(99999, token)
+        self.assertIsNone(result)
+
+    def test_verify_token_rejects_malformed_parts(self):
+        result = bot._verify_token(self.sender_id, "bad|data")
+        self.assertIsNone(result)
+
+    def test_verify_token_rejects_wrong_version(self):
+        result = bot._verify_token(self.sender_id, "badver|a|caf|690f2a10|deadbeef")
+        self.assertIsNone(result)
+
+    def test_verify_token_rejects_unknown_action(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        # Build a token-like string with an invalid action
+        exp_hex = format(int(time.time()) + 600, "x")
+        payload = f"rv1|x|{self.sender_id}|{cap_ref}|{exp_hex}"
+        key = hashlib.sha256(b"test_token_12345").digest()
+        mac = hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()[:12]
+        token = f"rv1|x|{cap_ref}|{exp_hex}|{mac}"
+        result = bot._verify_token(self.sender_id, token)
+        self.assertIsNone(result)
+
+    def test_verify_token_action_bound(self):
+        """Token for action 'a' fails verification when checked as action 'r'."""
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        token_a = bot._make_token("a", self.sender_id, cap_ref)
+        # Verification reconstructs payload using the same action from token — so this
+        # test verifies the action is embedded in the MAC and cannot be swapped.
+        # A token created for 'a' has action 'a' in its visible data, so verify_token
+        # uses token's own action field from the visible data. If someone modifies the
+        # visible action char, MAC will mismatch.
+        parts = token_a.split("|")
+        tampered = f"rv1|r|{parts[2]}|{parts[3]}|{parts[4]}"
+        result = bot._verify_token(self.sender_id, tampered)
+        self.assertIsNone(result)
+
+    def test_verify_token_rejects_expired_token(self):
+        cap_ref = bot._make_cap_ref(self.capture_id)
+        # Manually create an expired token
+        exp_hex = format(int(time.time()) - 1, "x")
+        payload = f"rv1|{self.action}|{self.sender_id}|{cap_ref}|{exp_hex}"
+        key = hashlib.sha256(b"test_token_12345").digest()
+        mac = hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()[:12]
+        token = f"rv1|{self.action}|{cap_ref}|{exp_hex}|{mac}"
+        result = bot._verify_token(self.sender_id, token)
+        self.assertIsNone(result)
 
 
 if __name__ == '__main__':
