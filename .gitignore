@@ -72,6 +72,12 @@ __pycache__/
 # Temporary files
 *.tmp
 
+# Root-level generated review/backup zips
+lifeos_files_*.zip
+lifeos_structure_review_*.zip
+lifeos_backup_*.zip
+/backups/
+
 # Telegram ChatOps local secrets/runtime
 40_Services/config/telegram/.env
 40_Services/config/telegram/*.secret

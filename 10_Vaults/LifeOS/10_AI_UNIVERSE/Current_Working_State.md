@@ -71,6 +71,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Read-only LifeOS status script created**: `40_Services/scripts/lifeos_status.py` reports capture queue counts, event log status, git dirty state, disk usage, n8n container status, and scaffold presence. Supports `--text` and `--json` output. n8n planned workflow `lifeos_status_digest.md` updated with manual-trigger Execute Command step. Activation checklist updated with first-workflow steps.
 
+- **Root-level review zip cleanup completed (2026-07-06)**: Deleted `/home/lifeos/lifeos_files_20260706_220619.zip` (910M). Moved `/home/lifeos/backups/lifeos_backup_20260706_220113.zip` (935M) into `/home/lifeos/70_Backups/review_zips/`. Removed now-empty `/home/lifeos/backups/`. Updated `.gitignore` to block future root-level `lifeos_files_*.zip`, `lifeos_structure_review_*.zip`, `lifeos_backup_*.zip`, and `/backups/`. No deeper stale candidates touched. Ready for next Telegram Control Plane step.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -131,12 +133,14 @@ Completed:
   - **Not production. No Telegram webhook registered. No domain-based tunnel activated.**
   - Next step: user-optional Respond to Webhook node refinement, then proceed to Phase B3 (domain-based) when user has Cloudflare domain.
 
+- **Exact proposal packet requirement locked in design docs**: All architecture and security docs now explicitly require exact proposal packets with version locking before any file creation/update approval. Hard boundaries 11-13 added to design doc Section 12 (no stale proposal, no unseen content approval, no direct AI vault writes). Section 20 updated with `proposal_version` field, proposal packet requirements table, version-locked approval rules, and Telegram display commands for proposals. Section 21 updated with version enforcement in processor requirements. n8n security boundaries extended with proposal approval boundaries and workflow review check item. Activation checklist extended with proposal viewing and version-locked approval items. Action API security boundaries document proposal scope exclusion. Documentation-only — no code, workflow, API, webhook, processor, or automation changes.
+
 Next:
 1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
 3. Phase C: n8n Telegram command workflow design/build in n8n UI.
 4. Phase D: Telegram webhook registration and end-to-end test.
-5. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor.
+5. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
 6. All phases require explicit step-by-step approval.
 
 ## Do Not Do Yet
