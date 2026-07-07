@@ -71,7 +71,9 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Read-only LifeOS status script created**: `40_Services/scripts/lifeos_status.py` reports capture queue counts, event log status, git dirty state, disk usage, n8n container status, and scaffold presence. Supports `--text` and `--json` output. n8n planned workflow `lifeos_status_digest.md` updated with manual-trigger Execute Command step. Activation checklist updated with first-workflow steps.
 
-- **Root-level review zip cleanup completed (2026-07-06)**: Deleted `/home/lifeos/lifeos_files_20260706_220619.zip` (910M). Moved `/home/lifeos/backups/lifeos_backup_20260706_220113.zip` (935M) into `/home/lifeos/70_Backups/review_zips/`. Removed now-empty `/home/lifeos/backups/`. Updated `.gitignore` to block future root-level `lifeos_files_*.zip`, `lifeos_structure_review_*.zip`, `lifeos_backup_*.zip`, and `/backups/`. No deeper stale candidates touched. Ready for next Telegram Control Plane step.
+- **Root-level review zip cleanup completed (2026-07-06)**: Deleted `/home/lifeos/lifeos_files_20260706_220619.zip` (910M). Moved `/home/lifeos/backups/lifeos_backup_20260706_220113.zip` (935M) into `/home/lifeos/70_Backups/review_zips/`. Removed now-empty `/home/lifeos/backups/`. Updated `.gitignore` to block future root-level `lifeos_files_*.zip`, `lifeos_structure_review_*.zip`, `lifeos_backup_*.zip`, and `/backups/`. No deeper stale candidates touched. Commit: `da0dd41`.
+
+- **Telegram receive-test planning completed (2026-07-06)**: Documented receive-test plan in `40_Services/chatops/telegram/README.md`. Recommends polling (`--once` mode) as first test — avoids webhook, tunnel, and public ingress. First test command: `/help` (read-only, no state mutation). Forbidden behaviors documented: no capture creation, no file writes, no event log appends, no Action API calls, no AI extraction, no n8n activation. Success criteria: bot replies with acknowledgement, no files created, no events logged. Next step after success: safe `/status` test.
 
 ## Active Deferrals
 
