@@ -336,6 +336,147 @@ class TestCompactAliases(unittest.TestCase):
                 mock_r.assert_not_called()
 
 
+class TestCaptureFirstMode(unittest.TestCase):
+    """Capture-first mode: read-only allowed, mutations blocked."""
+
+    @patch.object(bot, 'tg_api')
+    def test_p_allowed_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        with patch.object(bot, 'handle_p') as mock_p:
+            update = make_update('/p')
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+            mock_p.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    def test_view_allowed_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        with patch.object(bot, 'handle_view') as mock_v:
+            update = make_update('/view 1')
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+            mock_v.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    def test_view1_allowed_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        with patch.object(bot, 'handle_view') as mock_v:
+            update = make_update('/view1')
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+            mock_v.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    def test_a_blocked_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/a 1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_a') as mock_a:
+                bot.process_update(update)
+                mock_a.assert_not_called()
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_a1_blocked_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/a1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_a') as mock_a:
+                bot.process_update(update)
+                mock_a.assert_not_called()
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_r_blocked_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/r 1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_update(update)
+                mock_r.assert_not_called()
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_r1_blocked_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/r1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_r') as mock_r:
+                bot.process_update(update)
+                mock_r.assert_not_called()
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NO ACTION', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_blocked_mutation_does_not_call_action_api(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/a 1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'call_action_api') as mock_api:
+                bot.process_update(update)
+                mock_api.assert_not_called()
+
+    @patch.object(bot, 'tg_api')
+    def test_blocked_reject_does_not_call_action_api(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/r 1')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'call_action_api') as mock_api:
+                bot.process_update(update)
+                mock_api.assert_not_called()
+
+    @patch.object(bot, 'handle_p')
+    @patch.object(bot, 'tg_api')
+    def test_p_in_capture_first_passes_mode(self, mock_tg, mock_handle_p):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        update = make_update('/p')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_update(update)
+        mock_handle_p.assert_called_once_with(CHAT_ID)
+
+
+class TestFullReviewMode(unittest.TestCase):
+    """Full review mode: all commands allowed, index resolution still works."""
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_a_still_dispatches_in_review_mode(self, mock_api, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'handle_a') as mock_a:
+            update = make_update('/a 1')
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+            mock_a.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_r_still_dispatches_in_review_mode(self, mock_api, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = True
+        with patch.object(bot, 'handle_r') as mock_r:
+            update = make_update('/r 1')
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+            mock_r.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_numeric_index_still_resolves_in_review_mode(self, mock_api, mock_tg):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123'},
+        ]
+        bot.handle_a('/a 1', CHAT_ID)
+        self.assertEqual(mock_api.call_args_list[0].args, ('/captures/pending/1',))
+        self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/approve', {}))
+
+
 class TestNeedsIndexResponses(unittest.TestCase):
     """/view, /a, /r without index should return NEEDS INDEX card."""
 

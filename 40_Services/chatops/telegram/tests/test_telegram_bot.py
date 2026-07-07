@@ -601,12 +601,32 @@ class TestPollingModeControls(unittest.TestCase):
         bot.ALLOW_REVIEW_COMMANDS = self.original_allow_review
 
     @patch.object(bot, 'tg_api')
-    def test_review_commands_blocked_by_default(self, mock_tg):
+    @patch.object(bot, 'call_action_api')
+    def test_read_only_commands_allowed_in_capture_first(self, mock_api, mock_tg):
         bot.ALLOW_REVIEW_COMMANDS = False
-        review_commands = ['/p', '/view 1', '/a 1', '/r 1', '/view1', '/a1', '/r1',
-                           '/approve cap_1', '/reject cap_1', '/list_pending']
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'handle_p') as mock_p:
+                update = make_update('/p')
+                bot.process_update(update)
+                mock_p.assert_called_once()
 
-        for cmd in review_commands:
+            with patch.object(bot, 'handle_view') as mock_v:
+                update = make_update('/view 1')
+                bot.process_update(update)
+                mock_v.assert_called_once()
+
+            with patch.object(bot, 'handle_view') as mock_v:
+                update = make_update('/view1')
+                bot.process_update(update)
+                mock_v.assert_called_once()
+
+    @patch.object(bot, 'tg_api')
+    def test_mutation_commands_blocked_in_capture_first(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        mutation_commands = ['/a 1', '/r 1', '/a1', '/r1',
+                             '/approve cap_1', '/reject cap_1', '/list_pending']
+
+        for cmd in mutation_commands:
             mock_tg.reset_mock()
             update = make_update(cmd)
             with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
@@ -614,7 +634,7 @@ class TestPollingModeControls(unittest.TestCase):
 
             mock_tg.assert_called_once()
             text = mock_tg.call_args[0][1]['text']
-            self.assertIn('Review commands are disabled in capture-first mode', text)
+            self.assertIn('REVIEW DISABLED', text.upper())
 
     @patch.object(bot, 'handle_p')
     @patch.object(bot, 'tg_api')

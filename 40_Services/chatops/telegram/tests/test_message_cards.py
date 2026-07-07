@@ -199,8 +199,45 @@ class TestFormatPendingQueue(unittest.TestCase):
         items = [{"index": 1, "preview": "test", "created_at": "2026-07-07T12:00:00Z"}]
         result = cards.format_pending_queue(items, count=1)
         self.assertIn("/view1", result)
-        self.assertIn("/a1", result)
-        self.assertIn("/r1", result)
+
+    def test_review_mode_footer_includes_a_and_r(self):
+        items = [{"index": 1, "preview": "test"}]
+        result = cards.format_pending_queue(items, count=1, mode="review")
+        self.assertIn("/a 1", result)
+        self.assertIn("/r 1", result)
+
+    def test_capture_first_footer_says_disabled(self):
+        items = [{"index": 1, "preview": "test"}]
+        result = cards.format_pending_queue(items, count=1, mode="capture-first")
+        self.assertIn("disabled", result.lower())
+        self.assertNotIn("/a 1", result)
+
+
+class TestFormatCaptureFirstBlocked(unittest.TestCase):
+    def test_says_no_action(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("NO ACTION", result.upper())
+
+    def test_shows_mode(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("capture-first", result.lower())
+
+    def test_says_no_capture_approved(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("No capture was approved", result)
+
+    def test_says_no_capture_rejected(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("No capture was rejected", result)
+
+    def test_says_no_files_moved(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("No files were moved", result)
+
+    def test_suggests_read_only(self):
+        result = cards.format_capture_first_blocked()
+        self.assertIn("/p", result)
+        self.assertIn("/view1", result)
 
 
 class TestFormatReviewDisabled(unittest.TestCase):

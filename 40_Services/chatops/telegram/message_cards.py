@@ -122,7 +122,10 @@ def format_pending_queue(items, count=None, mode="capture-first", now=None):
         else:
             listing.append(f"[{idx}] {preview[:40]}")
     body = "\n".join(listing)
-    footer = "/view 1 or /view1\n/a 1 or /a1\n/r 1 or /r1"
+    if mode == "review":
+        footer = "/view 1 or /view1\n/a 1 or /a1\n/r 1 or /r1"
+    else:
+        footer = "/view 1 or /view1\n\nApprove/reject are disabled in capture-first mode."
     return format_box("REVIEW QUEUE", rows=rows, body=body, footer=footer)
 
 
@@ -138,6 +141,13 @@ def format_review_failed(reason):
     rows = [("STATE", "NO ACTION"), ("REASON", reason_label)]
     footer = "No capture was rejected. No files were moved."
     return format_box("REVIEW FAILED", rows=rows, footer=footer)
+
+
+def format_capture_first_blocked():
+    rows = [("STATE", "NO ACTION"), ("MODE", "capture-first")]
+    body = "Approve/reject commands are disabled right now."
+    footer = "No capture was approved. No capture was rejected. No files were moved.\n\nUse /p or /view1 for read-only review."
+    return format_box("REVIEW DISABLED", rows=rows, body=body, footer=footer)
 
 
 def format_review_disabled():

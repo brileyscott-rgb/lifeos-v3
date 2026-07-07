@@ -543,13 +543,15 @@ def process_update(update):
         text = f'/{m.group(1)} {m.group(2)}'
         cmd = f'/{m.group(1)}'
 
-    review_cmds = {'/p', '/view', '/a', '/r', '/list_pending', '/approve', '/reject'}
-    if cmd in review_cmds and not ALLOW_REVIEW_COMMANDS:
+    read_only_cmds = {'/p', '/view'}
+    mutation_cmds = {'/a', '/r', '/list_pending', '/approve', '/reject'}
+
+    if cmd in mutation_cmds and not ALLOW_REVIEW_COMMANDS:
         tg_api('sendMessage', {
             'chat_id': chat_id,
-            'text': cards.format_review_disabled()
+            'text': cards.format_capture_first_blocked()
         })
-        print(f"Capture-first mode: blocked review command '{cmd}'")
+        print(f"Capture-first mode: blocked mutation command '{cmd}'")
         return
 
     if cmd == '/capture':
@@ -736,7 +738,8 @@ def handle_p(chat_id):
         return
     items = result.get('pending', [])
     count = result.get('count', 0)
-    text_reply = cards.format_pending_queue(items, count=count)
+    mode = "review" if ALLOW_REVIEW_COMMANDS else "capture-first"
+    text_reply = cards.format_pending_queue(items, count=count, mode=mode)
     tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
 
 
