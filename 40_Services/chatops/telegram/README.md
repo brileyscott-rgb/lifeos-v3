@@ -271,6 +271,10 @@ Runtime state (gitignored):
 |------|-------------|
 | `40_Services/config/telegram/runtime/update_offset.json` | Last processed update_id |
 
+See `10_Vaults/LifeOS/10_AI_UNIVERSE/Policies/Runtime_Artifact_Tracking_Policy.md`
+for the full classification of Git-tracked vs runtime vs backup-only vs
+never-committed files.
+
 ## Token Safety
 
 - Token is read from the ignored `.env` file
