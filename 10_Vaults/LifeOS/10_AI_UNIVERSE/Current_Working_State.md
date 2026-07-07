@@ -172,6 +172,8 @@ Completed:
 
 - **Telegram/n8n next-phase gameplan added (2026-07-07)**: Added a roadmap/gameplan document for the next LifeOS Telegram, Action API, n8n, Docker, and future homelab phases: `docs/superpowers/specs/2026-07-07-lifeos-telegram-n8n-next-phase-gameplan.md`. The plan prioritizes runtime artifact policy, Telegram bot helper cleanup, Action API hardening, event traceability, review-command risk handling, and tests before adding buttons, n8n webhooks, Cloudflare tunnels, AI proposals, controlled file processor, Docker expansion, or Kubernetes. Documentation-only; no code or service changes.
 
+- **Tool candidate queue added to Telegram/n8n gameplan (2026-07-07)**: Integrated external repo/template suggestions as future candidates only. `awesome-n8n-templates`, `n8n-nodes-starter`, Evolution API nodes, Flowise, Langflow, GitHub repo monitoring, and automation template review are parked behind the current foundation gates. No tools were installed, no templates imported, no n8n workflows activated, and no terminal/Execute Command path was approved.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.

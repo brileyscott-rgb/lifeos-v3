@@ -355,14 +355,48 @@ Phase gate: **No external ingress until the Action API boundary is hardened.** n
 - Docker Compose service packaging.
 - Homelab deployment runbooks.
 - Kubernetes only after Compose stability and real need are proven.
+- Tool and template discovery queue for reviewed future candidates only.
 
-## 14. Stop Conditions
+## 14. Tool Candidate / Template Discovery Queue
+
+These candidates are parked for future research only. They are not approved for installation, import, activation, or runtime integration.
+
+- `awesome-n8n-templates`: read-only source for reviewed n8n workflow ideas and template patterns.
+- `n8n community nodes`: later reviewed extension path only, after service, security, and runtime policy are stable.
+- `n8n-nodes-starter`: official scaffold candidate for a future custom LifeOS n8n node.
+- `Evolution API / n8n-nodes-evolution-api`: cross-channel messaging candidate, deferred because native Telegram path is already active.
+- `Flowise`: visual AI-agent/RAG candidate for future proposal-drafting experiments only.
+- `Langflow`: visual AI-agent/RAG/MCP candidate for future research and proposal workflows.
+- `GitHub repo watcher`: monitor selected repos for releases, security notes, and useful changes.
+- `GitHub trending digest`: surface popular repos by topic into a review queue.
+- `Repo evaluation agent`: score candidate repos for maturity, maintenance, license, install complexity, and LifeOS fit.
+- `Automation template review queue`: collect n8n templates for review before any import.
+
+Templates and repos are never imported directly into active automation. They enter a review queue first.
+
+## 15. External Tool Integration Rules
+
+- Do not use n8n Execute Command as the Telegram mutation path.
+- Execute Command is not approved for Telegram/n8n mutation paths. Terminal execution remains A5/high-risk and requires a separate approval model.
+- Do not wire Telegram/n8n directly to terminal or repo directories.
+- Do not install community nodes until service, security, and runtime policy are stable.
+- Do not import random n8n templates into active workflows.
+- Do not use Flowise or Langflow for direct file writes.
+- Do not expose Flowise, Langflow, or n8n publicly.
+- All future tool integrations must route through approved APIs, proposal packets, or read-only research queues.
+- Future n8n templates must be reviewed for secrets, shell execution, filesystem writes, webhook exposure, credential usage, and Action API boundary compliance before import.
+- Future repo/tool candidates must be scored for maturity, maintenance, license, install complexity, security posture, and LifeOS fit before implementation is proposed.
+
+## 16. Stop Conditions
 
 Stop the next phase immediately if any of these occur:
 
 - A plan implies n8n, Telegram webhooks, or Cloudflare tunnels are active now.
 - A plan says `/view`, `/a`, or `/r` are already live-validated.
 - A plan says button UX is already implemented.
+- A plan implies any external tool is installed, imported, or active.
+- A plan approves Execute Command for Telegram/n8n mutation paths.
+- A plan implies Flowise or Langflow can write files directly.
 - Runtime artifacts are staged for commit.
 - Code files are modified during a documentation-only phase.
 - Secret/token/env inspection is required.
@@ -371,7 +405,7 @@ Stop the next phase immediately if any of these occur:
 - Review commands can approve/reject without traceable event IDs and validated target identity.
 - Any future feature tries to skip runtime policy, helper cleanup, Action API hardening, `event_id`, offline tests, or review-risk handling.
 
-## 15. Final Recommendation
+## 17. Final Recommendation
 
 Proceed with **Phase 1 - Runtime Artifact Policy** next.
 
