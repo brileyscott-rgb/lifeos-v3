@@ -1,6 +1,6 @@
 # Telegram ChatOps Config Scaffold
 
-This directory defines the planned Telegram ChatOps integration for LifeOS V3.
+This directory defines the Telegram ChatOps integration for LifeOS V3.
 
 ## Purpose
 
@@ -18,11 +18,16 @@ All messages are captured as raw records, queued for review, and only integrated
 
 ## Current Status
 
-- Config scaffold only
-- No real bot token configured
-- No bot process running
-- No Docker service started
+- **Active interim mode: local polling** — the Telegram bot runs as a systemd
+  user service (`lifeos-telegram-bot.service`) polling every 3 seconds.
+  This is capture-first: `/capture` is validated through Action API.
+  Review commands `/view`, `/a`, `/r` live validation is deferred.
+- Real bot token is configured in the local `.env` (gitignored)
+- Bot process is running as an enabled systemd user service during user session
+- No Docker service started (Action API runs outside Docker in current mode)
 - No n8n workflow active
+- No Telegram webhook registered
+- No Cloudflare tunnel required for local polling
 
 ## Future Integration
 
@@ -38,18 +43,18 @@ Telegram message
 
 ## Local Bot Handler
 
-A minimal local Telegram capture bot test handler is available at:
+The active Telegram capture bot handler is at:
 
 `40_Services/chatops/telegram/telegram_capture_bot.py`
 
-See the README there for usage:
+It runs as a local systemd user polling service (`--poll --interval 3`)
+during the user session. See the README there for usage and operating mode.
 
 ```bash
 python3 40_Services/chatops/telegram/telegram_capture_bot.py --help
 ```
 
-This is a manual foreground test tool, not a daemon or service. n8n integration
-is not yet active.
+n8n integration is not yet active.
 
 ## Safe to Send
 

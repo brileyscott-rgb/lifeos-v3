@@ -1,14 +1,59 @@
 # Telegram ChatOps Local Bot Handler
 
-> **Status: Fallback / manual-test tool.** The primary production Telegram
-> path will use the n8n webhook workflow routing through the LifeOS Action API.
-> This local polling bot is for development testing, offline validation, and
-> manual capture testing when n8n is not running. Do not rely on this bot
-> for production capture intake.
+> **Status: Active interim capture-first path.** The Telegram bot is currently
+> running as a local systemd user polling service (`--poll --interval 3`).
+> Capture-first operating mode: `/capture` automatic polling is validated
+> through Action API. Review commands are API-backed in code, but `/view`,
+> `/a`, and `/r` live validation remains deferred.
+>
+> The future production path will use n8n webhook workflow routing through
+> the LifeOS Action API, but is not yet active.
+
+## Current Interim Operating Mode
+
+```text
+Active path:
+Telegram /capture
+→ local systemd user polling service
+→ telegram_capture_bot.py --poll --interval 3
+→ Action API (http://localhost:8788)
+→ 30_Capture/pending_review/
+→ 50_Event_Log/events.jsonl
+
+Inactive/future paths (not started):
+n8n Telegram workflows
+Cloudflare tunnels
+Telegram webhooks
+AI proposal processing
+Controlled file processor
+```
+
+**Review commands are API-backed in code**, but `/view`, `/a`, and `/r` live
+validation remains deferred by user decision. Until validated, use Telegram
+primarily for `/capture`.
+
+**Service facts:**
+- Service name: `lifeos-telegram-bot.service`
+- Scope: systemd user service
+- Enabled on login: yes
+- Linger: no
+- Runs only during user session/login
+- Does not run independently before login
+
+**Action API dependency:** The Telegram bot expects Action API at
+`http://localhost:8788`. If Action API is unavailable, `/capture` and review
+mutation commands should fail safely with a no-action message.
+
+**Status API dependency:** The `/status` command expects Status API at
+`http://localhost:8787`.
+
+**Bot event logging:** The Telegram bot should not write capture/review
+lifecycle events directly. Some bot telemetry events may still be written
+by legacy/local bot telemetry paths; this is a known boundary cleanup item.
 
 ## Purpose
 
-Local manual-test Telegram bot handler for LifeOS V3. Polls the Telegram API,
+Local active Telegram bot handler for LifeOS V3. Polls the Telegram API,
 validates the sender, processes `/capture`, `/list_pending`, `/approve`,
 `/reject`, `/help`, and `/status` commands.
 
@@ -194,9 +239,14 @@ n8n workflows, or any automation beyond the file move and event log.
 
 ## What Gets Written
 
-The Telegram bot no longer writes files directly. All capture file creation,
-event logging, and review lifecycle operations are handled by the Action API
-(`http://localhost:8788`).
+The Telegram bot does not write capture files or review lifecycle events
+directly. All capture file creation, event logging, and review lifecycle
+operations are handled by the Action API (`http://localhost:8788`).
+
+**Known exception:** Some bot telemetry events may still be written by
+legacy/local bot telemetry paths in the Telegram bot process. This is a
+known boundary cleanup item — the intended design is for the Action API
+to own all capture/review event logging.
 
 | Path | Writer | Description |
 |------|--------|-------------|
@@ -508,15 +558,20 @@ systemctl --user enable lifeos-telegram-bot.service
 systemctl --user disable lifeos-telegram-bot.service
 ```
 
-### Warning
+### Status
 
-**Do not start or enable the service until explicit Phase 5 approval.**
+The service is **currently active and enabled on login**.
+
+- `/capture` automatic polling is validated through Action API.
+- `/p` was validated through `--review-test`.
+- `/view`, `/a`, and `/r` live validation remains deferred by user decision.
+  Review commands are API-backed in code but have not been live-tested.
+  If they fail in practice, they may be fixed later.
 
 ### Caveat
 
-`/capture` and `/p` have been live-validated. `/view`, `/a`, and `/r` live
-validation was deferred and should be completed before long-term unattended
-polling.
+Do not enable n8n Telegram webhook triggers while local polling is active.
+They would compete for the same Telegram update queue.
 
 ## Not Implemented Yet
 

@@ -168,6 +168,8 @@ Completed:
 - **Telegram capture-first service enabled on login (2026-07-07)**: The systemd user service `lifeos-telegram-bot.service` was enabled on login after `/capture` automatic polling validation passed. Service remains capture-first: `/capture` is validated, `/p` is validated, and `/view`, `/a`, `/r` live validation remains deferred by user decision. No n8n, tunnel, webhook, AI, proposal, or file processor actions were run. Runtime artifacts were not committed.
   Note: user lingering is not enabled, so the service is expected to start with the user session/login rather than run independently after logout.
 
+- **Telegram capture-first operating docs stabilized (2026-07-07)**: Documentation updated to match current runtime reality. The local Telegram polling service is the active interim capture-first path and is enabled on login as a systemd user service. `/capture` automatic polling is validated through Action API. `/p` is validated through `--review-test`. `/view`, `/a`, and `/r` live validation remains deferred by user decision. n8n, tunnels, webhooks, AI proposals, and controlled file processor remain inactive. Known stabilization backlog includes stale Telegram filesystem helpers, runtime artifact tracking policy, Action API atomicity, Action API host deployment contract, and review-action validation.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
@@ -177,6 +179,20 @@ Next:
 6. Phase D: Telegram webhook registration and end-to-end test.
 7. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
 8. All phases require explicit step-by-step approval.
+
+## Known Stabilization Backlog
+
+The following items were identified during the Phase 1A audit. They are
+recorded here for visibility but are **not yet fixed**:
+
+1. **Remove/quarantine stale direct-filesystem Telegram helper functions** — The Telegram bot still contains old filesystem-based helper functions from the pre-Action-API review flow. These are unused by current code but should be removed or quarantined to prevent confusion and accidental use.
+2. **Decide tracking policy for 30_Capture runtime files, 50_Event_Log/events.jsonl, and .config/opencode/opencode.json** — Runtime artifacts are currently generated but not tracked under any explicit policy. A decision is needed on whether/how to track these files.
+3. **Harden Action API mutation/event atomicity** — Action API capture creation and event logging are not wrapped in an atomic transaction. A crash between file write and event append could leave inconsistent state.
+4. **Fix filename collision risk in Action API capture creation** — The current timestamp-based capture filename scheme could collide if two captures arrive within the same second.
+5. **Clarify Action API localhost vs Docker-network deployment contract** — The Action API README describes a Docker-based deployment while the current operating mode runs it outside Docker on localhost. The deployment contract needs clarification.
+6. **Reconcile bot telemetry event logging with docs** — The docs claim the Telegram bot never writes event log entries, but some bot telemetry events may still be written by legacy/local paths. The code and docs need alignment.
+7. **Validate /view, /a, /r or add capture-only polling guard** — Until review commands are validated, a guard could prevent the polling service from processing review commands (capture-only mode).
+8. **Add Telegram bot offline tests** — No offline test suite exists for `telegram_capture_bot.py`. Unit tests would reduce risk during refactoring.
 
 ## Do Not Do Yet
 
