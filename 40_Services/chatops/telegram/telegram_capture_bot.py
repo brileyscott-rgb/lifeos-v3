@@ -743,7 +743,7 @@ def handle_p(chat_id):
 def handle_view(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip():
-        tg_api("sendMessage", {"chat_id": chat_id, "text": "Usage: /view <number> or /view latest or /view <capture_id>"})
+        tg_api("sendMessage", {"chat_id": chat_id, "text": cards.format_needs_index("view")})
         return
     ref = parts[1].strip()
     if ref == "latest":
@@ -803,31 +803,20 @@ def handle_a(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     index_text = parts[1].strip() if len(parts) > 1 else ''
     if not index_text:
-        result = call_action_api('/captures/pending')
-        if result is None or not result.get('success'):
-            action_api_unavailable_reply(chat_id)
-            return
-        pending = result.get('pending', [])
-        if len(pending) == 0:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
-            return
-        if len(pending) > 1:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Multiple pending captures. Use /p, then /a 1.'})
-            return
-        capture_id = pending[0].get('capture_id', '')
+        tg_api("sendMessage", {"chat_id": chat_id, "text": cards.format_needs_index("a")})
+        return
+    if index_text == 'latest':
+        endpoint = '/captures/pending/latest'
+    elif index_text.isdigit():
+        endpoint = f'/captures/pending/{index_text}'
     else:
-        if index_text == 'latest':
-            endpoint = '/captures/pending/latest'
-        elif index_text.isdigit():
-            endpoint = f'/captures/pending/{index_text}'
-        else:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
-            return
-        result = call_action_api(endpoint)
-        if result is None or not result.get('success'):
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
-            return
-        capture_id = result['capture'].get('capture_id', '')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
+        return
+    result = call_action_api(endpoint)
+    if result is None or not result.get('success'):
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
+        return
+    capture_id = result['capture'].get('capture_id', '')
     if not capture_id:
         tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
         return
@@ -855,31 +844,20 @@ def handle_r(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     index_text = parts[1].strip() if len(parts) > 1 else ''
     if not index_text:
-        result = call_action_api('/captures/pending')
-        if result is None or not result.get('success'):
-            action_api_unavailable_reply(chat_id)
-            return
-        pending = result.get('pending', [])
-        if len(pending) == 0:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
-            return
-        if len(pending) > 1:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Multiple pending captures. Use /p, then /r 1.'})
-            return
-        capture_id = pending[0].get('capture_id', '')
+        tg_api("sendMessage", {"chat_id": chat_id, "text": cards.format_needs_index("r")})
+        return
+    if index_text == 'latest':
+        endpoint = '/captures/pending/latest'
+    elif index_text.isdigit():
+        endpoint = f'/captures/pending/{index_text}'
     else:
-        if index_text == 'latest':
-            endpoint = '/captures/pending/latest'
-        elif index_text.isdigit():
-            endpoint = f'/captures/pending/{index_text}'
-        else:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
-            return
-        result = call_action_api(endpoint)
-        if result is None or not result.get('success'):
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
-            return
-        capture_id = result['capture'].get('capture_id', '')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
+        return
+    result = call_action_api(endpoint)
+    if result is None or not result.get('success'):
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
+        return
+    capture_id = result['capture'].get('capture_id', '')
     if not capture_id:
         tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
         return

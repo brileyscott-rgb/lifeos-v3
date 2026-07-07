@@ -336,6 +336,65 @@ class TestCompactAliases(unittest.TestCase):
                 mock_r.assert_not_called()
 
 
+class TestNeedsIndexResponses(unittest.TestCase):
+    """/view, /a, /r without index should return NEEDS INDEX card."""
+
+    @patch.object(bot, 'tg_api')
+    def test_view_without_index_returns_needs_index(self, mock_tg):
+        bot.handle_view('/view', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NEEDS INDEX', text.upper())
+        self.assertIn('No action was taken', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_a_without_index_returns_needs_index(self, mock_tg):
+        bot.handle_a('/a', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NEEDS INDEX', text.upper())
+        self.assertIn('No action was taken', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_r_without_index_returns_needs_index(self, mock_tg):
+        bot.handle_r('/r', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NEEDS INDEX', text.upper())
+        self.assertIn('No action was taken', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_view_with_whitespace_only_returns_needs_index(self, mock_tg):
+        bot.handle_view('/view   ', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('NEEDS INDEX', text.upper())
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_a_with_index_still_works(self, mock_api, mock_tg):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123'},
+        ]
+        bot.handle_a('/a 1', CHAT_ID)
+        self.assertEqual(mock_api.call_count, 2)
+        self.assertEqual(mock_api.call_args_list[0].args, ('/captures/pending/1',))
+        self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/approve', {}))
+
+    @patch.object(bot, 'tg_api')
+    @patch.object(bot, 'call_action_api')
+    def test_r_with_index_still_works(self, mock_api, mock_tg):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123'},
+        ]
+        bot.handle_r('/r 1', CHAT_ID)
+        self.assertEqual(mock_api.call_count, 2)
+        self.assertEqual(mock_api.call_args_list[0].args, ('/captures/pending/1',))
+        self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/reject', {}))
+
+
 class TestErrorMessagesUseCards(unittest.TestCase):
     """Error messages in approve/reject handlers use Operator Cards."""
 

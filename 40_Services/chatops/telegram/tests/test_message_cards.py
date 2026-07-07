@@ -46,6 +46,20 @@ class TestFormatBox(unittest.TestCase):
         self.assertIn("STATE", result)
         self.assertIn("QUEUED", result)
 
+    def test_box_no_right_border_on_rows(self):
+        result = cards.format_box("TEST", rows=[("STATE", "VALUE")])
+        for line in result.split("\n"):
+            if line.startswith("\u2502 "):
+                self.assertFalse(line.endswith("\u2502"),
+                                 "Row ends with right border character")
+
+    def test_box_no_fixed_width_padding(self):
+        result = cards.format_box("X", rows=[("LONG_LABEL", "short")])
+        for line in result.split("\n"):
+            if line.startswith("\u2502 "):
+                self.assertNotIn("                 ", line,
+                                 "Row has excessive right-padding")
+
     def test_box_with_body(self):
         result = cards.format_box("TEST", body="hello world")
         self.assertIn("hello world", result)
@@ -64,6 +78,53 @@ class TestFormatCaptureSuccess(unittest.TestCase):
     def test_includes_event_id_when_provided(self):
         result = cards.format_capture_success("cap_test", event_id="evt_abc")
         self.assertIn("evt_abc", result)
+
+    def test_capture_id_not_in_bordered_row(self):
+        result = cards.format_capture_success("cap_long_id_12345")
+        for line in result.split("\n"):
+            if line.startswith("\u2502 "):
+                self.assertNotIn("cap_long_id_12345", line,
+                                 "capture_id should not be in a bordered row")
+
+    def test_capture_id_below_box(self):
+        result = cards.format_capture_success("cap_below")
+        lines = result.split("\n")
+        after_box = False
+        found_id = False
+        for line in lines:
+            if line.startswith("\u2570"):
+                after_box = True
+                continue
+            if after_box and line.strip() == "ID":
+                found_id = True
+                continue
+            if found_id and "cap_below" in line:
+                break
+        else:
+            if not (after_box and found_id):
+                self.fail("capture_id was not found below the box in ID block")
+
+    def test_event_id_below_box_when_provided(self):
+        result = cards.format_capture_success("cap_test", event_id="evt_below")
+        lines = result.split("\n")
+        after_box = False
+        found_event = False
+        for line in lines:
+            if line.startswith("\u2570"):
+                after_box = True
+                continue
+            if after_box and line.strip() == "EVENT":
+                found_event = True
+                continue
+            if found_event and "evt_below" in line:
+                break
+        else:
+            if not (after_box and found_event):
+                self.fail("event_id was not found below the box in EVENT block")
+
+    def test_age_in_row_not_inside_bordered_box(self):
+        result = cards.format_capture_success("cap_test", created_at="2026-07-07T12:00:00Z", now=datetime(2026, 7, 7, 12, 0, 0, tzinfo=timezone.utc))
+        self.assertIn("now", result)
 
     def test_says_no_vault_processing(self):
         result = cards.format_capture_success("cap_test")
@@ -122,12 +183,56 @@ class TestFormatPendingQueue(unittest.TestCase):
         result = cards.format_pending_queue([], count=0)
         self.assertIn("no pending", result.lower())
 
+    def test_uses_bracket_index_format(self):
+        now = datetime(2026, 7, 7, 12, 5, 0, tzinfo=timezone.utc)
+        items = [{"index": 1, "preview": "test", "created_at": "2026-07-07T12:00:00Z"}]
+        result = cards.format_pending_queue(items, count=1, now=now)
+        self.assertIn("[1]", result)
+
+    def test_truncates_long_preview(self):
+        now = datetime(2026, 7, 7, 12, 5, 0, tzinfo=timezone.utc)
+        items = [{"index": 1, "preview": "x" * 100, "created_at": "2026-07-07T12:00:00Z"}]
+        result = cards.format_pending_queue(items, count=1, now=now)
+        self.assertNotIn("x" * 50, result)
+
+    def test_footer_mentions_or_aliases(self):
+        items = [{"index": 1, "preview": "test", "created_at": "2026-07-07T12:00:00Z"}]
+        result = cards.format_pending_queue(items, count=1)
+        self.assertIn("/view1", result)
+        self.assertIn("/a1", result)
+        self.assertIn("/r1", result)
+
 
 class TestFormatReviewDisabled(unittest.TestCase):
     def test_says_no_files_moved(self):
         result = cards.format_review_disabled()
         self.assertIn("review", result.lower())
         self.assertIn("disabled", result.lower())
+
+
+class TestFormatNeedsIndex(unittest.TestCase):
+    def test_says_needs_index(self):
+        result = cards.format_needs_index("view")
+        self.assertIn("NEEDS INDEX", result.upper())
+
+    def test_shows_view_usage(self):
+        result = cards.format_needs_index("view")
+        self.assertIn("/view 1", result)
+        self.assertIn("/view1", result)
+
+    def test_shows_a_usage(self):
+        result = cards.format_needs_index("a")
+        self.assertIn("/a 1", result)
+        self.assertIn("/a1", result)
+
+    def test_shows_r_usage(self):
+        result = cards.format_needs_index("r")
+        self.assertIn("/r 1", result)
+        self.assertIn("/r1", result)
+
+    def test_says_no_action(self):
+        result = cards.format_needs_index("view")
+        self.assertIn("No action was taken", result)
 
 
 class TestFormatUnauthorized(unittest.TestCase):
