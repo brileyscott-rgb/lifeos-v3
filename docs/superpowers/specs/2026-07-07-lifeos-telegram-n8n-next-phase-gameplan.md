@@ -329,18 +329,18 @@ Phase gate: **No external ingress until the Action API boundary is hardened.** n
 
 ## 12. Features To Avoid For Now
 
-- Public webhooks.
-- Active Cloudflare tunnels.
-- n8n Telegram workflow activation.
-- AI model nodes in Telegram-triggered flows.
-- Proposal generation or approval flows.
-- Controlled file processor execution.
-- Direct Telegram filesystem writes.
-- Button callbacks that bypass Action API.
-- Raw `--once` validation.
-- Manual foreground `--poll` validation.
-- Runtime artifact commits.
-- Kubernetes manifests or cluster deployment.
+- Public webhooks are not approved for unattended or unrestricted production use; narrow webhook endpoints may be piloted later after auth, replay, and rollback review.
+- Active Cloudflare tunnels are not approved for current Telegram/n8n work; narrow tunnel routing may be piloted later after endpoint and access review.
+- n8n Telegram workflow activation is deferred until local boundaries, review-command handling, and Action API hardening are stable.
+- AI model nodes in Telegram-triggered flows are deferred until proposal-only behavior, review gates, and traceability are defined.
+- Proposal generation or approval flows are deferred until exact proposal packets and version-locked approval are implemented.
+- Controlled file processor execution is deferred until A4 approval gates, rollback, and audit logging are implemented.
+- Direct Telegram filesystem writes remain blocked; Telegram must route mutations through approved APIs.
+- Button callbacks that bypass Action API remain blocked; button UX must use the same reviewed API path as commands.
+- Raw `--once` validation remains blocked for live Telegram validation because it can process stale queued commands.
+- Manual foreground `--poll` validation is not needed for current planning and should only occur under an explicit validation plan.
+- Runtime artifact commits remain blocked unless a future runtime artifact policy explicitly approves a narrow tracked subset.
+- Kubernetes manifests or cluster deployment remain deferred until Docker Compose is stable and a concrete operational need exists.
 
 ## 13. Future Feature Parking Lot
 
@@ -357,45 +357,76 @@ Phase gate: **No external ingress until the Action API boundary is hardened.** n
 - Kubernetes only after Compose stability and real need are proven.
 - Tool and template discovery queue for reviewed future candidates only.
 
-## 14. Tool Candidate / Template Discovery Queue
+## 14. Balanced Guardrail Model
 
-These candidates are parked for future research only. They are not approved for installation, import, activation, or runtime integration.
+1. Safety should preserve usefulness, not block the workflow.
+2. Powerful tools are classified, not banned.
+3. Unrestricted direct mutation is blocked.
+4. Reviewed sandbox experimentation is allowed.
+5. Production activation requires explicit approval.
+6. Shell/terminal execution is A5/high-risk, but not forbidden forever.
+7. External tools must start read-only, sandboxed, or inactive.
+8. Any tool that can write files, run commands, expose webhooks, or change services needs an approval gate and rollback plan.
 
-- `awesome-n8n-templates`: read-only source for reviewed n8n workflow ideas and template patterns.
-- `n8n community nodes`: later reviewed extension path only, after service, security, and runtime policy are stable.
-- `n8n-nodes-starter`: official scaffold candidate for a future custom LifeOS n8n node.
-- `Evolution API / n8n-nodes-evolution-api`: cross-channel messaging candidate, deferred because native Telegram path is already active.
-- `Flowise`: visual AI-agent/RAG candidate for future proposal-drafting experiments only.
-- `Langflow`: visual AI-agent/RAG/MCP candidate for future research and proposal workflows.
-- `GitHub repo watcher`: monitor selected repos for releases, security notes, and useful changes.
-- `GitHub trending digest`: surface popular repos by topic into a review queue.
-- `Repo evaluation agent`: score candidate repos for maturity, maintenance, license, install complexity, and LifeOS fit.
-- `Automation template review queue`: collect n8n templates for review before any import.
+Permission tiers:
+
+| Tier | Scope | Rule |
+|---|---|---|
+| A0 | Read-only status/search/list | Allowed when authenticated. |
+| A1 | Capture intake | Allowed through Action API. |
+| A2 | Review lifecycle | Allowed after validation and through Action API. |
+| A3 | AI draft/proposal | Allowed only as proposal generation, no direct writes. |
+| A4 | Approved file write | Allowed only through controlled file processor. |
+| A5 | Shell/Docker/service/admin operations | Allowed only with explicit approval, allowlisted commands, logging, and rollback. |
+
+Hard prohibitions remain narrow and intentional:
+
+- Committing secrets.
+- Publicly exposing admin UIs.
+- Unrestricted shell access from Telegram.
+- Direct AI vault writes.
+- Direct n8n vault writes.
+- Unapproved file processor writes.
+
+## 15. Tool Candidate / Template Discovery Queue
+
+These candidates are classified for controlled future use. None are active in the current capture-first path.
+
+- `awesome-n8n-templates`: Allowed as read-only research now. May import selected templates into inactive sandbox workflows after review.
+- `n8n community nodes`: Deferred, but not rejected. May install later after backup, dependency/security review, and rollback plan.
+- `n8n-nodes-starter`: Allowed later for custom LifeOS n8n nodes that wrap approved APIs instead of bypassing them.
+- `Evolution API / n8n-nodes-evolution-api`: Deferred cross-channel messaging candidate. Useful later if Telegram expands to WhatsApp or other chat interfaces.
+- `Flowise`: Allowed later as a private AI/RAG experiment surface. Must not directly write vault files.
+- `Langflow`: Allowed later as a private AI/RAG/MCP experiment surface. Must not directly write vault files.
+- `Execute Command`: Not allowed as an unrestricted Telegram/n8n shortcut. May be allowed later for A5 admin tasks with command allowlists, confirmation, logging, and rollback.
+- `GitHub repo watcher`: Allowed later as a read-only discovery and scoring feature for selected repos.
+- `GitHub trending digest`: Allowed later as a read-only discovery and scoring feature by topic.
+- `Repo evaluation agent`: Allowed later as a read-only discovery and scoring feature for maturity, maintenance, license, install complexity, and LifeOS fit.
+- `Automation template review queue`: Allowed later as a reviewed n8n template intake system before any import.
 
 Templates and repos are never imported directly into active automation. They enter a review queue first.
 
-## 15. External Tool Integration Rules
+## 16. External Tool Integration Rules
 
-- Do not use n8n Execute Command as the Telegram mutation path.
-- Execute Command is not approved for Telegram/n8n mutation paths. Terminal execution remains A5/high-risk and requires a separate approval model.
-- Do not wire Telegram/n8n directly to terminal or repo directories.
-- Do not install community nodes until service, security, and runtime policy are stable.
-- Do not import random n8n templates into active workflows.
-- Do not use Flowise or Langflow for direct file writes.
-- Do not expose Flowise, Langflow, or n8n publicly.
+- Execute Command is not approved for unattended or unrestricted Telegram/n8n mutation paths; it may be piloted later for reviewed, allowlisted, logged A5 admin tasks with rollback.
+- Telegram/n8n must not be wired directly to terminal or repo directories for unrestricted mutation; any terminal or repo operation requires an A5 approval model.
+- Community nodes may be installed later only after backup, dependency/security review, compatibility review, and rollback plan.
+- n8n templates may be imported into inactive sandbox workflows after review, but not directly into active automation.
+- Flowise and Langflow may run privately for experiments, but cannot directly write vault files or bypass proposal/review gates.
+- n8n, Flowise, and Langflow admin UIs must not be publicly exposed; narrow approved webhook endpoints may be exposed later with auth, replay protection, and rollback.
 - All future tool integrations must route through approved APIs, proposal packets, or read-only research queues.
 - Future n8n templates must be reviewed for secrets, shell execution, filesystem writes, webhook exposure, credential usage, and Action API boundary compliance before import.
 - Future repo/tool candidates must be scored for maturity, maintenance, license, install complexity, security posture, and LifeOS fit before implementation is proposed.
 
-## 16. Stop Conditions
+## 17. Stop Conditions
 
 Stop the next phase immediately if any of these occur:
 
 - A plan implies n8n, Telegram webhooks, or Cloudflare tunnels are active now.
 - A plan says `/view`, `/a`, or `/r` are already live-validated.
 - A plan says button UX is already implemented.
-- A plan implies any external tool is installed, imported, or active.
-- A plan approves Execute Command for Telegram/n8n mutation paths.
+- A plan implies any external tool is installed, imported into active automation, or active without approval.
+- A plan approves unrestricted or unattended Execute Command for Telegram/n8n mutation paths.
 - A plan implies Flowise or Langflow can write files directly.
 - Runtime artifacts are staged for commit.
 - Code files are modified during a documentation-only phase.
@@ -405,7 +436,7 @@ Stop the next phase immediately if any of these occur:
 - Review commands can approve/reject without traceable event IDs and validated target identity.
 - Any future feature tries to skip runtime policy, helper cleanup, Action API hardening, `event_id`, offline tests, or review-risk handling.
 
-## 17. Final Recommendation
+## 18. Final Recommendation
 
 Proceed with **Phase 1 - Runtime Artifact Policy** next.
 

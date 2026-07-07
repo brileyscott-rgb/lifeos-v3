@@ -174,6 +174,8 @@ Completed:
 
 - **Tool candidate queue added to Telegram/n8n gameplan (2026-07-07)**: Integrated external repo/template suggestions as future candidates only. `awesome-n8n-templates`, `n8n-nodes-starter`, Evolution API nodes, Flowise, Langflow, GitHub repo monitoring, and automation template review are parked behind the current foundation gates. No tools were installed, no templates imported, no n8n workflows activated, and no terminal/Execute Command path was approved.
 
+- **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
