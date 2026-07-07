@@ -119,9 +119,21 @@ Completed:
 
 - **Final documentation/security drift cleanup completed**: Root status docs (README.md, Source_of_Truth.md) updated to reflect current implemented state. n8n access model updated to allow Cloudflare Tunnel scaffold while requiring activation approval. Old Telegram workflow placeholder now routes through Action API instead of direct n8n filesystem writes. Local Telegram polling bot marked as fallback/manual tool, not production path. Event/capture privacy policy created at `10_Vaults/LifeOS/10_AI_UNIVERSE/Policies/Event_Capture_Privacy_Policy.md`. `.gitignore` updated to ignore `.lesshst`, `.xsession-errors.old`, `.opencode/`. Cloudflare runbook updated with Docker Compose v1/v2 note. All documentation now reflects the current implemented state without implementation creep.
 
+- **Temporary Cloudflare Quick Tunnel POC completed (2026-07-06)**:
+  - Cloudflared Docker image pulled (`cloudflare/cloudflared:latest`).
+  - Quick Tunnel started via `docker run --rm --network host cloudflare/cloudflared:latest tunnel --url http://127.0.0.1:5678`.
+  - Temporary `trycloudflare.com` URL obtained (ephemeral, no credentials).
+  - Generic n8n webhook test at `/webhook/test` returned HTTP 200 with `{"message":"Workflow was started"}` — confirms tunnel + n8n webhook end-to-end.
+  - Root (`/`) exposed n8n UI — confirmed and acceptable only for temporary POC.
+  - Tunnel stopped immediately after test.
+  - Runbook created at `40_Services/n8n/cloudflared/quick_tunnel_poc.md`.
+  - Helper script created at `40_Services/n8n/cloudflared/start_quick_tunnel_example.sh`.
+  - **Not production. No Telegram webhook registered. No domain-based tunnel activated.**
+  - Next step: user-optional Respond to Webhook node refinement, then proceed to Phase B3 (domain-based) when user has Cloudflare domain.
+
 Next:
-1. Phase B2 readiness cleanup is complete. Awaiting user Cloudflare/domain readiness confirmation.
-2. Phase B3: Controlled active tunnel setup with real values handled manually/out of band — user must provide Cloudflare domain, tunnel token, or credentials JSON.
+1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
+2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
 3. Phase C: n8n Telegram command workflow design/build in n8n UI.
 4. Phase D: Telegram webhook registration and end-to-end test.
 5. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor.
