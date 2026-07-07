@@ -275,6 +275,19 @@ See `10_Vaults/LifeOS/10_AI_UNIVERSE/Policies/Runtime_Artifact_Tracking_Policy.m
 for the full classification of Git-tracked vs runtime vs backup-only vs
 never-committed files.
 
+## Code Boundary Hygiene
+
+Legacy direct-filesystem review helpers were removed from
+`telegram_capture_bot.py`. Active capture and review handlers delegate to the
+Action API for capture creation, pending listing, review file reads,
+approve/reject file moves, frontmatter updates, and review lifecycle event
+logging.
+
+Offline stdlib `unittest` coverage protects safe modes and mutation
+boundaries under `40_Services/chatops/telegram/tests/`. The Telegram bot still
+has limited telemetry logging paths; review lifecycle events remain
+Action-API-owned.
+
 ## Token Safety
 
 - Token is read from the ignored `.env` file

@@ -180,6 +180,8 @@ Completed:
 
 - **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
 
+- **Telegram bot helper cleanup and boundary tests added (2026-07-07)**: Removed stale direct-filesystem review helper code from `telegram_capture_bot.py` and added offline stdlib unittest coverage for Telegram safe modes and Action API mutation boundaries. Active capture/review handlers remain API-backed. Review lifecycle file moves/frontmatter updates/event logging remain Action API-owned. No live Telegram tests, service changes, n8n, tunnels, webhooks, AI proposals, or file processor actions were run.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
