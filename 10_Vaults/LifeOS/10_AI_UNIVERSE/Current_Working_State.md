@@ -91,6 +91,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram safe review-test mode added (2026-07-07)**: Added `--review-test` mode to `telegram_capture_bot.py`. `process_review_test_update()` only allows review commands (`/p`, `/list_pending`, `/view`, `/a`, `/r`, `/approve`, `/reject`), blocks all other commands with a safe no-action reply. `cmd_review_test()` fetches one update, routes through the review-test handler, updates offset, and exits. Review commands route through the Action API — the Telegram bot does not directly list, read, move, or mutate review files. Normal `process_update()` is never called. Raw `--once` is intentionally avoided for review validation. README updated with `--review-test` usage. Next step: controlled validation of `/p`, `/view`, `/a`, `/r` through `--review-test`.
 
+- **Telegram review-command partial validation recorded (2026-07-07)**: `/p` was live-validated using `--review-test` through Action API-backed handlers with no file mutation and no new event-log entry. Controlled validation captures were identified for future approve/reject testing: `cap_20260707_040421_e1b68f_validation-test-from-safe-capture-test-m` and `cap_20260707_061632_1b4b64_validation-review-reject-path-test`. Full live validation of `/view`, `/a`, and `/r` was intentionally deferred by user decision. No raw `--once`, `--poll`, n8n, tunnel, webhook, AI, proposal, or file processor actions were run. No approve/reject mutation was performed.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -158,7 +160,7 @@ Completed:
 Next:
 1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
-3. Controlled validation of `/p`, `/view`, `/a`, `/r` through Action API using `--review-test`.
+3. Phase 4: Add local Telegram polling service template/runbook. Do not start or enable the service yet.
 4. Phase C: n8n Telegram command workflow design/build in n8n UI.
 5. Phase D: Telegram webhook registration and end-to-end test.
 6. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
