@@ -165,6 +165,9 @@ Completed:
 
 - **Telegram polling set to capture-first operating mode (2026-07-07)**: User chose to proceed without completing live `/view`, `/a`, and `/r` validation. Local systemd user polling service was started for capture-first operation after safe queue draining. `/capture` automatic polling was previously validated through Action API. `/p` was previously validated through `--review-test`. Review commands are API-backed in code, but `/view`, `/a`, and `/r` live validation remains deferred and may be fixed later if issues appear. Service was left running and was not enabled on login. No n8n, tunnel, webhook, AI, proposal, or file processor actions were run.
 
+- **Telegram capture-first service enabled on login (2026-07-07)**: The systemd user service `lifeos-telegram-bot.service` was enabled on login after `/capture` automatic polling validation passed. Service remains capture-first: `/capture` is validated, `/p` is validated, and `/view`, `/a`, `/r` live validation remains deferred by user decision. No n8n, tunnel, webhook, AI, proposal, or file processor actions were run. Runtime artifacts were not committed.
+  Note: user lingering is not enabled, so the service is expected to start with the user session/login rather than run independently after logout.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
