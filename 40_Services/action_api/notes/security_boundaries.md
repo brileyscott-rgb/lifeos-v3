@@ -44,3 +44,7 @@
 - `30_Capture/rejected/`
 - `30_Capture/processed/`
 - `50_Event_Log/events.jsonl`
+
+## Out of Scope
+
+The Action API does not handle proposals. Proposal creation, storage, versioning, viewing, and approval are the responsibility of the future AI Processing Pipeline and Controlled File Processor. The Action API's capture lifecycle (create, list, view, approve, reject) ends when a capture is marked `approved` — it does not generate, store, or route proposals.

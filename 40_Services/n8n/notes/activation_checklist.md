@@ -75,4 +75,7 @@ The following items are placeholders for when the Telegram capture workflow is r
 - [ ] Do not enable capture mode until the basic command router (start, help, capture, pending, view, approve, reject) works end-to-end.
 - [ ] Do not enable AI extraction until raw capture and review flow is stable and tested.
 - [ ] Do not enable file creation until a controlled proposal/approval processor is designed, implemented, and security-reviewed.
+- [ ] Proposal approval must reference exact proposal version (e.g., `/approve proposal_456 v1`). No version-less approval accepted.
+- [ ] Proposal viewing commands must be available before approval: `/view summary`, `/view full`, `/view diff`, `/view file <n>`.
+- [ ] Proposal safety checks verified: no secrets, no shell, no Docker, no delete/move/archive, allowed paths, template validation, event logging.
 - [ ] These features require explicit step-by-step approval before activation.

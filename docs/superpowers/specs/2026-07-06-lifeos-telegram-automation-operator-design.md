@@ -325,6 +325,9 @@ Events follow the existing `50_Event_Log/events.jsonl` schema (one JSON object p
 8. **Public webhook is read-only input** — Webhook triggers workflow execution but the workflow cannot be modified via webhook payload.
 9. **User allowlist enforced per message** — Every message authenticated before processing.
 10. **Action API operations are specific and bounded** — No arbitrary file create/delete/move. Only the documented capture lifecycle operations.
+11. **No stale proposal approval** — Proposal approval must reference an exact proposal version. If proposal content changes (even trivially), a new proposal version must be created. The system must not accept an approval command that does not reference an exact proposal version the user viewed.
+12. **No unseen content for proposal approval** — No proposal may be approved unless the user can view the exact file contents or exact diffs that will be applied. Telegram must provide `/view` subcommands for proposals (full content, diff, per-file) before `/approve` is accepted.
+13. **No direct AI vault writes** — AI produces proposals only. AI must never write files to `10_Vaults/` or any LifeOS directory directly. Only the controlled processor, operating on an exact user-approved proposal version, may apply file changes.
 
 ### Container Hardening (Action API)
 
@@ -669,6 +672,7 @@ The AI produces a **proposal** — a structured document that describes what sho
 ```json
 {
   "proposal_id": "prop_20260706_article_link",
+  "proposal_version": "v1",
   "capture_id": "capture_20260706_article_link",
   "source_event_id": "evt_20260706T180606Z_telegram_capture_created",
   "title": "Rust Async Patterns Article",
@@ -678,6 +682,9 @@ The AI produces a **proposal** — a structured document that describes what sho
   "action_items": [
     "Review the article for applicable patterns to adopt in LifeOS pipeline."
   ],
+  "recommended_action": "create knowledge note",
+  "reason": "Capture is a reference link worth documenting for future project use.",
+  "risk_tier": "low",
   "suggested_destination": "10_Vaults/LifeOS/30_Knowledge/Rust/",
   "proposed_files": [
     {
@@ -685,18 +692,65 @@ The AI produces a **proposal** — a structured document that describes what sho
       "content": "# Rust Async Patterns Reference\n\n...",
       "action": "create"
     }
-  ]
+  ],
+  "validation_result": "passed",
+  "safety_checks": {
+    "no_secrets": true,
+    "no_shell": true,
+    "no_docker": true,
+    "no_delete_move_archive": true,
+    "allowed_paths": true,
+    "template_validated": true,
+    "event_logged": true
+  }
 }
 ```
 
 The proposal is stored in a processing queue (e.g., `30_Capture/processing/proposals/`) for user review.
 
-### User Review and Approval
+### Proposal Packet Requirements
 
-- User reviews the proposal via a review command or interface
-- User can approve the proposal as-is, request modifications, or reject it entirely
-- Approved proposals proceed to the controlled processor
-- Rejected proposals are moved to a rejected proposals archive
+Every proposal packet MUST contain:
+
+| Field | Description |
+|---|---|
+| `proposal_id` | Unique proposal identifier |
+| `proposal_version` | Version string (e.g., `v1`, `v2`). Incremented on any content change. |
+| `capture_id` | Source capture that triggered this proposal |
+| `source_capture` | Full source capture text |
+| `recommended_action` | What the AI recommends doing (create, update, etc.) |
+| `reason` | Why this action is recommended |
+| `risk_tier` | `low`, `medium`, `high` — determines approval gate |
+| `files_to_create` | Array of objects: `{path, full_content}` — full proposed contents for each new file |
+| `files_to_update` | Array of objects: `{path, exact_diff_or_full_content}` — exact diff or full updated content for each existing file |
+| `validation_result` | `passed` or list of validation failures |
+| `safety_checks` | Object with boolean fields: `no_secrets`, `no_shell`, `no_docker`, `no_delete_move_archive`, `allowed_paths`, `template_validated`, `event_logged` |
+
+### Proposal Approval Version Locking
+
+Approval must apply only the exact proposal version the user viewed:
+
+1. **Version is part of the approval command** — `/approve proposal_456 v1` approves only `proposal_456` version `v1`.
+2. **If content changes, version increments** — Any edit to a proposal creates a new version (e.g., `v2`). The previous approval of `v1` does not apply to `v2`.
+3. **No stale approval** — The system must reject an `/approve` command for a proposal whose current version does not match the referenced version.
+4. **Approval scope** — Approval is for the entire proposal packet. Partial approval of individual files within a proposal is not allowed (revise the proposal first).
+5. **Event logging** — Every version creation, version view, and version approval is recorded in the event log.
+
+### Telegram Display Rules for Proposals
+
+Telegram must allow the user to view exact content before approving. Display commands:
+
+| Command | Description |
+|---|---|
+| `/view <proposal_id> summary` | Short summary of the proposal |
+| `/view <proposal_id> full` | Full proposal packet content |
+| `/view <proposal_id> diff` | Exact diff of files to update |
+| `/view <proposal_id> file <n>` | View a single proposed file's full content |
+| `/approve <proposal_id> <version>` | Approve exact proposal version |
+| `/reject <proposal_id>` | Reject the proposal entirely |
+| `/revise <proposal_id> "<instructions>"` | Request AI to revise the proposal |
+
+The system MUST NOT accept `/approve` without an exact version reference.
 
 ### Event Logging
 
@@ -740,7 +794,8 @@ The AI extraction pipeline is future work. It must not be built until:
 - **Templates** — File creation uses validated templates with frontmatter schemas
 - **Validation** — Each file path is checked against an allowlist of writable directories
 - **Event logging** — Every file creation/update is recorded in the event log
-- **Approval gates** — Only user-approved proposals are applied
+- **Approval gates** — Only user-approved proposals are applied. Processor must verify that the approval references the exact proposal version being applied.
+- **Version enforcement** — Processor must reject any proposal whose current version does not match the version in the approval command. Prevents stale approval application.
 - **Rollback support** — Processor should log before/after state for recovery
 
 ### Prohibitions

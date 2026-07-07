@@ -45,6 +45,14 @@ Direct filesystem mounts removed in favor of Status API calls.
 - Cloudflare Access interactive login must not protect Telegram webhook path — Telegram cannot complete login challenges.
 - Telegram `secret_token` + n8n allowlist provide app-layer protection instead.
 
+## Proposal Approval Boundaries
+
+1. **No stale proposal approval** — n8n must never route a proposal approval command that references a proposal version that does not match the current version.
+2. **No unseen content approval** — n8n must only route `/approve` for proposals after the user has had the opportunity to view the full content or diff. The workflow must provide `/view` subcommands (summary, full, diff, per-file) before accepting an approval.
+3. **n8n must not generate proposals** — Proposal generation is the AI processor's responsibility. n8n routes proposal data but does not construct, edit, or validate proposal packets.
+4. **n8n must not bypass proposal gates** — No n8n workflow may write files to the vault or invoke a processor without an exact, version-matched user approval.
+5. **No direct AI invocation from Telegram** — n8n must not embed AI model nodes or API calls directly in a Telegram-triggered workflow without intermediate user approval gates.
+
 ## Workflow Review Policy
 
 Before any workflow is activated:
@@ -54,5 +62,6 @@ Before any workflow is activated:
 - [ ] No public webhook triggers
 - [ ] No direct vault writes
 - [ ] No git operations
+- [ ] No proposal bypass (approval must reference exact proposal version)
 - [ ] Tested in isolated mode first
 - [ ] Approved by LifeOS user
