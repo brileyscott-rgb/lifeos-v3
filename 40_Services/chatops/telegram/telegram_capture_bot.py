@@ -25,10 +25,11 @@ ACTION_API_URL = "http://localhost:8788"
 
 ALLOWED_USER_ID = None
 BOT_TOKEN = None
+ALLOW_REVIEW_COMMANDS = False
 
 
 def load_env():
-    global BOT_TOKEN, ALLOWED_USER_ID
+    global BOT_TOKEN, ALLOWED_USER_ID, ALLOW_REVIEW_COMMANDS
     if not os.path.exists(ENV_PATH):
         print("FATAL: .env not found at", ENV_PATH)
         sys.exit(1)
@@ -43,6 +44,9 @@ def load_env():
                 env[key.strip()] = val.strip()
     BOT_TOKEN = env.get('TELEGRAM_BOT_TOKEN', '')
     user_id_str = env.get('TELEGRAM_ALLOWED_USER_ID', '')
+    allow_review_env = env.get('TELEGRAM_ALLOW_REVIEW', '0')
+    if allow_review_env.lower() in ('1', 'true', 'yes'):
+        ALLOW_REVIEW_COMMANDS = True
     if not BOT_TOKEN or not user_id_str:
         print("FATAL: TELEGRAM_BOT_TOKEN or TELEGRAM_ALLOWED_USER_ID missing in .env")
         sys.exit(1)
@@ -246,6 +250,16 @@ def process_update(update):
     cmd = (text or '').strip().lower().split()[0] if text else ''
     if '@' in cmd:
         cmd = cmd.split('@')[0]
+
+    review_cmds = {'/p', '/view', '/a', '/r', '/list_pending', '/approve', '/reject'}
+    if cmd in review_cmds and not ALLOW_REVIEW_COMMANDS:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Review commands are disabled in capture-first mode. No action was taken.'
+        })
+        print(f"Capture-first mode: blocked review command '{cmd}'")
+        return
+
     if cmd == '/capture':
         handle_capture(text, chat_id, sender_id, msg)
     elif cmd == '/help':
@@ -809,7 +823,12 @@ def main():
     parser.add_argument('--capture-test', action='store_true', help='Capture-test mode: safely process only /capture from one update, block all other commands')
     parser.add_argument('--review-test', action='store_true', help='Review-test mode: safely process only review commands from one update, block all other commands')
     parser.add_argument('--interval', type=int, default=3, help='Poll interval in seconds (default: 3)')
+    parser.add_argument('--allow-review', action='store_true', help='Allow review commands in polling mode')
     args = parser.parse_args()
+
+    if args.allow_review:
+        global ALLOW_REVIEW_COMMANDS
+        ALLOW_REVIEW_COMMANDS = True
 
     if args.check:
         cmd_check()

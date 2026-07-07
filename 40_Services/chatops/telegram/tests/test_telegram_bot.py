@@ -531,6 +531,40 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         self.assertNotIn('event_id', text)
 
 
+class TestPollingModeControls(unittest.TestCase):
+    def setUp(self):
+        self.original_allow_review = bot.ALLOW_REVIEW_COMMANDS
+
+    def tearDown(self):
+        bot.ALLOW_REVIEW_COMMANDS = self.original_allow_review
+
+    @patch.object(bot, 'tg_api')
+    def test_review_commands_blocked_by_default(self, mock_tg):
+        bot.ALLOW_REVIEW_COMMANDS = False
+        review_commands = ['/p', '/view 1', '/a 1', '/r 1', '/approve cap_1', '/reject cap_1', '/list_pending']
+
+        for cmd in review_commands:
+            mock_tg.reset_mock()
+            update = make_update(cmd)
+            with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+                bot.process_update(update)
+
+            mock_tg.assert_called_once()
+            text = mock_tg.call_args[0][1]['text']
+            self.assertIn('Review commands are disabled in capture-first mode', text)
+
+    @patch.object(bot, 'handle_p')
+    @patch.object(bot, 'tg_api')
+    def test_review_commands_allowed_when_flag_enabled(self, mock_tg, mock_handle_p):
+        bot.ALLOW_REVIEW_COMMANDS = True
+        update = make_update('/p')
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_update(update)
+
+        mock_handle_p.assert_called_once_with(CHAT_ID)
+        mock_tg.assert_not_called()
+
+
 class TestStaleHelpersRemoved(unittest.TestCase):
     def test_stale_helpers_do_not_exist(self):
         stale_names = [
