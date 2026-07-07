@@ -97,6 +97,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
+- **Telegram `/view`, `/a`, `/r` live validation deferred (2026-07-07)**: By user decision, live validation of `/view`, `/a`, and `/r` review commands was deferred to avoid blocking capture-first operating mode. Review commands are API-backed in code. If they fail in practice, they may be fixed later.
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)
@@ -160,6 +162,8 @@ Completed:
 - **Local Telegram polling service template added (2026-07-07)**: Added a systemd user service template and runbook for running the Telegram bot as a local-only poller. The service was not started or enabled. README documents start/status/stop/enable/disable commands and safety caveats. n8n, tunnels, webhooks, AI, proposals, and file processor remain disabled. `/view`, `/a`, and `/r` live validation remains deferred before long-term unattended polling.
 
 - **Local Telegram polling service live validation passed (2026-07-07)**: Started the systemd user service `lifeos-telegram-bot.service` temporarily for local-only polling. Sent `/capture automatic polling validation test` from Telegram. The running service processed the message automatically through the Action API, created exactly one pending capture (`30_Capture/pending_review/20260707_063037_automatic-polling-validation-test.md`), appended exactly one Action API capture event (`evt_20260707T063037Z_telegram_capture_created`), and replied in Telegram with capture_id/status. No raw `--once`, manual `--poll`, n8n, tunnel, webhook, AI, proposal, or file processor actions were run. Service was stopped by user choice and was not enabled on login.
+
+- **Telegram polling set to capture-first operating mode (2026-07-07)**: User chose to proceed without completing live `/view`, `/a`, and `/r` validation. Local systemd user polling service was started for capture-first operation after safe queue draining. `/capture` automatic polling was previously validated through Action API. `/p` was previously validated through `--review-test`. Review commands are API-backed in code, but `/view`, `/a`, and `/r` live validation remains deferred and may be fixed later if issues appear. Service was left running and was not enabled on login. No n8n, tunnel, webhook, AI, proposal, or file processor actions were run.
 
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
