@@ -103,6 +103,9 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram polling mode decision implemented (2026-07-07)**: Enforced capture-first default polling mode. Added `ALLOW_REVIEW_COMMANDS` guard (default: False) and `--allow-review` CLI flag. In default mode, all review commands are blocked with a safe no-action message. Added offline tests verifying review command blocking by default and authorization when explicitly enabled.
 
+- **Telegram review commands /view, /a, /r offline validation complete (2026-07-07)**: Validated `/view`, `/a`, and `/r` commands using controlled offline tests. Verified safe display of pending capture info, API-only approve/reject mutations, safe handling of invalid IDs/missing captures, and filepath exposure prevention. All tests added to `test_telegram_bot.py` pass.
+
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.

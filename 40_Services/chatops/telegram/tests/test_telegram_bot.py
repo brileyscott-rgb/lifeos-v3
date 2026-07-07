@@ -565,6 +565,105 @@ class TestPollingModeControls(unittest.TestCase):
         mock_tg.assert_not_called()
 
 
+class TestOfflineReviewValidation(unittest.TestCase):
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_pending_capture_info_safely(self, mock_tg, mock_api):
+        mock_api.return_value = {
+            'success': True,
+            'capture': {
+                'capture_id': 'cap_123',
+                'status': 'pending_review',
+                'created_at': '2026-07-07T00:00:00Z',
+                'content': 'Test note content text.'
+            }
+        }
+        bot.handle_view('/view 1', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Capture: cap_123', text)
+        self.assertIn('Status: pending_review', text)
+        self.assertIn('Created: 2026-07-07T00:00:00Z', text)
+        self.assertIn('Test note content text.', text)
+        # Verify no file path is exposed (e.g. 30_Capture or pending_review or .md)
+        self.assertNotIn('30_Capture', text)
+        self.assertNotIn('.md', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_view_invalid_id_fails_safely(self, mock_tg):
+        bot.handle_view('/view ../../secret', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Invalid argument. Use a number, "latest", or a capture_id.', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_view_missing_capture_fails_safely(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': False}
+        bot.handle_view('/view 999', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Capture not found or unavailable. No action was taken.', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_a_approves_only_through_action_api(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123'}
+        ]
+        with patch('builtins.open') as mock_open:
+            bot.handle_a('/a 1', CHAT_ID)
+            # Verify it didn't call builtins.open (no direct filesystem modification)
+            mock_open.assert_not_called()
+        
+        self.assertEqual(mock_api.call_count, 2)
+        self.assertEqual(mock_api.call_args_list[0].args, ('/captures/pending/1',))
+        self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/approve', {}))
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Approved: cap_123', text)
+        self.assertNotIn('30_Capture', text)
+        self.assertNotIn('.md', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_r_rejects_only_through_action_api(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123'}
+        ]
+        with patch('builtins.open') as mock_open:
+            bot.handle_r('/r 1', CHAT_ID)
+            # Verify no direct filesystem modification
+            mock_open.assert_not_called()
+
+        self.assertEqual(mock_api.call_count, 2)
+        self.assertEqual(mock_api.call_args_list[0].args, ('/captures/pending/1',))
+        self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/reject', {}))
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Rejected: cap_123', text)
+        self.assertNotIn('30_Capture', text)
+        self.assertNotIn('.md', text)
+
+    @patch.object(bot, 'tg_api')
+    def test_a_invalid_id_fails_safely(self, mock_tg):
+        bot.handle_a('/a invalid_index', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn("Invalid index: 'invalid_index'. Use a number or 'latest'.", text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_a_missing_capture_fails_safely(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': False}
+        bot.handle_a('/a 999', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Capture not found. No action was taken.', text)
+
+
 class TestStaleHelpersRemoved(unittest.TestCase):
     def test_stale_helpers_do_not_exist(self):
         stale_names = [
