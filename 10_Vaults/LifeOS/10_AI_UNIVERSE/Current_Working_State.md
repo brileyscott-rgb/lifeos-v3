@@ -95,6 +95,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Phase 2 — Telegram helper cleanup + offline tests completed (2026-07-07)**: Removed 10 stale direct-filesystem helper functions from `telegram_capture_bot.py` (`parse_frontmatter`, `find_pending_capture`, `get_first_line_content`, `load_pending_capture_summary`, `list_pending_review_files`, `format_pending_queue`, `resolve_pending_index`, `list_pending_captures`, `update_capture_frontmatter`, `move_capture_file`). All active handlers route through Action API only. Added offline `unittest` suite under `40_Services/chatops/telegram/tests/` covering safe-mode isolation, test-mode command blocking, Action API delegation, unauthorized sender rejection, direct-filesystem write prohibition, and lifecycle event boundary. Staleness confirmed by `grep` scan and test assertions. All verification commands pass. No Action API, live Telegram, or service changes.
 
+- **Action API mutation contract hardened (2026-07-07)**: ca41db0 — event_id envelope added, capture filename collision safety added, request size limits added, symbolic errors added, best-effort rollback added. event_id response contract is partly resolved at API level. Telegram receipts still need to display event_id if not already done. Action API tests: 103 passing.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -180,19 +182,14 @@ Completed:
 
 - **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
 
-- **Telegram bot helper cleanup and boundary tests added (2026-07-07)**: Removed stale direct-filesystem review helper code from `telegram_capture_bot.py` and added offline stdlib unittest coverage for Telegram safe modes and Action API mutation boundaries. Active capture/review handlers remain API-backed. Review lifecycle file moves/frontmatter updates/event logging remain Action API-owned. No live Telegram tests, service changes, n8n, tunnels, webhooks, AI proposals, or file processor actions were run.
-
-- **Critical Phase 3 Action API contract hardening completed (2026-07-07)**: Added contract spec at `docs/superpowers/specs/2026-07-07-action-api-contract-hardening-spec.md`. Action API mutation responses now preserve legacy `success`/top-level fields and add `ok`, `data`, `error`, and `event_id` envelope fields. Capture creation now uses timestamp plus random-suffix filenames with exclusive create semantics, writes `created_event_id` frontmatter, enforces `MAX_REQUEST_BYTES = 65536` and `MAX_CAPTURE_TEXT_CHARS = 20000`, and rolls back newly-created pending files if event append fails. Approve/reject now return `event_id`, use collision-safe target filenames, update processing frontmatter, and attempt rollback if event append fails. Error responses use safe symbolic codes. Documentation clarifies current local Telegram contract as `http://localhost:8788`; Docker/n8n service DNS remains future/inactive. No live Telegram tests, service changes, n8n, tunnels, webhooks, AI proposals, controlled file processor actions, capture movement, or runtime artifact commits were performed.
-
 Next:
-1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
-2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
-3. Phase 4 complete: Local Telegram polling service template/runbook added.
-4. Phase 5 complete: Local Telegram polling service live validation passed.
-5. Phase C: n8n Telegram command workflow design/build in n8n UI.
-6. Phase D: Telegram webhook registration and end-to-end test.
-7. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
-8. All phases require explicit step-by-step approval.
+1. **Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.
+2. **Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.
+3. **/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.
+4. **Telegram review button UX** — Add inline button-based review UI.
+5. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
+6. **n8n internal workflow design** — Build n8n workflows for internal automation.
+7. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
 ## Known Stabilization Backlog
 
@@ -207,6 +204,11 @@ recorded here for visibility but are **not yet fixed**:
 6. **Reconcile bot telemetry event logging with docs** — The docs claim the Telegram bot never writes event log entries, but some bot telemetry events may still be written by legacy/local paths. The code and docs need alignment.
 7. **Validate /view, /a, /r or add capture-only polling guard** — Until review commands are validated, a guard could prevent the polling service from processing review commands (capture-only mode).
 8. ~~**Add Telegram bot offline tests** — No offline test suite exists for `telegram_capture_bot.py`. Unit tests would reduce risk during refactoring.~~ **Resolved (2026-07-07).** Offline unittest coverage exists under `40_Services/chatops/telegram/tests/`.
+9. **Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.
+10. **Telegram review button UX** — Add inline button-based review UI.
+11. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
+12. **n8n internal workflow design** — Build n8n workflows for internal automation.
+13. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
 ## Do Not Do Yet
 
