@@ -114,7 +114,15 @@ Current symbolic errors include `invalid_json`, `payload_too_large`, `capture_te
 
 ## Docker
 
-Added to `40_Services/n8n/docker-compose.yml` as `lifeos-action-api`, but Docker/n8n ingress is not the active Telegram contract yet.
+The Action API is now **owned by the unified compose baseline** at `40_Services/compose/lifeos.yaml`.
+
+```bash
+# Build and start from unified compose:
+docker-compose -f 40_Services/compose/lifeos.yaml build lifeos-action-api
+docker-compose -f 40_Services/compose/lifeos.yaml up -d lifeos-action-api
+```
+
+The container joins `lifeos_internal` network, binds `127.0.0.1:8788:8788`, and is reachable from the host as `http://localhost:8788/` or from other containers on `lifeos_internal` as `http://lifeos-action-api:8788/`.
 
 ## Security
 

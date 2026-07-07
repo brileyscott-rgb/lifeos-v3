@@ -43,7 +43,7 @@ Actual Docker runtime may include legacy/manual containers not owned by this com
 Current known drift:
 
 - ~~Legacy `status_api` compose owned `lifeos-status-api` without `localhost:8787` mapping — **RESOLVED**. Status API now owned by this unified compose with `127.0.0.1:8787:8787`.~~
-- A manual/unlabeled Action API container (no compose labels) serves `localhost:8788` and processes live Telegram captures. No restart policy. Do not touch.
+- ~~Manual/unlabeled Action API (no compose labels) — **RESOLVED**. Action API now owned by this unified compose with `127.0.0.1:8788:8788` and `restart: unless-stopped`.~~
 - Legacy `n8n` compose project (`40_Services/n8n/docker-compose.yml`) owns a running `n8n_n8n_1` container on `localhost:5678`. n8n workflow activation status is not verified.
 - `lifeos_internal` Docker network exists and contains all running containers.
 
@@ -54,7 +54,7 @@ See `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.
 | Service | Role | Status (defined in this compose) | Runtime Status |
 |---------|------|----------------------------------|----------------|
 | `lifeos-status-api` | Read-only status endpoint | **Active** (adopted) | Running from this unified compose — `localhost:8787/health` reachable, read-only |
-| `lifeos-action-api` | Capture/review mutation API | Defined, not started | Running from manual container (no compose labels) — serves `localhost:8788` |
+| `lifeos-action-api` | Capture/review mutation API | **Active** (adopted) | Running from this unified compose — `localhost:8788/health` reachable, read-write |
 | `lifeos-n8n` | Workflow automation scaffold | `manual-start-disabled` profile | Running from legacy `n8n` compose — `localhost:5678`, workflow activation not verified |
 
 ## Network
