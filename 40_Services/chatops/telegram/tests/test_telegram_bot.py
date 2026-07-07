@@ -423,6 +423,104 @@ class TestActionAPIFallback(unittest.TestCase):
         })
 
 
+class TestTelegramEventIdReceipts(unittest.TestCase):
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_capture_success_reply_includes_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123', 'event_id': 'evt_capture_123'}
+        bot.handle_capture('/capture hello', CHAT_ID, AUTHORIZED_SENDER, {})
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Capture created: cap_123', text)
+        self.assertIn('event_id: evt_capture_123', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_capture_success_reply_without_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123'}
+        bot.handle_capture('/capture hello', CHAT_ID, AUTHORIZED_SENDER, {})
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Capture created: cap_123', text)
+        self.assertNotIn('event_id', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_approve_success_reply_includes_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123', 'event_id': 'evt_approve_123'}
+        bot.handle_approve('/approve cap_123', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Approved: cap_123', text)
+        self.assertIn('event_id: evt_approve_123', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_approve_success_reply_without_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123'}
+        bot.handle_approve('/approve cap_123', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Approved: cap_123', text)
+        self.assertNotIn('event_id', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_reject_success_reply_includes_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123', 'event_id': 'evt_reject_123'}
+        bot.handle_reject('/reject cap_123', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Rejected: cap_123', text)
+        self.assertIn('event_id: evt_reject_123', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_reject_success_reply_without_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': True, 'capture_id': 'cap_123'}
+        bot.handle_reject('/reject cap_123', CHAT_ID)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Rejected: cap_123', text)
+        self.assertNotIn('event_id', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_a_success_reply_includes_event_id(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123', 'event_id': 'evt_a_123'}
+        ]
+        bot.handle_a('/a 1', CHAT_ID)
+        self.assertEqual(mock_tg.call_count, 1)
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Approved: cap_123', text)
+        self.assertIn('event_id: evt_a_123', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_r_success_reply_includes_event_id(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            {'success': True, 'capture': {'capture_id': 'cap_123'}},
+            {'success': True, 'capture_id': 'cap_123', 'event_id': 'evt_r_123'}
+        ]
+        bot.handle_r('/r 1', CHAT_ID)
+        self.assertEqual(mock_tg.call_count, 1)
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Rejected: cap_123', text)
+        self.assertIn('event_id: evt_r_123', text)
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_capture_error_reply_does_not_claim_event_id(self, mock_tg, mock_api):
+        mock_api.return_value = {'success': False, 'error': 'invalid_text'}
+        bot.handle_capture('/capture hello', CHAT_ID, AUTHORIZED_SENDER, {})
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('LifeOS capture unavailable', text)
+        self.assertNotIn('event_id', text)
+
+
 class TestStaleHelpersRemoved(unittest.TestCase):
     def test_stale_helpers_do_not_exist(self):
         stale_names = [

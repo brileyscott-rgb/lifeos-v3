@@ -292,9 +292,13 @@ def handle_capture(text, chat_id, sender_id, msg):
         return
 
     capture_id = result.get('capture_id', 'unknown')
+    text_reply = f'Capture created: {capture_id}\nStatus: pending_review\nNo AI processing has started.'
+    event_id = result.get('event_id')
+    if event_id:
+        text_reply += f'\nevent_id: {event_id}'
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Capture created: {capture_id}\nStatus: pending_review\nNo AI processing has started.'
+        'text': text_reply
     })
 
 
@@ -400,9 +404,14 @@ def handle_approve(text, chat_id):
         error = result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
         return
+    capture_id_val = result.get("capture_id", capture_id)
+    text_reply = f'Approved: {capture_id_val}'
+    event_id = result.get('event_id')
+    if event_id:
+        text_reply += f'\nevent_id: {event_id}'
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Approved: {result.get("capture_id", capture_id)}'
+        'text': text_reply
     })
 
 
@@ -423,9 +432,14 @@ def handle_reject(text, chat_id):
         error = result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
         return
+    capture_id_val = result.get("capture_id", capture_id)
+    text_reply = f'Rejected: {capture_id_val}'
+    event_id = result.get('event_id')
+    if event_id:
+        text_reply += f'\nevent_id: {event_id}'
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Rejected: {result.get("capture_id", capture_id)}'
+        'text': text_reply
     })
 
 
@@ -520,9 +534,14 @@ def handle_a(text, chat_id):
         error = approve_result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
         return
+    capture_id_val = approve_result.get("capture_id", capture_id)
+    text_reply = f'Approved: {capture_id_val}'
+    event_id = approve_result.get('event_id')
+    if event_id:
+        text_reply += f'\nevent_id: {event_id}'
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Approved: {approve_result.get("capture_id", capture_id)}'
+        'text': text_reply
     })
 
 
@@ -566,9 +585,14 @@ def handle_r(text, chat_id):
         error = reject_result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
         return
+    capture_id_val = reject_result.get("capture_id", capture_id)
+    text_reply = f'Rejected: {capture_id_val}'
+    event_id = reject_result.get('event_id')
+    if event_id:
+        text_reply += f'\nevent_id: {event_id}'
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Rejected: {reject_result.get("capture_id", capture_id)}'
+        'text': text_reply
     })
 
 
