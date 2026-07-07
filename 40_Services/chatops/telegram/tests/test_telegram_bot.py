@@ -1029,5 +1029,191 @@ class TestViewSummaryAndButtons(unittest.TestCase):
         self.assertLessEqual(len(text.split("\n")[-1]) if "\n" in text else len(text), 130)
 
 
+class TestIntentAndConfirmFlows(unittest.TestCase):
+    """Approve/reject intent shows confirmation; confirm calls Action API."""
+
+    def setUp(self):
+        self.sender_id = AUTHORIZED_SENDER
+        self.cap_ref = bot._make_cap_ref("cap_test_123")
+        self.chat_id = CHAT_ID
+        self.msg_id = 100
+        self.pending_list = {
+            "success": True,
+            "pending": [
+                {"capture_id": "cap_test_123", "index": 1, "status": "pending_review",
+                 "created_at": "2026-07-07T12:00:00Z", "preview": "Test capture content"},
+            ],
+            "count": 1,
+        }
+
+    # --- Approve Intent ---
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_approve_intent_shows_confirmation_and_generates_tokens(self, mock_tg, mock_api):
+        mock_api.return_value = self.pending_list
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_approve_intent(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+
+        # Should edit the original message
+        mock_tg.assert_called_once()
+        args = mock_tg.call_args[0]
+        self.assertEqual(args[0], "editMessageText")
+        payload = args[1]
+        self.assertEqual(payload["chat_id"], self.chat_id)
+        self.assertEqual(payload["message_id"], self.msg_id)
+        self.assertIn("Confirm approval?", payload["text"])
+        self.assertIn("cap_test_123", payload["text"])
+
+        # Should have Confirm Approve + Cancel buttons
+        kb = payload["reply_markup"]["inline_keyboard"]
+        self.assertEqual(len(kb), 1)
+        self.assertEqual(len(kb[0]), 2)
+        self.assertEqual(kb[0][0]["text"], "Confirm Approve")
+        self.assertEqual(kb[0][1]["text"], "Cancel")
+        # Callback data should be 'ca' and 'n' tokens
+        self.assertTrue(kb[0][0]["callback_data"].startswith("rv1|ca|"))
+        self.assertTrue(kb[0][1]["callback_data"].startswith("rv1|n|"))
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_approve_intent_no_pending_capture_shows_error(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "pending": [], "count": 0}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_approve_intent(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+        mock_tg.assert_called_once_with("sendMessage", {
+            "chat_id": self.chat_id,
+            "text": "Capture no longer pending. Please /p to refresh.",
+        })
+
+    # --- Reject Intent ---
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_reject_intent_shows_confirmation(self, mock_tg, mock_api):
+        mock_api.return_value = self.pending_list
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_reject_intent(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+
+        mock_tg.assert_called_once()
+        payload = mock_tg.call_args[0][1]
+        self.assertIn("Confirm rejection?", payload["text"])
+        self.assertEqual(payload["reply_markup"]["inline_keyboard"][0][0]["text"], "Confirm Reject")
+        self.assertTrue(payload["reply_markup"]["inline_keyboard"][0][0]["callback_data"].startswith("rv1|cr|"))
+
+    # --- Confirm Approve Mutation ---
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_approve_calls_action_api_and_shows_event_id(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            self.pending_list,  # _resolve_cap_ref
+            {"success": True, "capture_id": "cap_test_123", "event_id": "evt_approve_123"},  # POST approve
+        ]
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_confirm_approve(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+
+        # Should edit the original message
+        edit_call = mock_tg.call_args_list[0]
+        self.assertEqual(edit_call[0][0], "editMessageText")
+        payload = edit_call[0][1]
+        self.assertIn("Approved", payload["text"])
+        self.assertIn("cap_test_123", payload["text"])
+        self.assertIn("evt_approve_123", payload["text"])
+        # Keyboard should be removed
+        self.assertEqual(payload["reply_markup"], {"inline_keyboard": []})
+
+        # Verify approve was called
+        self.assertEqual(mock_api.call_args_list[1][0][0], "/captures/cap_test_123/approve")
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_approve_no_longer_pending_does_not_mutate(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "pending": [], "count": 0}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_confirm_approve(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+        # Should NOT call approve endpoint
+        self.assertEqual(mock_api.call_count, 1)  # only the pending list call
+        mock_tg.assert_called_once_with("sendMessage", {
+            "chat_id": self.chat_id,
+            "text": "Capture no longer pending. Please /p to refresh.",
+        })
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_approve_api_unavailable_does_not_mutate(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            self.pending_list,
+            None,  # Action API unavailable
+        ]
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_confirm_approve(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+        mock_tg.assert_called_once_with("sendMessage", {
+            "chat_id": self.chat_id,
+            "text": "LifeOS review unavailable. No action was taken.",
+        })
+
+    # --- Confirm Reject Mutation ---
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_reject_calls_action_api_and_shows_event_id(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            self.pending_list,  # _resolve_cap_ref
+            {"success": True, "capture_id": "cap_test_123", "event_id": "evt_reject_123"},  # POST reject
+        ]
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_confirm_reject(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+
+        edit_call = mock_tg.call_args_list[0]
+        self.assertEqual(edit_call[0][0], "editMessageText")
+        payload = edit_call[0][1]
+        self.assertIn("Rejected", payload["text"])
+        self.assertIn("cap_test_123", payload["text"])
+        self.assertIn("evt_reject_123", payload["text"])
+        self.assertEqual(payload["reply_markup"], {"inline_keyboard": []})
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_reject_no_longer_pending_does_not_mutate(self, mock_tg, mock_api):
+        mock_api.return_value = {"success": True, "pending": [], "count": 0}
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                bot._handle_confirm_reject(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+        self.assertEqual(mock_api.call_count, 1)
+
+    # --- Boundary: no direct filesystem access ---
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_intent_flow_does_not_touch_filesystem(self, mock_tg, mock_api):
+        mock_api.return_value = self.pending_list
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                with patch("builtins.open") as mock_open:
+                    bot._handle_approve_intent(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+                    mock_open.assert_not_called()
+
+    @patch.object(bot, 'call_action_api')
+    @patch.object(bot, 'tg_api')
+    def test_confirm_flow_does_not_touch_filesystem(self, mock_tg, mock_api):
+        mock_api.side_effect = [
+            self.pending_list,
+            {"success": True, "capture_id": "cap_test_123", "event_id": "evt_approve_123"},
+        ]
+        with patch.object(bot, 'BOT_TOKEN', "test_token"):
+            with patch.object(bot, 'ALLOWED_USER_ID', self.sender_id):
+                with patch("builtins.open") as mock_open:
+                    bot._handle_confirm_approve(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
+                    mock_open.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

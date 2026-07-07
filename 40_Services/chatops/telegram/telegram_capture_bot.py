@@ -388,19 +388,129 @@ def _handle_view_full(chat_id, cap_ref):
 
 
 def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
-    pass
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    token_ca = _make_token("ca", sender_id, cap_ref)
+    token_n = _make_token("n", sender_id, cap_ref)
+
+    result = call_action_api(f"/captures/{capture_id}")
+    preview = capture_id
+    if result and result.get("success"):
+        capture = result.get("capture", {})
+        content = capture.get("content", "")
+        preview = _extract_preview_line(content)[:120]
+
+    tg_api("editMessageText", {
+        "chat_id": chat_id,
+        "message_id": msg_id,
+        "text": (
+            f"Confirm approval?\n\n"
+            f"capture_id: {capture_id}\n"
+            f"Preview: {preview}"
+        ),
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {"text": "Confirm Approve", "callback_data": token_ca},
+                    {"text": "Cancel", "callback_data": token_n},
+                ],
+            ],
+        },
+    })
 
 
 def _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref):
-    pass
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    token_cr = _make_token("cr", sender_id, cap_ref)
+    token_n = _make_token("n", sender_id, cap_ref)
+
+    result = call_action_api(f"/captures/{capture_id}")
+    preview = capture_id
+    if result and result.get("success"):
+        capture = result.get("capture", {})
+        content = capture.get("content", "")
+        preview = _extract_preview_line(content)[:120]
+
+    tg_api("editMessageText", {
+        "chat_id": chat_id,
+        "message_id": msg_id,
+        "text": (
+            f"Confirm rejection?\n\n"
+            f"capture_id: {capture_id}\n"
+            f"Preview: {preview}"
+        ),
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {"text": "Confirm Reject", "callback_data": token_cr},
+                    {"text": "Cancel", "callback_data": token_n},
+                ],
+            ],
+        },
+    })
 
 
 def _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref):
-    pass
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    result = call_action_api(f"/captures/{capture_id}/approve", {})
+    if result is None:
+        tg_api("sendMessage", {
+            "chat_id": chat_id,
+            "text": "LifeOS review unavailable. No action was taken.",
+        })
+        return
+
+    cid = result.get("capture_id", capture_id)
+    text_reply = f"Approved: {cid}"
+    event_id = result.get("event_id")
+    if event_id:
+        text_reply += f"\nevent_id: {event_id}"
+
+    tg_api("editMessageText", {
+        "chat_id": chat_id,
+        "message_id": msg_id,
+        "text": text_reply,
+        "reply_markup": {"inline_keyboard": []},
+    })
 
 
 def _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref):
-    pass
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    result = call_action_api(f"/captures/{capture_id}/reject", {})
+    if result is None:
+        tg_api("sendMessage", {
+            "chat_id": chat_id,
+            "text": "LifeOS review unavailable. No action was taken.",
+        })
+        return
+
+    cid = result.get("capture_id", capture_id)
+    text_reply = f"Rejected: {cid}"
+    event_id = result.get("event_id")
+    if event_id:
+        text_reply += f"\nevent_id: {event_id}"
+
+    tg_api("editMessageText", {
+        "chat_id": chat_id,
+        "message_id": msg_id,
+        "text": text_reply,
+        "reply_markup": {"inline_keyboard": []},
+    })
 
 
 def process_update(update):
