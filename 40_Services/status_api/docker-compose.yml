@@ -1,3 +1,8 @@
+# LEGACY/REFERENCE: A unified compose file now exists at
+#   40_Services/compose/lifeos.yaml
+# This file is preserved as-is for reference and backward compatibility.
+# New work should use the unified file. This file is not removed.
+
 services:
   lifeos-status-api:
     build: .

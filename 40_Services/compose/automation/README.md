@@ -1,5 +1,7 @@
 # Automation Compose Scaffold
 
+> **Note:** A unified compose file now exists at `40_Services/compose/lifeos.yaml`. This directory's compose file is preserved for reference and backward compatibility.
+
 This directory contains the inert n8n compose scaffold for LifeOS V3 automation.
 
 Status: scaffold only. Do not start services yet.
