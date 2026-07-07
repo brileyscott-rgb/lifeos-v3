@@ -6,7 +6,9 @@
 
 **Architecture:** A single `40_Services/compose/lifeos.yaml` that defines Docker-capable services for Status API, Action API, and n8n scaffold. The unified file consolidates definitions from three existing compose files. No service migration occurs — the active Telegram bot contract remains `http://localhost:8788` and `http://localhost:8787` via host-mapped ports. No service activation occurs in this phase.
 
-**Tech Stack:** Docker Compose V2+, Python 3.12-alpine (Status API, Action API), n8nio/n8n (scaffold-only).
+**Tech Stack:** Docker Compose (v1 baseline), Python 3.12-alpine (Status API, Action API), n8nio/n8n (scaffold-only).
+
+> **Host tooling note:** Current host has `docker-compose` v1.29.2. The `docker compose` v2 plugin is not available. All validation commands in this plan use `docker-compose`. The unified `lifeos.yaml` is the validated baseline (no `name:` top-level key, v1-compatible). The legacy automation compose at `40_Services/compose/automation/compose.yaml` still contains `name:` and will fail under docker-compose v1; it is preserved as reference-only.
 
 ## Global Constraints
 
@@ -75,7 +77,7 @@
 - **No `env_file` — all config via `${VAR:-default}` substitution**
 - **No `WEBHOOK_URL` — no webhook activation**
 - **Restart:** `no`
-- **Security:** `cap_drop: ALL`, `no-new-privileges`, non-root
+- **Security:** `cap_drop: ALL`, `no-new-privileges`, non-root via upstream image defaults (not explicitly set until activation review)
 
 ---
 ## Internal Network Model
@@ -115,8 +117,15 @@ Consolidates env vars from existing `.env.example` files:
 # =============================================================================
 # LifeOS Docker Compose — Example Environment Variables
 # =============================================================================
-# Copy this file to <compose-dir>/.env and fill in real values.
+# This file is documentation only. The compose file uses ${VAR:-default}
+# substitution — no env_file reference. docker-compose config works without
+# a real .env file.
+#
 # .env is gitignored — do not commit secrets.
+#
+# NOTE: N8N_ENCRYPTION_KEY is a future activation placeholder. It is not
+# consumed by the baseline compose unless explicitly added during n8n
+# activation planning.
 # =============================================================================
 
 # n8n server configuration
@@ -130,6 +139,11 @@ N8N_PERSONALIZATION_ENABLED=false
 N8N_VERSION_NOTIFICATIONS_ENABLED=false
 N8N_ENCRYPTION_KEY=replace_with_real_secret_later
 
+# Basic authentication for n8n
+N8N_BASIC_AUTH_ACTIVE=true
+N8N_BASIC_AUTH_USER=change_me
+N8N_BASIC_AUTH_PASSWORD=change_me
+
 # Action API
 ACTION_API_PORT=8788
 
@@ -139,7 +153,7 @@ STATUS_API_PORT=8787
 
 **Per-service `.env.example` files** at `40_Services/n8n/.env.example`, `40_Services/secrets/.env.example` remain as reference for their respective modules.
 
-**Important:** The n8n compose service uses `${VAR:-default}` environment substitution — no `env_file: .env` is used. This allows `docker compose config` to validate successfully without a real `.env` file. The `.env.example` is documentation only.
+**Important:** The n8n compose service uses `${VAR:-default}` environment substitution — no `env_file: .env` is used. This allows `docker-compose config` to validate successfully without a real `.env` file. The `.env.example` is documentation only.
 
 ---
 ## Action API Handling
@@ -166,7 +180,7 @@ STATUS_API_PORT=8787
 ---
 ## n8n Placeholder / Local-Only Handling
 
-- n8n service uses `profiles: ["manual-start-disabled"]` — will not start on `docker compose up`
+- n8n service uses `profiles: ["manual-start-disabled"]` — will not start on `docker-compose up`
 - No `WEBHOOK_URL`, no Telegram webhook trigger, no public ingress
 - `restart: "no"` — explicit manual start only
 - **No `env_file: .env`** — all configuration via `${VAR:-default}` environment substitution
@@ -206,7 +220,7 @@ Applied uniformly across all services:
 |---|---|
 | `cap_drop: ALL` | All services |
 | `security_opt: no-new-privileges:true` | All services |
-| Non-root user | Built into each Dockerfile (uid 1001) |
+| Non-root user | API services via Dockerfiles (uid 1001); n8n via upstream image defaults |
 | `read_only: true` | Status API only (write-not-needed) |
 | Network | `lifeos_internal` only — no `host` network mode |
 | Port binding | `127.0.0.1` only — no `0.0.0.0` |
@@ -249,8 +263,6 @@ All paths relative to `/home/lifeos`.
 - [ ] **Step 1: Write `40_Services/compose/lifeos.yaml`**
 
 ```yaml
-name: lifeos
-
 x-lifeos-boundary:
   status: baseline
   notes: >
@@ -366,7 +378,7 @@ networks:
 
 ```bash
 cd /home/lifeos/40_Services/compose
-docker compose -f lifeos.yaml config
+docker-compose -f lifeos.yaml config
 ```
 
 Expected: Compose file is valid, config output shows resolved service definitions. No warnings about missing `.env` (n8n uses `${VAR:-default}` substitution only). No containers are built, pulled, or started.
@@ -386,12 +398,15 @@ Expected: Compose file is valid, config output shows resolved service definition
 # =============================================================================
 # LifeOS Docker Compose — Example Environment Variables
 # =============================================================================
-# Copy this file to .env and fill in real values.
+# This file is documentation only. The compose file uses ${VAR:-default}
+# substitution — no env_file reference. docker-compose config works without
+# a real .env file.
+#
 # .env is gitignored — do not commit secrets.
 #
-# NOTE: The compose file uses ${VAR:-default} substitution — no env_file
-# reference. This file is documentation only. docker compose config works
-# without a real .env file.
+# NOTE: N8N_ENCRYPTION_KEY is a future activation placeholder. It is not
+# consumed by the baseline compose unless explicitly added during n8n
+# activation planning.
 # =============================================================================
 
 # n8n server configuration
@@ -567,7 +582,7 @@ Expected: `40_Services/compose/.env` is covered by existing `.env` rules. If not
 
 ```bash
 cd /home/lifeos/40_Services/compose
-docker compose -f lifeos.yaml config > /dev/null && echo "COMPOSE VALID"
+docker-compose -f lifeos.yaml config > /dev/null && echo "COMPOSE VALID"
 ```
 
 Expected: exits 0, prints "COMPOSE VALID".
@@ -602,7 +617,7 @@ Expected: Only expected files. No `30_Capture/`, `50_Event_Log/events.jsonl`, `.
 - [ ] **Step 5: Verify all ports bound to 127.0.0.1 (no public exposure)**
 
 ```bash
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -E "published.*\":" | grep -v "127.0.0.1" && echo "WARNING: non-localhost bind found" || echo "OK: all ports localhost-only"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -E "published.*\":" | grep -v "127.0.0.1" && echo "WARNING: non-localhost bind found" || echo "OK: all ports localhost-only"
 ```
 
 Expected: `OK: all ports localhost-only`.
@@ -618,7 +633,7 @@ Expected: Only files listed in the commits above.
 - [ ] **Step 7: Verify `external: true` on network**
 
 ```bash
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -A2 "lifeos_internal" | grep "external: true"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -A2 "lifeos_internal" | grep "external: true"
 ```
 
 Expected: `external: true` is present.
@@ -626,7 +641,7 @@ Expected: `external: true` is present.
 - [ ] **Step 8: Verify n8n has no `env_file` reference**
 
 ```bash
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -A30 "lifeos-n8n" | grep "env_file"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -A30 "lifeos-n8n" | grep "env_file"
 ```
 
 Expected: No matches. n8n uses `${VAR:-default}` only.
@@ -650,7 +665,7 @@ Run after implementation, before claiming completion. These are static validatio
 
 ```bash
 # 1. Compose syntax (static validation)
-docker compose -f 40_Services/compose/lifeos.yaml config > /dev/null && echo "COMPOSE VALID"
+docker-compose -f 40_Services/compose/lifeos.yaml config > /dev/null && echo "COMPOSE VALID"
 
 # 2. Legacy/reference notices present
 grep -c "LEGACY/REFERENCE" \
@@ -665,22 +680,22 @@ git check-ignore 40_Services/compose/.env 2>/dev/null && echo "OK (ignored)" || 
 git status --short
 
 # 5. All ports bound to 127.0.0.1 (no public exposure)
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -E "published.*\":" | grep -v "127.0.0.1" && echo "WARNING: non-localhost bind found" || echo "OK: all ports localhost-only"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -E "published.*\":" | grep -v "127.0.0.1" && echo "WARNING: non-localhost bind found" || echo "OK: all ports localhost-only"
 
 # 6. Git diff is clean (only expected files)
 git diff --stat
 
 # 7. Network is external: true
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -A2 "lifeos_internal" | grep "external: true"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -A2 "lifeos_internal" | grep "external: true"
 
 # 8. No env_file in n8n service
-docker compose -f 40_Services/compose/lifeos.yaml config | grep -A30 "lifeos-n8n" | grep "env_file" || echo "OK: no env_file in n8n"
+docker-compose -f 40_Services/compose/lifeos.yaml config | grep -A30 "lifeos-n8n" | grep "env_file" || echo "OK: no env_file in n8n"
 ```
 
 **Do NOT run in baseline phase:**
-- `docker compose build` — not approved until activation/build phase
-- `docker compose pull` — not approved until activation/build phase
-- `docker compose up` — not approved until activation phase
+- `docker-compose build` — not approved until activation/build phase
+- `docker-compose pull` — not approved until activation/build phase
+- `docker-compose up` — not approved until activation phase
 - `docker network inspect` / `docker network create` — not approved until activation phase
 
 ---
@@ -714,11 +729,11 @@ If the unified compose introduces issues:
 
 5. **Verify pre-existing state:**
    ```bash
-   docker compose -f 40_Services/n8n/docker-compose.yml config > /dev/null
-   docker compose -f 40_Services/status_api/docker-compose.yml config > /dev/null
+   docker-compose -f 40_Services/n8n/docker-compose.yml config > /dev/null
+   docker-compose -f 40_Services/status_api/docker-compose.yml config > /dev/null
    ```
 
-6. **No containers were ever started** in this phase, so no `docker compose down` cleanup is needed.
+6. **No containers were ever started** in this phase, so no `docker-compose down` cleanup is needed.
 
 ---
 ## Risks / Open Questions
@@ -731,4 +746,4 @@ If the unified compose introduces issues:
 | Action API Docker service DNS path (`lifeos-action-api:8788`) differs from localhost path | Active Telegram contract remains `localhost:8788`. Service DNS is prepared but inactive until a separate activation step. |
 | `.env.example` falls out of sync with compose env vars | Both files are part of the same repo. Verification step 8 checks for env_file references. Manual review during activation. |
 
-(End of file - total 613 lines → replaced with revised content)
+
