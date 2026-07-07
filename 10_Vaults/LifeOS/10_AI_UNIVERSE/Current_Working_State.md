@@ -105,6 +105,7 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram review commands /view, /a, /r offline validation complete (2026-07-07)**: Validated `/view`, `/a`, and `/r` commands using controlled offline tests. Verified safe display of pending capture info, API-only approve/reject mutations, safe handling of invalid IDs/missing captures, and filepath exposure prevention. All tests added to `test_telegram_bot.py` pass.
 
+- **Telegram stabilization activation complete (2026-07-07)**: Restarted `lifeos-telegram-bot.service` after HEAD `6aeabd2` — all 5 reviewed commits (bf79a53, 0f1cff9, 9785064, b9e075f, 6aeabd2) are now active in the live polling service. Service remains capture-first (`--poll --interval 3`, no `--allow-review`). Review commands are blocked in live polling by default. Event_id receipt code is active on successful mutation responses. No live `/view`, `/a`, `/r` review command validation performed. n8n/Docker/Cloudflare remain deferred. 189 offline tests passing. All preflight checks clean.
 
 ## Active Deferrals
 
@@ -192,8 +193,8 @@ Completed:
 - **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
 
 Next:
-1. **Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.
-2. **Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.
+1. ~~**Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.~~ **Resolved (2026-07-07).** Centralized `append_event` in bot to enforce local operational/telemetry logging only.
+2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Event_id now displayed in mutation response receipts.
 3. **/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.
 4. **Telegram review button UX** — Add inline button-based review UI.
 5. **Docker Compose baseline** — Stabilize docker-compose.yml for local services.
