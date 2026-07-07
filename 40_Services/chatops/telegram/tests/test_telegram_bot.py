@@ -445,8 +445,9 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_capture('/capture hello', CHAT_ID, AUTHORIZED_SENDER, {})
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Capture created: cap_123', text)
-        self.assertIn('event_id: evt_capture_123', text)
+        self.assertIn('Capture', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('evt_capture_123', text)
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -455,7 +456,8 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_capture('/capture hello', CHAT_ID, AUTHORIZED_SENDER, {})
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Capture created: cap_123', text)
+        self.assertIn('Capture', text)
+        self.assertIn('cap_123', text)
         self.assertNotIn('event_id', text)
 
     @patch.object(bot, 'call_action_api')
@@ -465,8 +467,9 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_approve('/approve cap_123', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Approved: cap_123', text)
-        self.assertIn('event_id: evt_approve_123', text)
+        self.assertIn('Approved', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('evt_approve_123', text)
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -475,7 +478,8 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_approve('/approve cap_123', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Approved: cap_123', text)
+        self.assertIn('Approved', text)
+        self.assertIn('cap_123', text)
         self.assertNotIn('event_id', text)
 
     @patch.object(bot, 'call_action_api')
@@ -485,8 +489,9 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_reject('/reject cap_123', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Rejected: cap_123', text)
-        self.assertIn('event_id: evt_reject_123', text)
+        self.assertIn('Rejected', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('evt_reject_123', text)
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -495,7 +500,8 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_reject('/reject cap_123', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Rejected: cap_123', text)
+        self.assertIn('Rejected', text)
+        self.assertIn('cap_123', text)
         self.assertNotIn('event_id', text)
 
     @patch.object(bot, 'call_action_api')
@@ -508,8 +514,9 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_a('/a 1', CHAT_ID)
         self.assertEqual(mock_tg.call_count, 1)
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Approved: cap_123', text)
-        self.assertIn('event_id: evt_a_123', text)
+        self.assertIn('Approved', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('evt_a_123', text)
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -521,8 +528,9 @@ class TestTelegramEventIdReceipts(unittest.TestCase):
         bot.handle_r('/r 1', CHAT_ID)
         self.assertEqual(mock_tg.call_count, 1)
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Rejected: cap_123', text)
-        self.assertIn('event_id: evt_r_123', text)
+        self.assertIn('Rejected', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('evt_r_123', text)
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -586,11 +594,10 @@ class TestOfflineReviewValidation(unittest.TestCase):
             bot.handle_view('/view 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Capture: cap_123', text)
-        self.assertIn('Status: pending_review', text)
-        self.assertIn('Created: 2026-07-07T00:00:00Z', text)
+        self.assertIn('Review Card', text)
+        self.assertIn('cap_123', text)
+        self.assertIn('pending_review', text)
         self.assertIn('Test note content text.', text)
-        self.assertIn('Preview:', text)
         # Verify no file path is exposed (e.g. 30_Capture or pending_review or .md)
         self.assertNotIn('30_Capture', text)
         self.assertNotIn('.md', text)
@@ -628,7 +635,8 @@ class TestOfflineReviewValidation(unittest.TestCase):
         self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/approve', {}))
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Approved: cap_123', text)
+        self.assertIn('Approved', text)
+        self.assertIn('cap_123', text)
         self.assertNotIn('30_Capture', text)
         self.assertNotIn('.md', text)
 
@@ -649,7 +657,8 @@ class TestOfflineReviewValidation(unittest.TestCase):
         self.assertEqual(mock_api.call_args_list[1].args, ('/captures/cap_123/reject', {}))
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Rejected: cap_123', text)
+        self.assertIn('Rejected', text)
+        self.assertIn('cap_123', text)
         self.assertNotIn('30_Capture', text)
         self.assertNotIn('.md', text)
 
@@ -909,9 +918,9 @@ class TestViewSummaryAndButtons(unittest.TestCase):
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]["text"]
         # Should contain summary fields but NOT full content body
-        self.assertIn("Capture: cap_20260707_120000_a1b2c3_slug", text)
-        self.assertIn("Status: pending_review", text)
-        self.assertIn("Created: 2026-07-07T12:00:00Z", text)
+        self.assertIn("Review Card", text)
+        self.assertIn("cap_20260707_120000_a1b2c3_slug", text)
+        self.assertIn("pending_review", text)
         # Should contain preview line
         self.assertIn("My quick note about something important.", text)
         # Should NOT contain full second line
@@ -1063,7 +1072,7 @@ class TestIntentAndConfirmFlows(unittest.TestCase):
         payload = args[1]
         self.assertEqual(payload["chat_id"], self.chat_id)
         self.assertEqual(payload["message_id"], self.msg_id)
-        self.assertIn("Confirm approval?", payload["text"])
+        self.assertIn("Confirm Approval", payload["text"])
         self.assertIn("cap_test_123", payload["text"])
 
         # Should have Confirm Approve + Cancel buttons
@@ -1100,7 +1109,7 @@ class TestIntentAndConfirmFlows(unittest.TestCase):
 
         mock_tg.assert_called_once()
         payload = mock_tg.call_args[0][1]
-        self.assertIn("Confirm rejection?", payload["text"])
+        self.assertIn("Confirm Rejection", payload["text"])
         self.assertEqual(payload["reply_markup"]["inline_keyboard"][0][0]["text"], "Confirm Reject")
         self.assertTrue(payload["reply_markup"]["inline_keyboard"][0][0]["callback_data"].startswith("rv1|cr|"))
 

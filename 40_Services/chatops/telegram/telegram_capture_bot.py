@@ -35,6 +35,53 @@ TOKEN_TTL = 600       # 10 minutes
 MAC_TRUNC = 12        # hex chars
 ALL_ACTIONS = ("v", "a", "r", "ca", "cr", "n")
 
+# --- Message formatting helpers ---
+
+def _box(title, pairs=None, lines=None, width=36):
+    """Build a boxed message with a title bar and key-value rows.
+    title: str shown in the top border
+    pairs: list of (label, value) tuples — each becomes 'LABEL   value'
+    lines: list of plain strings — each becomes a content row
+    """
+    avail = width - 6
+    title_display = title[:avail - 2] if len(title) > avail - 2 else title
+    pad = avail - len(title_display)
+    top = f"\u256d\u2500\u2500\u2500 {title_display} " + "\u2500" * pad + "\u256e"
+    body = []
+    if pairs:
+        for label, value in pairs:
+            row = f"{label}:".ljust(10) + str(value)
+            body.append(f"\u2502 {row.ljust(width - 4)}\u2502")
+    if lines:
+        for line in lines:
+            body.append(f"\u2502 {line.ljust(width - 4)}\u2502")
+    bottom = "\u2570" + "\u2500" * (width - 2) + "\u256f"
+    if body:
+        return "\n".join([top] + body + [bottom])
+    return "\n".join([top, bottom])
+
+
+def _fmt_age(created_at):
+    """Return a human-readable age like '2m' or '1h' from an ISO timestamp."""
+    if not created_at:
+        return "?"
+    try:
+        created = datetime.fromisoformat(created_at)
+        delta = datetime.now(timezone.utc) - created
+        mins = int(delta.total_seconds() / 60)
+        if mins < 1:
+            return "now"
+        if mins < 60:
+            return f"{mins}m"
+        hours = mins // 60
+        mins_rem = mins % 60
+        if hours < 24:
+            return f"{hours}h {mins_rem}m" if mins_rem else f"{hours}h"
+        days = hours // 24
+        return f"{days}d"
+    except (ValueError, TypeError):
+        return created_at
+
 
 def load_env():
     global BOT_TOKEN, ALLOWED_USER_ID, ALLOW_REVIEW_COMMANDS
@@ -403,14 +450,14 @@ def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
+    text = _box("Confirm Approval", pairs=[
+        ("ID", capture_id),
+        ("PREV", preview),
+    ])
     tg_api("editMessageText", {
         "chat_id": chat_id,
         "message_id": msg_id,
-        "text": (
-            f"Confirm approval?\n\n"
-            f"capture_id: {capture_id}\n"
-            f"Preview: {preview}"
-        ),
+        "text": text,
         "reply_markup": {
             "inline_keyboard": [
                 [
@@ -438,14 +485,14 @@ def _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref):
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
+    text = _box("Confirm Rejection", pairs=[
+        ("ID", capture_id),
+        ("PREV", preview),
+    ])
     tg_api("editMessageText", {
         "chat_id": chat_id,
         "message_id": msg_id,
-        "text": (
-            f"Confirm rejection?\n\n"
-            f"capture_id: {capture_id}\n"
-            f"Preview: {preview}"
-        ),
+        "text": text,
         "reply_markup": {
             "inline_keyboard": [
                 [
@@ -472,10 +519,11 @@ def _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref):
         return
 
     cid = result.get("capture_id", capture_id)
-    text_reply = f"Approved: {cid}"
     event_id = result.get("event_id")
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f"\nevent_id: {event_id}"
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Approved", pairs=pairs)
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -500,10 +548,11 @@ def _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref):
         return
 
     cid = result.get("capture_id", capture_id)
-    text_reply = f"Rejected: {cid}"
     event_id = result.get("event_id")
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f"\nevent_id: {event_id}"
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Rejected", pairs=pairs)
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -590,10 +639,15 @@ def handle_capture(text, chat_id, sender_id, msg):
         return
 
     capture_id = result.get('capture_id', 'unknown')
-    text_reply = f'Capture created: {capture_id}\nStatus: pending_review\nNo AI processing has started.'
     event_id = result.get('event_id')
+    pairs = [
+        ("STATE", "queued for review"),
+        ("ID", capture_id),
+    ]
     if event_id:
-        text_reply += f'\nevent_id: {event_id}'
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Capture", pairs=pairs)
+    text_reply += "\n\nNo AI processing started. Use /p to review the queue."
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -702,11 +756,12 @@ def handle_approve(text, chat_id):
         error = result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
         return
-    capture_id_val = result.get("capture_id", capture_id)
-    text_reply = f'Approved: {capture_id_val}'
+    cid = result.get("capture_id", capture_id)
     event_id = result.get('event_id')
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f'\nevent_id: {event_id}'
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Approved", pairs=pairs)
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -730,11 +785,12 @@ def handle_reject(text, chat_id):
         error = result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
         return
-    capture_id_val = result.get("capture_id", capture_id)
-    text_reply = f'Rejected: {capture_id_val}'
+    cid = result.get("capture_id", capture_id)
     event_id = result.get('event_id')
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f'\nevent_id: {event_id}'
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Rejected", pairs=pairs)
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -751,14 +807,17 @@ def handle_p(chat_id):
     if count == 0:
         tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
         return
-    lines = [f'Pending captures: {count}']
+    header = _box("Review Queue", pairs=[("PENDING", f"{count} waiting")])
+    items = []
     for item in pending:
-        cid = item.get('capture_id', '')
         preview = item.get('preview', '')
-        summary = _extract_preview_line(preview) if preview else cid
-        lines.append(f"\n{item['index']}. {summary}")
-    lines.append('\n\nUse:\n/view 1\n/a 1\n/r 1')
-    tg_api('sendMessage', {'chat_id': chat_id, 'text': ''.join(lines)})
+        summary = _extract_preview_line(preview) if preview else item.get('capture_id', '')
+        age = item.get('age', '')
+        age_str = f"  {age}" if age else ""
+        items.append(f" {item['index']}. {summary}{age_str}")
+    text_reply = header + "\n" + "\n".join(items)
+    text_reply += "\n\n/view 1  /a 1  /r 1"
+    tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
 
 
 def handle_view(text, chat_id):
@@ -790,12 +849,14 @@ def handle_view(text, chat_id):
     # Build summary (first non-empty content line, truncated to 120 chars)
     preview = _extract_preview_line(content)[:120]
 
-    summary = (
-        f"Capture: {cid}\n"
-        f"Status: {ctype}\n"
-        f"Created: {created}\n"
-        f"Preview: {preview}"
-    )
+    summary = _box("Review Card", pairs=[
+        ("SOURCE", "Telegram"),
+        ("STATE", ctype),
+        ("AGE", _fmt_age(created)),
+        ("ID", cid),
+    ])
+    if preview:
+        summary += f"\n\n{preview}"
 
     # Generate tokens for view-full, approve-intent, reject-intent
     cap_ref = _make_cap_ref(cid)
@@ -860,11 +921,12 @@ def handle_a(text, chat_id):
         error = approve_result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
         return
-    capture_id_val = approve_result.get("capture_id", capture_id)
-    text_reply = f'Approved: {capture_id_val}'
+    cid = approve_result.get("capture_id", capture_id)
     event_id = approve_result.get('event_id')
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f'\nevent_id: {event_id}'
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Approved", pairs=pairs)
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -911,11 +973,12 @@ def handle_r(text, chat_id):
         error = reject_result.get('error', 'unknown')
         tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
         return
-    capture_id_val = reject_result.get("capture_id", capture_id)
-    text_reply = f'Rejected: {capture_id_val}'
+    cid = reject_result.get("capture_id", capture_id)
     event_id = reject_result.get('event_id')
+    pairs = [("ID", cid)]
     if event_id:
-        text_reply += f'\nevent_id: {event_id}'
+        pairs.append(("EVENT", event_id))
+    text_reply = _box("Rejected", pairs=pairs)
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
