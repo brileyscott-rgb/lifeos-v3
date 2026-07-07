@@ -2,7 +2,7 @@
 
 Local n8n automation server for LifeOS V3.
 
-**Status: scaffold only — not production active.**
+**Runtime status: n8n container is currently running locally from legacy compose. It is tolerated temporarily as localhost-only drift. Workflow activation status is not verified. No public ingress, WEBHOOK_URL, or Cloudflare is configured. Future unified compose ownership/adoption remains deferred.**
 
 ## Quick Start
 

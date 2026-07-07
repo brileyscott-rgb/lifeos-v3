@@ -26,26 +26,26 @@
 
 | Component / Container | Current State | Origin / Owner | Compose Project | Compose File / Working Dir | Port Exposure | Restart Policy | Mounts / Data Access | Health Status | Matches Unified Compose Baseline? | Current Documentation Status | Risk Level | Recommended Handling |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `lifeos-status-api` | Running | Legacy `status_api` compose | `status_api` | `40_Services/status_api/docker-compose.yml` / `/home/lifeos/40_Services/status_api` | Container-only 8787/tcp (no host mapping) | `unless-stopped` | `30_Capture:ro`, `50_Event_Log:ro` | Internal healthy; `localhost:8787` unreachable | Partial — image/build differs; no `127.0.0.1:8787` mapping; similar mounts | Compose README says "Defined, not started" — contradicts running state | Medium — unreachable from host; no migration path | Tolerate temporarily; plan recreate with localhost mapping |
-| `lifeos-action-api` | Running | Likely manual `docker run` (no compose labels) | (empty) | (empty) — no compose origin | `127.0.0.1:8788→8788/tcp` | `no` | `30_Capture:rw`, `50_Event_Log:rw` | `localhost:8788/health` returns `ok/read_write` | Partial — image name differs; no compose labels; manual start | Compose README says "Defined, not started" — contradicts running state | High — mutation surface; no restart policy; serves live Telegram path | Do not touch; leave untouched until n8n/Status drift reconciled |
+| `lifeos-status-api` | **RESOLVED** — now unified-compose-owned | Unified compose `compose` project | `compose` | `40_Services/compose/lifeos.yaml` / `/home/lifeos/40_Services/compose` | `127.0.0.1:8787→8787/tcp` | `unless-stopped` | `30_Capture:ro`, `50_Event_Log:ro` | `localhost:8787/health` returns `ok/read_only` | Yes — owned by unified compose | Compose README now shows **Active (adopted)** | Low — resolved | Resolved via Phase 2 adoption |
+| `lifeos-action-api` | **RESOLVED** — now unified-compose-owned | Unified compose `compose` project | `compose` | `40_Services/compose/lifeos.yaml` / `/home/lifeos/40_Services/compose` | `127.0.0.1:8788→8788/tcp` | `unless-stopped` (improved from `no`) | `30_Capture:rw`, `50_Event_Log:rw` | `localhost:8788/health` returns `ok/read_write` | Yes — owned by unified compose | Compose README now shows **Active (adopted)** | Low — resolved | Resolved via Phase 5 adoption |
 | `n8n_n8n_1` | Running | Legacy `n8n` compose | `n8n` | `docker-compose.yml` / `/home/lifeos/40_Services/n8n` | `127.0.0.1:5678→5678/tcp` | `unless-stopped` | Docker volume `n8n_n8n_data` | Container running; workflow activation NOT verified | Matches compose structure; unified uses different project name (`lifeos-n8n`) | n8n README says "scaffold only — not production active" — contradicts running container | Medium — container is running but no verified active workflows | Decide stop vs tolerate; preserve data volume |
 | `lifeos_internal` network | Exists | Created by first compose up | N/A | N/A | N/A | N/A | N/A | N/A | Matches — unified uses `external: true` | Documented correctly | Low — no action needed | Accept as-is |
 | Telegram bot service | Active, enabled | systemd user service | N/A | `/home/lifeos/.config/systemd/user/lifeos-telegram-bot.service` | N/A | `enabled` (user session) | N/A | Active (`--poll --interval 3`) | Not in compose — correct | Documented correctly | Low — no action needed | Accept as-is |
-| Unified compose baseline (`lifeos.yaml`) | Static definition only | Current task | N/A | `40_Services/compose/lifeos.yaml` | N/A | N/A | N/A | N/A | N/A — owns no containers | Created 2026-07-07; services listed as "Defined, not started" | Medium — documented state contradicts reality | Add drift warning; update current-state docs |
+| Unified compose baseline (`lifeos.yaml`) | Owns Status API and Action API | Drift reconciliation | `compose` | `40_Services/compose/lifeos.yaml` | N/A | N/A | N/A | N/A | N/A — now owns 2 of 3 services | Updated in Phases 2/5 documentation | Low — resolved for Status/Action API; n8n remains | Accept n8n as tolerated drift |
 
 ---
 
 ## B. Drift Classification
 
 ### `lifeos-status-api`
-- **Classification:** Accepted current runtime; requires future stop/recreate planning
-- **Rationale:** Container is healthy and correct in behavior but unreachable from host. Documentation says not started.
-- **Action:** Documentation correction first. Plan recreate with `127.0.0.1:8787` mapping. Do not recreate yet.
+- **Classification:** **RESOLVED** — adopted under unified compose (Phase 2)
+- **Rationale:** Legacy container stopped/removed. Unified compose container running with `127.0.0.1:8787:8787` mapping. Healthy on `localhost:8787/health`.
+- **Action:** No further action. Monitor health.
 
 ### `lifeos-action-api`
-- **Classification:** Accepted current runtime; requires immediate action to never touch
-- **Rationale:** Serving live Telegram capture path at `localhost:8788`. No compose ownership. No restart policy. High risk of disruption.
-- **Action:** Do not touch. Document as manual/unlabeled container. Leave untouched until Status API and n8n drifts are reconciled.
+- **Classification:** **RESOLVED** — adopted under unified compose (Phase 5)
+- **Rationale:** Manual container stopped/removed. Unified compose container running with `127.0.0.1:8788:8788` and `restart: unless-stopped`. Telegram capture path intact.
+- **Action:** No further action. Monitor health. Do not enable `--allow-review`.
 
 ### `n8n_n8n_1`
 - **Classification:** Tolerated temporary drift; requires stop/defer decision
@@ -63,9 +63,9 @@
 - **Action:** No action needed.
 
 ### Unified compose baseline
-- **Classification:** Documentation drift; ownership drift
-- **Rationale:** Exists as static definition but does not own running containers. Compose README claims "Defined, not started" for all services — contradicts runtime.
-- **Action:** Add drift warning. Update service status table. Do not attempt to claim ownership until per-container adoption plans are approved.
+- **Classification:** **RESOLVED** — now owns Status API and Action API
+- **Rationale:** Status API and Action API adopted under unified compose in Phases 2 and 5. Compose README service table updated to reflect active ownership. n8n remains the only unowned container (tolerated temporary drift).
+- **Action:** n8n ownership remains deferred. Do not attempt n8n adoption without separate plan and approval.
 
 ---
 
@@ -97,13 +97,13 @@
 
 **Goal:** Record current Docker runtime drift without any service changes.
 
-**Executable now — docs/planning only.**
+**Status: COMPLETE** (commit 23cecc3)
 
 Steps:
-- [ ] Record this plan as `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.md`
-- [ ] Add runtime drift entry to `Current_Working_State.md` with the verified runtime truth
-- [ ] Update `40_Services/compose/README.md` with Runtime Drift Warning section
-- [ ] Run static validation checks to confirm no unintended changes
+- [x] Record this plan as `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.md`
+- [x] Add runtime drift entry to `Current_Working_State.md` with the verified runtime truth
+- [x] Update `40_Services/compose/README.md` with Runtime Drift Warning section
+- [x] Run static validation checks to confirm no unintended changes
 
 **Do NOT execute:**
 - `docker-compose up/start/restart/build/pull/create`
@@ -112,11 +112,13 @@ Steps:
 - `systemctl --user stop/start/restart`
 - Any container or service modification
 
-### Phase B: n8n stop/defer decision plan
+### Phase B: n8n stop/tolerate decision plan
 
 **Goal:** Decide whether running localhost-only n8n container is tolerated temporarily or should be stopped.
 
-**Not executable yet — requires separate decision.**
+**Status: COMPLETE** (commit ab5d18c) — Decision: **tolerate temporarily**
+
+Decision: **Tolerate n8n temporarily** (Option A per decision plan). See `docs/superpowers/plans/2026-07-07-n8n-stop-tolerate-decision-plan.md` for full analysis.
 
 Decision options:
 1. **Tolerate (recommended unless risk is clear):** Leave n8n running localhost-only. Document that workflow activation is not verified. No container changes. Low risk if `127.0.0.1:5678` remains local-only.
@@ -152,68 +154,57 @@ docker-compose -f 40_Services/compose/lifeos.yaml --profile manual-start-disable
 
 ### Phase C: Status API localhost mapping adoption/recreate plan
 
-**Goal:** Plan how to make Status API reachable on `localhost:8787`.
+**Goal:** Plan and execute Status API adoption under unified compose with `localhost:8787` mapping.
 
-**Not executable yet — requires separate plan after Phase A is approved.**
+**Status: COMPLETE** (commit d6f7757 — execution; preceded by plan at 96062cd)
 
-Current state: Legacy `lifeos-status-api` container is healthy internally (`lifeos_internal`) but has no `127.0.0.1:8787` host port mapping. `localhost:8787` is free.
-
-Future options:
-1. **Recreate via unified compose:** `docker-compose -f 40_Services/compose/lifeos.yaml up -d lifeos-status-api` — would start a new container with `127.0.0.1:8787:8787` mapping. The existing legacy container must be stopped first to avoid port conflict (it uses internal-only 8787, so technically no port conflict exists on host).
-2. **Adopt existing container:** Modify the legacy container to add port mapping. Less clean than recreate.
-3. **Combined approach:** Stop the legacy `lifeos-status-api` container (no data loss — read-only container), then start the unified compose Status API.
-
-**Important:** The legacy `lifeos-status-api` and the unified `lifeos-status-api` have different image names and compose project labels. They are distinct containers that cannot both claim the name `lifeos-status-api` on the same network.
-
-**Do NOT recreate in this phase.**
+Adoption executed via Phase 2:
+1. Legacy `lifeos-status-api` from `status_api` compose was stopped and removed.
+2. Unified compose `lifeos-status-api` was built and started.
+3. `localhost:8787/health` now returns `ok/read_only`.
+4. `localhost:8787/status` now returns valid JSON.
+5. No data loss — read-only container. No other services affected.
 
 ### Phase D: Action API adoption plan
 
-**Goal:** Plan how to bring Action API under compose ownership.
+**Goal:** Plan and execute Action API adoption under unified compose.
 
-**Not executable yet — deferred until Phase B and Phase C are resolved.**
+**Status: COMPLETE** (commit 16699bf — execution; preceded by plan at 1e3f727)
 
-Current state: `lifeos-action-api` is serving live Telegram capture path at `localhost:8788`. No compose labels. No restart policy (`restart: no`).
-
-Constraints:
-- `localhost:8788` must remain functional throughout — Telegram polling depends on it
-- Do not touch Action API until Status API and n8n drifts are reconciled
-- Any restart or replacement risks a gap in Telegram capture service
-
-Future options:
-1. **Adopt via unified compose:** Stop the manual container, start the unified compose Action API. Risk of brief capture outage during swap.
-2. **Leave as-is indefinitely:** Manual container with no restart policy is fragile. A host reboot would leave Action API down until manually started.
-3. **Add `--restart unless-stopped` to existing container:** Minimal change, no outage. Requires `docker update`.
-
-**Do NOT touch Action API in this plan. Future plans must include:**
-- Rollback steps (restore manual container)
-- Telegram capture verification after any change
-- Event log continuity check
+Adoption executed via Phase 5:
+1. Manual `lifeos-action-api` container (no compose labels, `restart: no`) was stopped and removed.
+2. Unified compose `lifeos-action-api` was built and started with `restart: unless-stopped`.
+3. `localhost:8788/health` still returns `ok/read_write` — Telegram capture path intact.
+4. Status API remained healthy throughout.
+5. Telegram was not restarted. No capture outage.
 
 ### Phase E: Unified compose ownership migration plan
 
 **Goal:** Unified compose baseline should eventually own all LifeOS Docker services.
 
-**Not executable yet — depends on Phase C and Phase D.**
+**Status: PARTIALLY COMPLETE** — Status API and Action API adopted. n8n remains.
 
-Issues to resolve:
-- **Name conflicts:** Legacy `lifeos-status-api` (from `status_api` project) conflicts with unified `lifeos-status-api` (from unified compose). The unified container name `lifeos-status-api` cannot be created while the legacy one exists with the same name.
-- **Legacy project `status_api`:** `docker-compose -f 40_Services/status_api/docker-compose.yml down` would stop the legacy Status API. This is the cleanest way to free the name.
-- **Manual Action API:** No compose project commands apply. Must be stopped individually.
-- **Legacy n8n project:** `docker-compose -f 40_Services/n8n/docker-compose.yml down` would stop n8n. Use carefully — preserves volume.
-- **Network:** `lifeos_internal` already exists and is used by all containers. Unified compose uses `external: true`. No network change needed.
+Status:
+- `lifeos-status-api` — adopted (Phase 2). No name conflict remaining.
+- `lifeos-action-api` — adopted (Phase 5). No restart policy issue remaining.
+- `n8n_n8n_1` — **not adopted.** Remains under legacy `n8n` compose project. Tolerated temporary drift.
+- `lifeos_internal` network — preserved. Unified compose uses `external: true`.
 
-**Do NOT execute broad `docker-compose down` until per-container ownership is clearly understood.**
+**Do NOT execute broad `docker-compose down`.** Only adopt n8n via a separate approved plan.
 
 ### Phase F: Documentation closeout
 
 **Goal:** Update all documentation to reflect current runtime reality after approved changes.
 
-- Update `Current_Working_State.md` after each phase
-- Update `40_Services/compose/README.md` status table
-- Update `40_Services/status_api/README.md` if Status API is recreated
-- Update `40_Services/action_api/README.md` if Action API is adopted
-- Update `40_Services/n8n/README.md` if n8n is stopped or configuration changes
+**Status: COMPLETE** (current commit)
+
+Updates performed:
+- `Current_Working_State.md` — runtime drift entry added (23cecc3); Status API adoption recorded (d6f7757); Action API adoption recorded (16699bf); final closeout entry (current commit)
+- `40_Services/compose/README.md` — drift warning added (23cecc3); Status API resolved (d6f7757); Action API resolved (16699bf)
+- `40_Services/status_api/README.md` — unified compose ownership documented (d6f7757)
+- `40_Services/action_api/README.md` — unified compose ownership documented (16699bf)
+- `40_Services/n8n/README.md` — stale "scaffold only" claim corrected (current commit)
+- `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.md` — phases marked complete (current commit)
 
 ---
 
@@ -237,14 +228,19 @@ Issues to resolve:
 
 ---
 
-## F. Recommended Next Step
+## F. Recommended Next Step (Update — Post Reconciliation)
 
-1. **Docs-only correction first (Phase A)** — Record the runtime drift truth. This covers the current task. No service changes.
+**Docker runtime drift reconciliation is complete for Status API and Action API.**
 
-2. **Then decide whether to stop or tolerate n8n (Phase B)** — As a separate plan/decision. Localhost-only n8n with no verified active workflows is low risk. Stopping it is optional.
+Current state:
+1. **Status API** — Unified-compose-owned, `localhost:8787`, healthy read-only.
+2. **Action API** — Unified-compose-owned, `localhost:8788`, healthy read-write, Telegram capture intact.
+3. **n8n** — Tolerated localhost-only drift. No public ingress, no WEBHOOK_URL, no Cloudflare. Workflow activation not verified.
+4. **Telegram** — Active, capture-first, no `--allow-review`.
 
-3. **Then plan Status API localhost:8787 mapping (Phase C)** — Status API is read-only, lowest risk for actual migration. Requires stopping the legacy container and starting the unified one. Simple rollback.
-
-4. **Leave Action API untouched (Phase D)** — Do not touch the live Telegram capture path until all other drifts are reconciled. This is the last container to adopt.
-
-5. **Pause unified compose activation** — Do not run `docker-compose up` or `docker-compose build` until the drift reconciliation plan is reviewed and each per-container adoption is separately approved.
+Next deferred phases (no timeline):
+- **n8n ownership/adoption** — Requires separate plan and approval if/when desired.
+- **Telegram review command live validation** — Requires `--allow-review` test.
+- **Cloudflare/webhooks** — Requires domain readiness and separate activation plan.
+- **AI proposal pipeline** — Requires controlled file processor design.
+- **Controlled file processor** — Requires proposal/approval architecture.
