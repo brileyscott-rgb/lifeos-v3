@@ -1,10 +1,10 @@
 # Telegram ChatOps Local Bot Handler
 
-> **Status: Active interim capture-first path.** The Telegram bot is currently
-> running as a local systemd user polling service (`--poll --interval 3`).
-> Capture-first operating mode: `/capture` automatic polling is validated
-> through Action API. Review commands are API-backed in code, but `/view`,
-> `/a`, and `/r` live validation remains deferred.
+> **Status: Active capture+review path.** The Telegram bot is currently
+> running as a local systemd user polling service (`--poll --interval 3 --allow-review`).
+> Both capture and review commands are live-validated through Action API.
+> Inline review button UX (approve/reject with confirmation, cancel, view full text)
+> is active in live polling.
 >
 > The future production path will use n8n webhook workflow routing through
 > the LifeOS Action API, but is not yet active.
