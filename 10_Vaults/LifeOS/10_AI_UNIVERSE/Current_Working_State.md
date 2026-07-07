@@ -159,14 +159,17 @@ Completed:
 
 - **Local Telegram polling service template added (2026-07-07)**: Added a systemd user service template and runbook for running the Telegram bot as a local-only poller. The service was not started or enabled. README documents start/status/stop/enable/disable commands and safety caveats. n8n, tunnels, webhooks, AI, proposals, and file processor remain disabled. `/view`, `/a`, and `/r` live validation remains deferred before long-term unattended polling.
 
+- **Local Telegram polling service live validation passed (2026-07-07)**: Started the systemd user service `lifeos-telegram-bot.service` temporarily for local-only polling. Sent `/capture automatic polling validation test` from Telegram. The running service processed the message automatically through the Action API, created exactly one pending capture (`30_Capture/pending_review/20260707_063037_automatic-polling-validation-test.md`), appended exactly one Action API capture event (`evt_20260707T063037Z_telegram_capture_created`), and replied in Telegram with capture_id/status. No raw `--once`, manual `--poll`, n8n, tunnel, webhook, AI, proposal, or file processor actions were run. Service was stopped by user choice and was not enabled on login.
+
 Next:
-1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
+1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
-3. Phase 4: Add local Telegram polling service template/runbook. Do not start or enable the service yet.
-4. Phase C: n8n Telegram command workflow design/build in n8n UI.
-5. Phase D: Telegram webhook registration and end-to-end test.
-6. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
-7. All phases require explicit step-by-step approval.
+3. Phase 4 complete: Local Telegram polling service template/runbook added.
+4. Phase 5 complete: Local Telegram polling service live validation passed.
+5. Phase C: n8n Telegram command workflow design/build in n8n UI.
+6. Phase D: Telegram webhook registration and end-to-end test.
+7. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
+8. All phases require explicit step-by-step approval.
 
 ## Do Not Do Yet
 
