@@ -467,6 +467,57 @@ validation.
 same as `--capture-test`. This prevents re-processing the same update in
 subsequent test runs.
 
+## Local Polling Service
+
+### Purpose
+
+Run the Telegram bot locally as a systemd user service so that messages are
+processed automatically without manual intervention.
+
+### Safety
+
+- **Local-only**: No n8n, tunnel, webhook, AI, proposal, or file processor.
+- All capture and review lifecycle operations still route through the Action API
+  (`http://localhost:8788`).
+- The Status API (`http://localhost:8787`) handles `/status` queries.
+- The bot never writes directly to `30_Capture/`, `50_Event_Log/`, or any vault path.
+- No Docker, no Cloudflare, no public ingress — purely local polling.
+
+### Prerequisites
+
+- Action API running on `http://localhost:8788` for `/capture` and review mutation commands.
+- Status API running on `http://localhost:8787` for `/status`.
+
+### Install
+
+Copy the user service template:
+
+```bash
+mkdir -p ~/.config/systemd/user/
+cp 40_Services/chatops/telegram/systemd/lifeos-telegram-bot.service ~/.config/systemd/user/
+```
+
+### Commands
+
+```bash
+systemctl --user daemon-reload
+systemctl --user start lifeos-telegram-bot.service
+systemctl --user status lifeos-telegram-bot.service
+systemctl --user stop lifeos-telegram-bot.service
+systemctl --user enable lifeos-telegram-bot.service
+systemctl --user disable lifeos-telegram-bot.service
+```
+
+### Warning
+
+**Do not start or enable the service until explicit Phase 5 approval.**
+
+### Caveat
+
+`/capture` and `/p` have been live-validated. `/view`, `/a`, and `/r` live
+validation was deferred and should be completed before long-term unattended
+polling.
+
 ## Not Implemented Yet
 
 - `/link`, `/idea`, `/project` command routing

@@ -157,6 +157,8 @@ Completed:
 
 - **Telegram `/capture` routed through Action API (2026-07-06)**: `handle_capture()` in `telegram_capture_bot.py` no longer writes capture files directly. Calls `POST /captures` on the Action API (`http://localhost:8788`). Bot no longer writes to `30_Capture/notes/`, `30_Capture/pending_review/`, or `50_Event_Log/events.jsonl`. Action API handles capture file creation, event logging, and capture_id generation. Unavailable Action API returns safe message: `LifeOS capture unavailable. No action was taken.` Success response includes `capture_id` and `pending_review` status. No AI, n8n, file processor, proposals, or review commands implemented.
 
+- **Local Telegram polling service template added (2026-07-07)**: Added a systemd user service template and runbook for running the Telegram bot as a local-only poller. The service was not started or enabled. README documents start/status/stop/enable/disable commands and safety caveats. n8n, tunnels, webhooks, AI, proposals, and file processor remain disabled. `/view`, `/a`, and `/r` live validation remains deferred before long-term unattended polling.
+
 Next:
 1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.

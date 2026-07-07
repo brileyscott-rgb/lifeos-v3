@@ -1,0 +1,13 @@
+[Unit]
+Description=LifeOS Telegram Bot Local Poller
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lifeos
+ExecStart=/usr/bin/python3 /home/lifeos/40_Services/chatops/telegram/telegram_capture_bot.py --poll --interval 3
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
