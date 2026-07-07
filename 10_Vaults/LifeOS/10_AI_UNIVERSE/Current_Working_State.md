@@ -77,6 +77,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Safe Telegram receive-test guard added (2026-07-06)**: Added `--receive-test` mode to `telegram_capture_bot.py`. Safe handler bypasses all normal command dispatch (`/capture`, `/status`, `/approve`, `/reject`, `/list_pending`, `/p`, `/view`, `/a`, `/r`). Sends fixed acknowledgement: `LifeOS receive test OK. No action was taken.` Updated README.md to recommend `--receive-test` over raw `--once` for first receive testing. No live Telegram test run. No `/status` or `/capture` implementation.
 
+- **Telegram sender authorization guard and read-only `/status` command added (2026-07-06)**: Extracted `extract_sender_id()`, `is_authorized_sender()`, and `reject_unauthorized()` helper functions. All command handlers and `--receive-test` mode now enforce sender allowlist before replying. Replaced local filesystem `handle_status()` with HTTP call to the internal Status API (`http://localhost:8787/status`) with safe fallback on unavailable. `/status` is read-only — no captures created, no files moved, no vault writes, no AI/n8n/Docker invoked. Authorization is centralized and reusable for future commands. Documentation updated.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.

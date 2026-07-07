@@ -20,6 +20,7 @@ PENDING_DIR = os.path.join(CAPTURE_DIR, 'pending_review')
 APPROVED_DIR = os.path.join(CAPTURE_DIR, 'approved')
 REJECTED_DIR = os.path.join(CAPTURE_DIR, 'rejected')
 EVENT_LOG = os.path.join(LIFEOS_ROOT, '50_Event_Log', 'events.jsonl')
+STATUS_API_URL = "http://localhost:8787/status"
 
 ALLOWED_USER_ID = None
 BOT_TOKEN = None
@@ -49,6 +50,29 @@ def load_env():
     except ValueError:
         print("FATAL: TELEGRAM_ALLOWED_USER_ID must be an integer")
         sys.exit(1)
+
+
+def extract_sender_id(update):
+    msg = update.get('message', {})
+    sender_id = msg.get('from', {}).get('id')
+    chat_id = msg.get('chat', {}).get('id')
+    return sender_id, chat_id
+
+
+def is_authorized_sender(sender_id):
+    return sender_id is not None and sender_id == ALLOWED_USER_ID
+
+
+def reject_unauthorized(chat_id):
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Unauthorized'
+    })
+    append_event('chatops.telegram.unauthorized_sender_rejected', {
+        'source': 'telegram',
+        'sender_rejected': True,
+        'raw_message_logged': False,
+    })
 
 
 def tg_api(method, payload=None):
@@ -178,27 +202,17 @@ def slugify(text):
 
 
 def process_update(update):
-    msg = update.get('message', {})
-    chat = msg.get('chat', {})
-    sender_id = msg.get('from', {}).get('id')
-    text = msg.get('text', '')
-    chat_id = chat.get('id')
-
+    sender_id, chat_id = extract_sender_id(update)
     if sender_id is None or chat_id is None:
         return
 
-    if sender_id != ALLOWED_USER_ID:
+    if not is_authorized_sender(sender_id):
         print("Unauthorized sender rejected")
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': 'Unauthorized'
-        })
-        append_event('chatops.telegram.unauthorized_sender_rejected', {
-            'source': 'telegram',
-            'sender_rejected': True,
-            'raw_message_logged': False,
-        })
+        reject_unauthorized(chat_id)
         return
+
+    msg = update.get('message', {})
+    text = msg.get('text', '')
 
     cmd = (text or '').strip().lower().split()[0] if text else ''
     if '@' in cmd:
@@ -345,15 +359,45 @@ def handle_help(chat_id):
 
 
 def handle_status(chat_id):
-    pending_count = len([f for f in os.listdir(PENDING_DIR) if f.endswith('.md') and f != 'README.md'])
-    note_count = len([f for f in os.listdir(NOTES_DIR) if f.endswith('.md') and f != 'README.md'])
+    try:
+        req = urllib.request.Request(STATUS_API_URL)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'LifeOS status unavailable. No action was taken.'
+        })
+        return
+
+    pending = data.get('pending_captures', '?')
+    approved = data.get('approved_unprocessed_captures', '?')
+    rejected = data.get('rejected_captures', '?')
+    evt_count = data.get('event_log_line_count', '?')
+    evt_type = data.get('last_event_type', 'none')
+    evt_time = data.get('last_event_time', '')
+
+    evt_line = f"Last event: {evt_type} at {evt_time}" if evt_time else "Last event: none"
+    status_text = (
+        f"LifeOS Status\n"
+        f"Capture queue:\n"
+        f"- pending_review: {pending}\n"
+        f"- approved: {approved}\n"
+        f"- rejected: {rejected}\n"
+        f"\n"
+        f"Event log: {evt_count} entries\n"
+        f"{evt_line}\n"
+        f"\n"
+        f"Safety:\n"
+        f"- no action taken"
+    )
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'LifeOS ChatOps status:\nPending reviews: {pending_count}\nCaptures recorded: {note_count}'
+        'text': status_text
     })
     append_event('chatops.telegram.status_requested', {
         'source': 'telegram',
-        'pending_review_count': pending_count,
+        'pending_review_count': pending,
     })
 
 
@@ -858,19 +902,22 @@ def cmd_poll(interval):
 def process_receive_test_update(update):
     """Safe receive-test handler. Never dispatches normal commands or mutates state."""
     msg = update.get('message', {})
-    chat = msg.get('chat', {})
-    chat_id = chat.get('id')
     text = msg.get('text', '')
     from_info = msg.get('from', {})
+    sender_id, chat_id = extract_sender_id(update)
 
     if chat_id is None:
         print("Receive test: update has no chat_id, skipping.")
         return
 
-    user_id = from_info.get('id')
+    if not is_authorized_sender(sender_id):
+        print("Receive test: unauthorized sender rejected")
+        reject_unauthorized(chat_id)
+        return
+
     username = from_info.get('username') or from_info.get('first_name', 'unknown')
     preview = (text or '')[:80]
-    print(f"Receive test: message from {username} (id={user_id}): {preview}")
+    print(f"Receive test: message from {username} (id={sender_id}): {preview}")
 
     tg_api('sendMessage', {
         'chat_id': chat_id,

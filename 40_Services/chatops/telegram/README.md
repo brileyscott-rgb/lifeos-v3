@@ -78,9 +78,41 @@ You can review and close it from Telegram using numbered commands:
 
 ### Safety behavior
 
+- **Authorization**: Every command handler validates the sender against `TELEGRAM_ALLOWED_USER_ID`. Unauthorized senders receive `Unauthorized` and are logged without revealing internal details.
+- **Receive-test auth**: `--receive-test` mode also enforces sender authorization before acknowledging.
 - `/a` and `/r` without a number only act when **exactly one** pending capture exists.
 - If multiple are pending, they refuse with a prompt to use `/p`.
 - `/a latest` and `/r latest` require the explicit word `latest`.
+
+## `/status` Command
+
+### Behavior
+
+- **Authorization required**: Only the configured `TELEGRAM_ALLOWED_USER_ID` can invoke `/status`.
+- **Read-only**: Calls the LifeOS Status API via HTTP (`http://localhost:8787/status`).
+- **No side effects**: Does not create captures, move files, write vault content, invoke AI, n8n, or Docker.
+- **Safe fallback**: If the Status API is unreachable, replies: `LifeOS status unavailable. No action was taken.`
+- **Event logging**: Appends `chatops.telegram.status_requested` event to the event log.
+
+### Response format
+
+```text
+LifeOS Status
+Capture queue:
+- pending_review: N
+- approved: N
+- rejected: N
+
+Event log: N entries
+Last event: <type> at <timestamp>
+
+Safety:
+- no action taken
+```
+
+### Note
+
+`/status` is the first real Telegram command after the receive-test guard. `/capture` is still not the next command unless separately implemented. Live bot execution still requires explicit manual approval.
 
 ### What happens
 
@@ -206,7 +238,7 @@ The bot now supports `--receive-test` mode. **Always use `--receive-test` for th
 
 ### Next Step After Success
 
-1. Confirm `/status` command works safely (run with `--once` after verifying update queue is safe, or wait for scoped `/status` guard implementation)
+1. Confirm `/capture` command works safely (run with `--once` after verifying update queue is safe)
 2. Plan the `/capture` test with explicit file-creation approval
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)
