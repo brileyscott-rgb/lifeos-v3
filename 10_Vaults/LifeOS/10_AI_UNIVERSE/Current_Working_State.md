@@ -115,6 +115,8 @@ Completed:
   - Security boundaries and activation checklist updated with Cloudflare Tunnel prerequisites.
   - Next step after Phase B1: user-provided Cloudflare/domain readiness, then controlled implementation of active tunnel config.
 
+- **Long-term Telegram Control Plane roadmap locked**: `docs/superpowers/specs/2026-07-06-lifeos-telegram-control-plane-roadmap.md`. Defines 7 modules (Capture Operator, Review Operator, AI Processing Pipeline, Controlled File Processor, Retrieval Operator, Drift Auditor, Private Ops Dashboard), phased build plan (B3 through I2), safety model, permission tiers (A0-A5), and future features. Complements the existing Telegram Operator architecture design. No implementation performed in this step.
+
 Next:
 1. Phase B2: Cloudflare Tunnel activation readiness and user domain/Cloudflare confirmation.
 2. Phase B3: Controlled active tunnel setup with real values handled manually/out of band.

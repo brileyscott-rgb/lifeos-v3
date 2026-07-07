@@ -1058,3 +1058,5 @@ These should be decided before implementation.
 This document is the planning source of truth until replaced by a more formal implementation spec.
 
 If a future plan conflicts with this document, the future plan must explicitly say what is changing and why.
+
+Telegram Control Plane roadmap: `docs/superpowers/specs/2026-07-06-lifeos-telegram-control-plane-roadmap.md` (locked 2026-07-06, 7 modules, phased build B3–I2).
