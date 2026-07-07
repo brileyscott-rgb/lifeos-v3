@@ -846,6 +846,47 @@ def process_capture_test_update(update):
         print(f"Capture test: blocked non-capture command '{cmd}'")
 
 
+def process_review_test_update(update):
+    """Review-test handler. Only allows review commands. Never dispatches normal commands."""
+    msg = update.get('message', {})
+    text = msg.get('text', '')
+    sender_id, chat_id = extract_sender_id(update)
+
+    if chat_id is None:
+        print("Review test: update has no chat_id, skipping.")
+        return
+
+    if not is_authorized_sender(sender_id):
+        print("Review test: unauthorized sender rejected")
+        reject_unauthorized(chat_id)
+        return
+
+    cmd = (text or '').strip().lower().split()[0] if text else ''
+    if '@' in cmd:
+        cmd = cmd.split('@')[0]
+
+    if cmd == '/p':
+        handle_p(chat_id)
+    elif cmd == '/list_pending':
+        handle_list_pending(chat_id)
+    elif cmd == '/view':
+        handle_view(text, chat_id)
+    elif cmd == '/a':
+        handle_a(text, chat_id)
+    elif cmd == '/r':
+        handle_r(text, chat_id)
+    elif cmd == '/approve':
+        handle_approve(text, chat_id)
+    elif cmd == '/reject':
+        handle_reject(text, chat_id)
+    else:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'LifeOS review-test mode is active. No action was taken.'
+        })
+        print(f"Review test: blocked non-review command '{cmd}'")
+
+
 def cmd_capture_test():
     """Capture-test mode: fetch at most one update, only allow /capture, exit."""
     load_env()
@@ -863,6 +904,25 @@ def cmd_capture_test():
     new_offset = update['update_id'] + 1
     save_offset(new_offset)
     print("Capture test complete.")
+
+
+def cmd_review_test():
+    """Review-test mode: fetch at most one update, only allow review commands, exit."""
+    load_env()
+    offset = load_offset()
+    updates = tg_api('getUpdates', {'offset': offset, 'timeout': 2})
+    if not updates.get('ok'):
+        print("FAIL: getUpdates failed:", updates.get('description'))
+        sys.exit(1)
+    result = updates.get('result', [])
+    if not result:
+        print("No new updates to test.")
+        return
+    update = result[0]
+    process_review_test_update(update)
+    new_offset = update['update_id'] + 1
+    save_offset(new_offset)
+    print("Review test complete.")
 
 
 def cmd_receive_test():
@@ -891,6 +951,7 @@ def main():
     parser.add_argument('--poll', action='store_true', help='Poll mode (foreground, Ctrl+C to stop)')
     parser.add_argument('--receive-test', action='store_true', help='Receive-test mode: safely acknowledge one update without dispatching commands')
     parser.add_argument('--capture-test', action='store_true', help='Capture-test mode: safely process only /capture from one update, block all other commands')
+    parser.add_argument('--review-test', action='store_true', help='Review-test mode: safely process only review commands from one update, block all other commands')
     parser.add_argument('--interval', type=int, default=3, help='Poll interval in seconds (default: 3)')
     args = parser.parse_args()
 
@@ -902,6 +963,8 @@ def main():
         cmd_poll(args.interval)
     elif args.capture_test:
         cmd_capture_test()
+    elif args.review_test:
+        cmd_review_test()
     elif args.receive_test:
         cmd_receive_test()
     else:

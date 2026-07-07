@@ -89,6 +89,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram review commands routed through Action API (2026-07-07)**: All review commands (`/p`, `/list_pending`, `/view`, `/a`, `/r`, `/approve`, `/reject`) now call the Action API instead of directly accessing the filesystem. Telegram bot no longer lists `30_Capture/pending_review/` directly, reads pending capture files, moves review files, updates frontmatter, or appends review lifecycle events. Action API owns capture listing, file reads, approve/reject file moves, frontmatter updates, and event logging for the review lifecycle. Helpers added: `action_api_unavailable_reply()`, `_extract_preview_line()`. No AI, proposals, file processor, or n8n actions are triggered by capture approval. Next step: controlled validation of `/p`, `/view`, `/a`, `/r` through Action API.
 
+- **Telegram safe review-test mode added (2026-07-07)**: Added `--review-test` mode to `telegram_capture_bot.py`. `process_review_test_update()` only allows review commands (`/p`, `/list_pending`, `/view`, `/a`, `/r`, `/approve`, `/reject`), blocks all other commands with a safe no-action reply. `cmd_review_test()` fetches one update, routes through the review-test handler, updates offset, and exits. Review commands route through the Action API — the Telegram bot does not directly list, read, move, or mutate review files. Normal `process_update()` is never called. Raw `--once` is intentionally avoided for review validation. README updated with `--review-test` usage. Next step: controlled validation of `/p`, `/view`, `/a`, `/r` through `--review-test`.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -156,7 +158,7 @@ Completed:
 Next:
 1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
-3. Controlled validation of `/p`, `/view`, `/a`, `/r` through Action API (add safe `--review-test` mode or perform tightly scoped validation without raw `--once`).
+3. Controlled validation of `/p`, `/view`, `/a`, `/r` through Action API using `--review-test`.
 4. Phase C: n8n Telegram command workflow design/build in n8n UI.
 5. Phase D: Telegram webhook registration and end-to-end test.
 6. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).

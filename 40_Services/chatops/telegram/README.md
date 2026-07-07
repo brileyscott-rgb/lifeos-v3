@@ -36,6 +36,9 @@ python3 telegram_capture_bot.py --receive-test
 # Safe capture test (only /capture allowed, all other commands blocked)
 python3 telegram_capture_bot.py --capture-test
 
+# Safe review test (only review commands allowed, all other commands blocked)
+python3 telegram_capture_bot.py --review-test
+
 # Process pending updates once
 python3 telegram_capture_bot.py --once
 
@@ -51,7 +54,7 @@ python3 telegram_capture_bot.py --poll --interval 3
 3. Ensure the Action API is running on `http://localhost:8788`.
 4. Send `/capture test message` to your bot on Telegram.
 5. **Do NOT use raw `--once` for first `/capture` or `/p`/`/view`/`/a`/`/r` validation.** Use
-   `--capture-test` for capture testing, or wait for a safe `--review-test` mode. Raw
+   `--capture-test` for capture testing, and `--review-test` for review command testing. Raw
    `--once` may process stale review commands that have accumulated in the
    Telegram update queue.
 6. Run `python3 telegram_capture_bot.py --capture-test` to safely process
@@ -85,9 +88,9 @@ files. It only calls Action API endpoints and formats replies.
 ### Workflow
 
 1. Send `/p` to your bot to see the numbered pending queue.
-2. Run `python3 telegram_capture_bot.py --once` to process.
+2. Run `python3 telegram_capture_bot.py --review-test` to process.
 3. Send `/view 1` to inspect, then `/a 1` or `/r 1` to decide.
-4. Run `python3 telegram_capture_bot.py --once` to process.
+4. Run `python3 telegram_capture_bot.py --review-test` to process.
 
 ### Long-form commands (still supported)
 
@@ -306,7 +309,7 @@ The bot now supports `--receive-test` mode. **Always use `--receive-test` for th
 ### Next Step After Success
 
 1. `/capture` and all review commands now route through the Action API
-2. Add a safe `--review-test` mode or perform tightly scoped controlled validation of `/p`, `/view`, `/a`, `/r` through Action API without raw `--once`
+2. `--review-test` mode is available for safe validation of `/p`, `/view`, `/a`, `/r`, `/approve`, `/reject` without raw `--once`
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)
 
@@ -385,6 +388,84 @@ live capture validation.
 `--capture-test` updates the Telegram offset for the single processed update,
 same as `--once` and `--receive-test`. This prevents re-processing the same
 update in subsequent test runs.
+
+## Review Test Mode (`--review-test`)
+
+### Purpose
+
+Safe review-only validation mode for live `/p`, `/view`, `/a`, `/r`,
+`/approve`, and `/reject` testing. Prevents the bot from accidentally
+dispatching `/capture`, `/status`, `/help`, or any unknown command when
+processing a real Telegram update.
+
+### Warning: Do Not Use Raw `--once` for First Review Command Validation
+
+Raw `--once` calls the normal `process_update()` dispatcher, which handles
+ALL commands. If the Telegram update queue contains stale or unexpected
+commands, `--once` will execute them. This is unsafe during live review
+validation.
+
+**Always use `--review-test` for first review command validation.**
+
+### Behavior
+
+- Loads environment normally.
+- Fetches at most one update from Telegram using the existing offset.
+- Validates sender authorization before any action.
+- Only allows review commands (`/p`, `/list_pending`, `/view`, `/a`, `/r`,
+  `/approve`, `/reject`).
+- If the update is not a review command, replies:
+  `LifeOS review-test mode is active. No action was taken.`
+- Allowed review commands route through the Action API — the Telegram bot
+  does not directly list, read, move, or mutate review files.
+- Never calls `process_update()` — normal command dispatch is completely bypassed.
+- Always updates offset for the one processed update.
+- Exits immediately after one update.
+
+### Commands Allowed
+
+- `/p`
+- `/list_pending`
+- `/view <n|latest|capture_id>`
+- `/a <n|latest|capture_id>`
+- `/r <n|latest|capture_id>`
+- `/approve <capture_id>`
+- `/reject <capture_id>`
+
+### Commands Blocked
+
+- `/capture`
+- `/status`
+- `/help`
+- Any unknown or unrecognized command
+
+### Boundaries Preserved
+
+- **Telegram bot does not list, read, move, or mutate review files directly.**
+  All review operations are delegated to the Action API.
+- **No AI processing or proposal generation** is triggered by `--review-test`.
+- **No controlled file processor** is invoked.
+- **No n8n, Docker, tunnels, or webhooks** are started.
+- **No service restart** occurs.
+- **Do not use `--poll` until review commands are validated** through `--review-test`.
+
+### How to Use
+
+1. Ensure `40_Services/config/telegram/.env` has `TELEGRAM_BOT_TOKEN` and
+   `TELEGRAM_ALLOWED_USER_ID`.
+2. Run `python3 telegram_capture_bot.py --check` to verify configuration.
+3. Ensure the LifeOS Action API is running on `http://localhost:8788`.
+4. Send a review command (e.g., `/p`) to the bot on Telegram.
+5. Run `python3 telegram_capture_bot.py --review-test`.
+6. Bot replies with the pending queue listing or review result.
+7. If Action API is unreachable, bot replies:
+   `LifeOS review unavailable. No action was taken.`
+
+### Note on Offset
+
+`--review-test` updates the Telegram offset for the single processed update,
+same as `--capture-test`. This prevents re-processing the same update in
+subsequent test runs.
 
 ## Not Implemented Yet
 
