@@ -1,5 +1,11 @@
 # Telegram ChatOps Local Bot Handler
 
+> **Status: Fallback / manual-test tool.** The primary production Telegram
+> path will use the n8n webhook workflow routing through the LifeOS Action API.
+> This local polling bot is for development testing, offline validation, and
+> manual capture testing when n8n is not running. Do not rely on this bot
+> for production capture intake.
+
 ## Purpose
 
 Local manual-test Telegram bot handler for LifeOS V3. Polls the Telegram API,

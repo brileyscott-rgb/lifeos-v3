@@ -22,6 +22,15 @@ Telegram (mobile)
 - `http://lifeos-status-api:8787` — Status API (internal only)
 - `http://lifeos-action-api:8788` — Action API (internal only)
 
+## Docker Compose Version Note
+
+This tunnel setup uses Docker Compose V2 syntax (the `docker compose` command, with a space). If you are on Docker Compose V1 (the `docker-compose` command, with a hyphen), you may need to adjust the compose file or upgrade to V2. The compose file uses the `name:` field which requires V2+. To check your version:
+
+```bash
+docker compose version   # V2 — preferred
+docker-compose version   # V1 — legacy, may need adapter
+```
+
 ## Manual Prerequisites
 
 Before activating the tunnel:

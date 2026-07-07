@@ -1,11 +1,16 @@
-# LifeOS V3 Fresh Start
+# LifeOS V3 — Control Plane
 
-This directory is the Phase 1 control-plane scaffold for LifeOS V3.
+Current milestone: **Foundation Lock-In**.
+
+Implemented:
+
+- **LifeOS Status API** — read-only endpoints at `40_Services/status_api/` (port 8787).
+- **LifeOS Action API** — bounded read-write capture lifecycle at `40_Services/action_api/` (port 8788).
+- **n8n Status API test** — manual trigger → HTTP Request, saved inactive.
+- **Cloudflare Tunnel scaffold** — templates/runbook at `40_Services/n8n/cloudflared/`, no tunnel active.
+- **Telegram Control Plane roadmap** — `docs/superpowers/specs/2026-07-06-lifeos-telegram-control-plane-roadmap.md`.
+- **Long-term design doc** — `docs/superpowers/specs/2026-07-06-lifeos-telegram-automation-operator-design.md`.
+
+Not yet active: Cloudflare Tunnel, Telegram webhook, n8n Telegram workflow, capture mode, AI extraction, file processor, retrieval, drift auditor, private dashboard.
 
 Authoritative source: `/home/lifeos/LifeOS_V3_Source_of_Truth.md`
-
-Phase 1 creates structure, registries, schemas, templates, prompts, event-log seeds, and governance files only.
-
-No sudo, no new Linux user, no live service deployment, no old-vault migration, and no real secrets are required in Phase 1.
-
-Telegram Control Plane roadmap: `docs/superpowers/specs/2026-07-06-lifeos-telegram-control-plane-roadmap.md`

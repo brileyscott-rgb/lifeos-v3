@@ -82,6 +82,13 @@ __pycache__/
 # Local runtime/cache directories
 .bun/
 
+# Shell session state
+.lesshst
+.xsession-errors.old
+
+# OpenCode runtime state
+.opencode/
+
 # Capture intake working files
 30_Capture/**/*.tmp
 *.bak
