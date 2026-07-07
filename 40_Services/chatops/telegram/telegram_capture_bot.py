@@ -395,10 +395,6 @@ def handle_status(chat_id):
         'chat_id': chat_id,
         'text': status_text
     })
-    append_event('chatops.telegram.status_requested', {
-        'source': 'telegram',
-        'pending_review_count': pending,
-    })
 
 
 def parse_frontmatter(filepath):

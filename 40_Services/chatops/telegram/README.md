@@ -92,7 +92,7 @@ You can review and close it from Telegram using numbered commands:
 - **Read-only**: Calls the LifeOS Status API via HTTP (`http://localhost:8787/status`).
 - **No side effects**: Does not create captures, move files, write vault content, invoke AI, n8n, or Docker.
 - **Safe fallback**: If the Status API is unreachable, replies: `LifeOS status unavailable. No action was taken.`
-- **Event logging**: Appends `chatops.telegram.status_requested` event to the event log.
+- **No event log mutation**: Does not append events to the event log. The internal Status API may read the event log, but the Telegram bot does not write to it.
 
 ### Response format
 
