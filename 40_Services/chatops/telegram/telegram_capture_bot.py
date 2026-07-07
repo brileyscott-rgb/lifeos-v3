@@ -855,11 +855,55 @@ def cmd_poll(interval):
         print("\nStopped.")
 
 
+def process_receive_test_update(update):
+    """Safe receive-test handler. Never dispatches normal commands or mutates state."""
+    msg = update.get('message', {})
+    chat = msg.get('chat', {})
+    chat_id = chat.get('id')
+    text = msg.get('text', '')
+    from_info = msg.get('from', {})
+
+    if chat_id is None:
+        print("Receive test: update has no chat_id, skipping.")
+        return
+
+    user_id = from_info.get('id')
+    username = from_info.get('username') or from_info.get('first_name', 'unknown')
+    preview = (text or '')[:80]
+    print(f"Receive test: message from {username} (id={user_id}): {preview}")
+
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': 'LifeOS receive test OK. No action was taken.'
+    })
+    print("Receive test: safe acknowledgement sent.")
+
+
+def cmd_receive_test():
+    """Receive-test mode: fetch at most one update, safely acknowledge, exit."""
+    load_env()
+    offset = load_offset()
+    updates = tg_api('getUpdates', {'offset': offset, 'timeout': 2})
+    if not updates.get('ok'):
+        print("FAIL: getUpdates failed:", updates.get('description'))
+        sys.exit(1)
+    result = updates.get('result', [])
+    if not result:
+        print("No new updates to test.")
+        return
+    update = result[0]
+    process_receive_test_update(update)
+    new_offset = update['update_id'] + 1
+    save_offset(new_offset)
+    print("Receive test complete.")
+
+
 def main():
     parser = argparse.ArgumentParser(description='LifeOS Telegram Capture Bot - Local Test Handler')
     parser.add_argument('--check', action='store_true', help='Verify configuration and connectivity')
     parser.add_argument('--once', action='store_true', help='Process new updates once')
     parser.add_argument('--poll', action='store_true', help='Poll mode (foreground, Ctrl+C to stop)')
+    parser.add_argument('--receive-test', action='store_true', help='Receive-test mode: safely acknowledge one update without dispatching commands')
     parser.add_argument('--interval', type=int, default=3, help='Poll interval in seconds (default: 3)')
     args = parser.parse_args()
 
@@ -869,6 +913,8 @@ def main():
         cmd_once()
     elif args.poll:
         cmd_poll(args.interval)
+    elif args.receive_test:
+        cmd_receive_test()
     else:
         parser.print_help()
 

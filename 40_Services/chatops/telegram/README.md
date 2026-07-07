@@ -25,6 +25,9 @@ reviewed files to approved/rejected folders, and appends events.
 # Check connectivity and configuration
 python3 telegram_capture_bot.py --check
 
+# Safe receive test (acknowledges one update, no commands executed)
+python3 telegram_capture_bot.py --receive-test
+
 # Process pending updates once
 python3 telegram_capture_bot.py --once
 
@@ -140,26 +143,28 @@ git ls-files 40_Services/chatops/telegram \
 
 ### Purpose
 
-Confirm Telegram messages can reach the local polling bot and produce/log a harmless acknowledgement — before any n8n webhook, Cloudflare tunnel, or production path.
+Confirm Telegram messages can reach the local polling bot and produce a harmless acknowledgement — before any n8n webhook, Cloudflare tunnel, or production path.
 
-### Test Mode Decision: **Polling (`--once`)**
+### Test Mode Decision: **Polling (`--receive-test`)**
 
-The existing bot supports `--poll` and `--once` modes via Telegram's `getUpdates` long-polling API. **Use `--once`** for the first test because:
+The bot now supports `--receive-test` mode. **Always use `--receive-test` for the first test** because:
 
 - No public webhook registration required
 - No Cloudflare tunnel required
 - No public n8n ingress
 - No daemon or foreground process needed
+- **Regular command handlers are completely bypassed** — `/capture`, `/status`, `/approve`, `/reject`, `/list_pending`, `/p`, `/view`, `/a`, `/r` are never dispatched
+- The safe handler sends a fixed acknowledgement: `LifeOS receive test OK. No action was taken.`
+- Even dangerous commands like `/capture attempt123` are harmlessly acknowledged
 - Each test is an explicit action: send message → run script → see result
 
 ### Allowed Behavior
 
 - Run `python3 telegram_capture_bot.py --check` to verify config and connectivity
-- Send a message to the bot via Telegram (mobile or desktop)
-- Run `python3 telegram_capture_bot.py --once` to fetch pending updates
-- The bot replies to the user's Telegram client
-- The test logs to stdout that a message was received
-- `/help` is the recommended first command (read-only, no state mutation)
+- Send any message to the bot via Telegram (mobile or desktop) — the content does not matter
+- Run `python3 telegram_capture_bot.py --receive-test` to fetch and safely acknowledge the message
+- The bot replies with: `LifeOS receive test OK. No action was taken.`
+- The test logs to stdout what was received (first 80 chars only)
 
 ### Forbidden Behavior
 
@@ -172,35 +177,36 @@ The existing bot supports `--poll` and `--once` modes via Telegram's `getUpdates
 - No webhook registration
 - No Cloudflare tunnel
 - No n8n workflow activation
+- **Do not use raw `--once` for first receive testing** unless you have verified the Telegram update queue contains only safe `/help` messages and no stale `/capture`, `/approve`, or `/reject` commands
 
 ### How to Perform
 
 1. Ensure `40_Services/config/telegram/.env` has `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_USER_ID`
 2. Run `python3 telegram_capture_bot.py --check` — confirms bot identity and connectivity
-3. From Telegram mobile, send `/help` to the bot
-4. Run `python3 telegram_capture_bot.py --once` — fetches the message, bot replies with help text
+3. From Telegram mobile, send any test message to the bot
+4. Run `python3 telegram_capture_bot.py --receive-test` — fetches the message, sends safe acknowledgement
 5. Check stdout for log lines (no errors, no file writes)
-6. Check Telegram client for the bot's reply
+6. Check Telegram client for the bot's reply: `LifeOS receive test OK. No action was taken.`
 
 ### Success Criteria
 
 - `--check` exits 0 with bot identity confirmed
-- `--once` processes the update without errors
-- Bot replies in Telegram with the expected acknowledgement
+- `--receive-test` processes the update without errors
+- Bot replies with the safe fixed acknowledgement
 - No files created in `30_Capture/`
 - No events appended to `50_Event_Log/`
 - No mutation of any LifeOS state
 
 ### Rollback / Stop Rule
 
-- `--once` is inherently ephemeral — no persistent state is created
-- If the bot processes an unexpected command (e.g., `/capture`), stop immediately and review the `process_update` handler
+- `--receive-test` is inherently ephemeral — no persistent state is created
+- If the bot processes a command instead of acknowledging it, stop immediately and review `process_receive_test_update()` to ensure it does not call `process_update()`
 - If the bot connects to the wrong environment, remove/rotate the token
 - If the bot leaks the token in logs, check `.env` is gitignored and fix the leak source
 
 ### Next Step After Success
 
-1. Confirm `/status` command works safely (currently returns capture queue counts — verify no unexpected side effects)
+1. Confirm `/status` command works safely (run with `--once` after verifying update queue is safe, or wait for scoped `/status` guard implementation)
 2. Plan the `/capture` test with explicit file-creation approval
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)

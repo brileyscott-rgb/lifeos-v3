@@ -73,7 +73,9 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Root-level review zip cleanup completed (2026-07-06)**: Deleted `/home/lifeos/lifeos_files_20260706_220619.zip` (910M). Moved `/home/lifeos/backups/lifeos_backup_20260706_220113.zip` (935M) into `/home/lifeos/70_Backups/review_zips/`. Removed now-empty `/home/lifeos/backups/`. Updated `.gitignore` to block future root-level `lifeos_files_*.zip`, `lifeos_structure_review_*.zip`, `lifeos_backup_*.zip`, and `/backups/`. No deeper stale candidates touched. Commit: `da0dd41`.
 
-- **Telegram receive-test planning completed (2026-07-06)**: Documented receive-test plan in `40_Services/chatops/telegram/README.md`. Recommends polling (`--once` mode) as first test — avoids webhook, tunnel, and public ingress. First test command: `/help` (read-only, no state mutation). Forbidden behaviors documented: no capture creation, no file writes, no event log appends, no Action API calls, no AI extraction, no n8n activation. Success criteria: bot replies with acknowledgement, no files created, no events logged. Next step after success: safe `/status` test.
+- **Telegram receive-test planning completed (2026-07-06)**: Documented receive-test plan in `40_Services/chatops/telegram/README.md`. Recommends polling (`--once` mode) as first test — avoids webhook, tunnel, and public ingress. Forbidden behaviors documented. Commit: `0436bea`.
+
+- **Safe Telegram receive-test guard added (2026-07-06)**: Added `--receive-test` mode to `telegram_capture_bot.py`. Safe handler bypasses all normal command dispatch (`/capture`, `/status`, `/approve`, `/reject`, `/list_pending`, `/p`, `/view`, `/a`, `/r`). Sends fixed acknowledgement: `LifeOS receive test OK. No action was taken.` Updated README.md to recommend `--receive-test` over raw `--once` for first receive testing. No live Telegram test run. No `/status` or `/capture` implementation.
 
 ## Active Deferrals
 
