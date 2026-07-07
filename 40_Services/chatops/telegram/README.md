@@ -587,6 +587,45 @@ The service is **currently active and enabled on login**.
 Do not enable n8n Telegram webhook triggers while local polling is active.
 They would compete for the same Telegram update queue.
 
+## Stale Helpers Removed
+
+The following stale direct-filesystem helper functions were removed from
+`telegram_capture_bot.py` during Phase 2 cleanup. They were unused by all
+active code paths — all capture and review operations route through the
+Action API.
+
+```text
+parse_frontmatter          — read frontmatter from pending files directly
+find_pending_capture       — search pending_review/ by capture_id
+get_first_line_content     — extract first content line from markdown
+load_pending_capture_summary — build summary dict from filesystem file
+list_pending_review_files  — list pending_review/ directory directly
+format_pending_queue       — format queue text from filesystem data
+resolve_pending_index      — resolve index from in-memory items
+list_pending_captures      — list captures by scanning pending_review/
+update_capture_frontmatter — write status/processed_at to frontmatter
+move_capture_file          — os.rename between capture subdirectories
+```
+
+## Offline Tests
+
+Offline unit tests are available under `40_Services/chatops/telegram/tests/`.
+Run them with:
+
+```bash
+python3 -m unittest discover -s 40_Services/chatops/telegram/tests
+```
+
+These tests mock Telegram API calls and never connect to live services.
+They verify:
+- Safe modes do not dispatch unsafe paths
+- Capture-test blocks non-capture commands
+- Review-test blocks non-review commands
+- Active capture/review handlers call Action API (not filesystem)
+- Unauthorized sender is rejected before any action
+- No active handler directly moves, renames, or writes capture/review files
+- No active review path appends lifecycle events directly
+
 ## Not Implemented Yet
 
 - `/link`, `/idea`, `/project` command routing

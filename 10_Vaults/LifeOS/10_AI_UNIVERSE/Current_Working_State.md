@@ -93,6 +93,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram review-command partial validation recorded (2026-07-07)**: `/p` was live-validated using `--review-test` through Action API-backed handlers with no file mutation and no new event-log entry. Controlled validation captures were identified for future approve/reject testing: `cap_20260707_040421_e1b68f_validation-test-from-safe-capture-test-m` and `cap_20260707_061632_1b4b64_validation-review-reject-path-test`. Full live validation of `/view`, `/a`, and `/r` was intentionally deferred by user decision. No raw `--once`, `--poll`, n8n, tunnel, webhook, AI, proposal, or file processor actions were run. No approve/reject mutation was performed.
 
+- **Phase 2 — Telegram helper cleanup + offline tests completed (2026-07-07)**: Removed 10 stale direct-filesystem helper functions from `telegram_capture_bot.py` (`parse_frontmatter`, `find_pending_capture`, `get_first_line_content`, `load_pending_capture_summary`, `list_pending_review_files`, `format_pending_queue`, `resolve_pending_index`, `list_pending_captures`, `update_capture_frontmatter`, `move_capture_file`). All active handlers route through Action API only. Added offline `unittest` suite under `40_Services/chatops/telegram/tests/` covering safe-mode isolation, test-mode command blocking, Action API delegation, unauthorized sender rejection, direct-filesystem write prohibition, and lifecycle event boundary. Staleness confirmed by `grep` scan and test assertions. All verification commands pass. No Action API, live Telegram, or service changes.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -193,7 +195,7 @@ Next:
 The following items were identified during the Phase 1A audit. They are
 recorded here for visibility but are **not yet fixed**:
 
-1. **Remove/quarantine stale direct-filesystem Telegram helper functions** — The Telegram bot still contains old filesystem-based helper functions from the pre-Action-API review flow. These are unused by current code but should be removed or quarantined to prevent confusion and accidental use.
+1. ~~**Remove/quarantine stale direct-filesystem Telegram helper functions** — The Telegram bot still contains old filesystem-based helper functions from the pre-Action-API review flow. These are unused by current code but should be removed or quarantined to prevent confusion and accidental use.~~ **Resolved (2026-07-07).** All 10 stale helpers removed from `telegram_capture_bot.py`. Offline unittest suite added under `40_Services/chatops/telegram/tests/`. README updated.
 2. ~~**Decide tracking policy for 30_Capture runtime files, 50_Event_Log/events.jsonl, and .config/opencode/opencode.json** — Resolved by Runtime_Artifact_Tracking_Policy.md (2026-07-07). Captures and event logs are canonical operational records (not committed). `.config/opencode/opencode.json` is tracked by explicit exception.~~
 3. **Harden Action API mutation/event atomicity** — Action API capture creation and event logging are not wrapped in an atomic transaction. A crash between file write and event append could leave inconsistent state.
 4. **Fix filename collision risk in Action API capture creation** — The current timestamp-based capture filename scheme could collide if two captures arrive within the same second.
