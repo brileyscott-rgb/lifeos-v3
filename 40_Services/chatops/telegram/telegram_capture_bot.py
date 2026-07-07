@@ -103,6 +103,21 @@ def call_action_api(endpoint, payload=None):
         return None
 
 
+def action_api_unavailable_reply(chat_id):
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': 'LifeOS review unavailable. No action was taken.'
+    })
+
+
+def _extract_preview_line(content_text):
+    for line in content_text.split('\n'):
+        stripped = line.strip()
+        if stripped and not stripped.startswith('#') and not stripped.startswith('```') and not stripped.startswith('---'):
+            return stripped[:80]
+    return content_text[:80].replace('\n', ' ')
+
+
 def validate_event_log():
     if not os.path.exists(EVENT_LOG):
         print("FAIL: event log not found at", EVENT_LOG)
@@ -513,31 +528,26 @@ def move_capture_file(src, dst_dir):
 
 
 def handle_list_pending(chat_id):
-    captures = list_pending_captures()
-    if not captures:
+    result = call_action_api('/captures/pending')
+    if result is None or not result.get('success'):
+        action_api_unavailable_reply(chat_id)
+        return
+    pending = result.get('pending', [])
+    count = result.get('count', 0)
+    if count == 0:
         tg_api('sendMessage', {
             'chat_id': chat_id,
             'text': 'No pending captures.'
         })
         return
-    lines = [f'Pending captures: {len(captures)}']
-    for i, (cid, ctype, created, fname) in enumerate(captures[:10], 1):
-        lines.append(f'\n{i}. {cid}\n   type: {ctype}\n   created: {created}')
-    if len(captures) > 10:
-        lines.append(f'\n... and {len(captures) - 10} more')
+    lines = [f'Pending captures: {count}']
+    for item in pending[:10]:
+        lines.append(f"\n{item['index']}. {item.get('capture_id', '')}\n   status: {item.get('status', '')}\n   created: {item.get('created_at', '')}")
+    if count > 10:
+        lines.append(f'\n... and {count - 10} more')
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': ''.join(lines)
-    })
-    append_event('chatops.telegram.pending_list_requested', {
-        'source': 'telegram',
-        'pending_count': len(captures),
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'real_secrets_added': False,
-        'old_lifeos_migration_started': False,
     })
 
 
@@ -550,47 +560,17 @@ def handle_approve(text, chat_id):
         })
         return
     capture_id = parts[1].strip()
-    fpath, fm, err = find_pending_capture(capture_id)
-    if err:
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': err})
+    result = call_action_api(f'/captures/{capture_id}/approve', {})
+    if result is None:
+        action_api_unavailable_reply(chat_id)
         return
-    if fpath is None:
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture not found: {capture_id}'
-        })
+    if not result.get('success'):
+        error = result.get('error', 'unknown')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
         return
-    if fm.get('status') == 'approved':
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture already approved: {capture_id}'
-        })
-        return
-    if fm.get('status') == 'rejected':
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture already rejected: {capture_id}'
-        })
-        return
-    processed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    update_capture_frontmatter(fpath, 'approved', processed_at)
-    move_capture_file(fpath, APPROVED_DIR)
-    append_event('chatops.telegram.approval_received', {
-        'capture_id': capture_id,
-        'previous_status': 'pending_review',
-        'new_status': 'approved',
-        'source': 'telegram',
-        'capture_file_moved': True,
-        'direct_vault_write': False,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'old_lifeos_migration_started': False,
-    })
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Approved: {capture_id}'
+        'text': f'Approved: {result.get("capture_id", capture_id)}'
     })
 
 
@@ -603,192 +583,160 @@ def handle_reject(text, chat_id):
         })
         return
     capture_id = parts[1].strip()
-    fpath, fm, err = find_pending_capture(capture_id)
-    if err:
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': err})
+    result = call_action_api(f'/captures/{capture_id}/reject', {})
+    if result is None:
+        action_api_unavailable_reply(chat_id)
         return
-    if fpath is None:
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture not found: {capture_id}'
-        })
+    if not result.get('success'):
+        error = result.get('error', 'unknown')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
         return
-    if fm.get('status') == 'approved':
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture already approved: {capture_id}'
-        })
-        return
-    if fm.get('status') == 'rejected':
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': f'Capture already rejected: {capture_id}'
-        })
-        return
-    processed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    update_capture_frontmatter(fpath, 'rejected', processed_at)
-    move_capture_file(fpath, REJECTED_DIR)
-    append_event('chatops.telegram.rejection_received', {
-        'capture_id': capture_id,
-        'previous_status': 'pending_review',
-        'new_status': 'rejected',
-        'source': 'telegram',
-        'capture_file_moved': True,
-        'direct_vault_write': False,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'old_lifeos_migration_started': False,
-    })
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Rejected: {capture_id}'
+        'text': f'Rejected: {result.get("capture_id", capture_id)}'
     })
 
 
 def handle_p(chat_id):
-    items = list_pending_review_files()
-    text = format_pending_queue(items)
-    tg_api('sendMessage', {'chat_id': chat_id, 'text': text})
-    append_event('chatops.telegram.pending_list_requested', {
-        'source': 'telegram',
-        'pending_count': len(items),
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'real_secrets_added': False,
-        'old_lifeos_migration_started': False,
-    })
+    result = call_action_api('/captures/pending')
+    if result is None or not result.get('success'):
+        action_api_unavailable_reply(chat_id)
+        return
+    pending = result.get('pending', [])
+    count = result.get('count', 0)
+    if count == 0:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
+        return
+    lines = [f'Pending captures: {count}']
+    for item in pending:
+        cid = item.get('capture_id', '')
+        preview = item.get('preview', '')
+        summary = _extract_preview_line(preview) if preview else cid
+        lines.append(f"\n{item['index']}. {summary}")
+    lines.append('\n\nUse:\n/view 1\n/a 1\n/r 1')
+    tg_api('sendMessage', {'chat_id': chat_id, 'text': ''.join(lines)})
 
 
 def handle_view(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip():
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /view <number> or /view latest'})
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /view <number> or /view latest or /view <capture_id>'})
         return
-    index_text = parts[1].strip()
-    items = list_pending_review_files()
-    item, err = resolve_pending_index(index_text, items)
-    if err:
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': err})
+    ref = parts[1].strip()
+    if ref == 'latest':
+        endpoint = '/captures/pending/latest'
+    elif ref.isdigit():
+        endpoint = f'/captures/pending/{ref}'
+    elif ref.startswith('cap_'):
+        endpoint = f'/captures/{ref}'
+    else:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Invalid argument. Use a number, "latest", or a capture_id.'})
         return
-    try:
-        with open(item['path']) as f:
-            content = f.read()
-    except Exception as e:
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Error reading capture: {e}'})
+    result = call_action_api(endpoint)
+    if result is None or not result.get('success'):
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found or unavailable. No action was taken.'})
         return
-    cid = item['capture_id']
-    ctype = item['capture_type']
-    created = item['created_at']
+    capture = result['capture']
+    cid = capture.get('capture_id', '')
+    ctype = capture.get('status', '')
+    created = capture.get('created_at', '')
+    content = capture.get('content', '')
     max_len = 3500
     if len(content) > max_len:
         content = content[:max_len] + '\n... (truncated)'
-    view_text = f"Capture: {cid}\nType: {ctype}\nCreated: {created}\n\n{content}"
+    view_text = f"Capture: {cid}\nStatus: {ctype}\nCreated: {created}\n\n{content}"
     tg_api('sendMessage', {'chat_id': chat_id, 'text': view_text})
 
 
 def handle_a(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     index_text = parts[1].strip() if len(parts) > 1 else ''
-    items = list_pending_review_files()
     if not index_text:
-        if len(items) == 0:
+        result = call_action_api('/captures/pending')
+        if result is None or not result.get('success'):
+            action_api_unavailable_reply(chat_id)
+            return
+        pending = result.get('pending', [])
+        if len(pending) == 0:
             tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
             return
-        if len(items) > 1:
+        if len(pending) > 1:
             tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Multiple pending captures. Use /p, then /a 1.'})
             return
-        item = dict(items[0])
-        item['index'] = 1
+        capture_id = pending[0].get('capture_id', '')
     else:
-        item, err = resolve_pending_index(index_text, items)
-        if err:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': err})
+        if index_text == 'latest':
+            endpoint = '/captures/pending/latest'
+        elif index_text.isdigit():
+            endpoint = f'/captures/pending/{index_text}'
+        else:
+            tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
             return
-    fpath = item['path']
-    fm = parse_frontmatter(fpath)
-    cid = fm.get('capture_id', '')
-    if fm.get('status') == 'approved':
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Capture already approved: {cid}'})
+        result = call_action_api(endpoint)
+        if result is None or not result.get('success'):
+            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
+            return
+        capture_id = result['capture'].get('capture_id', '')
+    if not capture_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
         return
-    if fm.get('status') == 'rejected':
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Capture already rejected: {cid}'})
+    approve_result = call_action_api(f'/captures/{capture_id}/approve', {})
+    if approve_result is None:
+        action_api_unavailable_reply(chat_id)
         return
-    processed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    update_capture_frontmatter(fpath, 'approved', processed_at)
-    move_capture_file(fpath, APPROVED_DIR)
-    append_event('chatops.telegram.approval_received', {
-        'capture_id': cid,
-        'previous_status': 'pending_review',
-        'new_status': 'approved',
-        'source': 'telegram',
-        'capture_file_moved': True,
-        'direct_vault_write': False,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'old_lifeos_migration_started': False,
-    })
-    ctype = fm.get('capture_type', '')
-    summary = item.get('summary', '')
+    if not approve_result.get('success'):
+        error = approve_result.get('error', 'unknown')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Approve failed: {error}'})
+        return
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f"Approved #{item['index']}:\n{ctype} — {summary}"
+        'text': f'Approved: {approve_result.get("capture_id", capture_id)}'
     })
 
 
 def handle_r(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     index_text = parts[1].strip() if len(parts) > 1 else ''
-    items = list_pending_review_files()
     if not index_text:
-        if len(items) == 0:
+        result = call_action_api('/captures/pending')
+        if result is None or not result.get('success'):
+            action_api_unavailable_reply(chat_id)
+            return
+        pending = result.get('pending', [])
+        if len(pending) == 0:
             tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No pending captures.'})
             return
-        if len(items) > 1:
+        if len(pending) > 1:
             tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Multiple pending captures. Use /p, then /r 1.'})
             return
-        item = dict(items[0])
-        item['index'] = 1
+        capture_id = pending[0].get('capture_id', '')
     else:
-        item, err = resolve_pending_index(index_text, items)
-        if err:
-            tg_api('sendMessage', {'chat_id': chat_id, 'text': err})
+        if index_text == 'latest':
+            endpoint = '/captures/pending/latest'
+        elif index_text.isdigit():
+            endpoint = f'/captures/pending/{index_text}'
+        else:
+            tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid index: '{index_text}'. Use a number or 'latest'."})
             return
-    fpath = item['path']
-    fm = parse_frontmatter(fpath)
-    cid = fm.get('capture_id', '')
-    if fm.get('status') == 'approved':
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Capture already approved: {cid}'})
+        result = call_action_api(endpoint)
+        if result is None or not result.get('success'):
+            tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
+            return
+        capture_id = result['capture'].get('capture_id', '')
+    if not capture_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Capture not found. No action was taken.'})
         return
-    if fm.get('status') == 'rejected':
-        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Capture already rejected: {cid}'})
+    reject_result = call_action_api(f'/captures/{capture_id}/reject', {})
+    if reject_result is None:
+        action_api_unavailable_reply(chat_id)
         return
-    processed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    update_capture_frontmatter(fpath, 'rejected', processed_at)
-    move_capture_file(fpath, REJECTED_DIR)
-    append_event('chatops.telegram.rejection_received', {
-        'capture_id': cid,
-        'previous_status': 'pending_review',
-        'new_status': 'rejected',
-        'source': 'telegram',
-        'capture_file_moved': True,
-        'direct_vault_write': False,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'n8n_workflow_activated': False,
-        'old_lifeos_migration_started': False,
-    })
-    ctype = fm.get('capture_type', '')
-    summary = item.get('summary', '')
+    if not reject_result.get('success'):
+        error = reject_result.get('error', 'unknown')
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f'Reject failed: {error}'})
+        return
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f"Rejected #{item['index']}:\n{ctype} — {summary}"
+        'text': f'Rejected: {reject_result.get("capture_id", capture_id)}'
     })
 
 

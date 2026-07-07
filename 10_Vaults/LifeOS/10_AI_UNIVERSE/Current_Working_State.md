@@ -87,6 +87,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram `/capture` live validation passed using `--capture-test` (2026-07-06)**: Validated end-to-end live `/capture` through `--capture-test` mode. Bot received `/capture validation test from safe capture-test mode` from Telegram mobile. `--capture-test` fetched exactly one update, routed `/capture` through Action API `POST /captures`. Action API created capture file `30_Capture/pending_review/20260707_040421_validation-test-from-safe-capture-test-m.md` with `capture_id: cap_20260707_040421_e1b68f_validation-test-from-safe-capture-test-m` and appended event `evt_20260707T040421Z_telegram_capture_created` (actor: `lifeos-action-api`). Event log increased from 25 to 26 lines. Telegram replied: `Capture created: cap_20260707_040421_e1b68f_validation-test-from-safe-capture-test-m` / `Status: pending_review` / `No AI processing has started.` No files created in `approved/` or `rejected/`. No normal `process_update()` dispatch, no review commands, no n8n, no tunnel, no webhook, no AI, no proposal, no file processor actions. Action API run via Docker with port mapping; all other services unchanged.
 
+- **Telegram review commands routed through Action API (2026-07-07)**: All review commands (`/p`, `/list_pending`, `/view`, `/a`, `/r`, `/approve`, `/reject`) now call the Action API instead of directly accessing the filesystem. Telegram bot no longer lists `30_Capture/pending_review/` directly, reads pending capture files, moves review files, updates frontmatter, or appends review lifecycle events. Action API owns capture listing, file reads, approve/reject file moves, frontmatter updates, and event logging for the review lifecycle. Helpers added: `action_api_unavailable_reply()`, `_extract_preview_line()`. No AI, proposals, file processor, or n8n actions are triggered by capture approval. Next step: controlled validation of `/p`, `/view`, `/a`, `/r` through Action API.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
@@ -154,10 +156,11 @@ Completed:
 Next:
 1. Phase B2 readiness cleanup is complete. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.
-3. Phase C: n8n Telegram command workflow design/build in n8n UI.
-4. Phase D: Telegram webhook registration and end-to-end test.
-5. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
-6. All phases require explicit step-by-step approval.
+3. Controlled validation of `/p`, `/view`, `/a`, `/r` through Action API (add safe `--review-test` mode or perform tightly scoped validation without raw `--once`).
+4. Phase C: n8n Telegram command workflow design/build in n8n UI.
+5. Phase D: Telegram webhook registration and end-to-end test.
+6. Later: capture mode, photos/voice/documents, AI extraction, controlled file creation processor (now with exact proposal packet requirement documented).
+7. All phases require explicit step-by-step approval.
 
 ## Do Not Do Yet
 

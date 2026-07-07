@@ -12,10 +12,11 @@ Local manual-test Telegram bot handler for LifeOS V3. Polls the Telegram API,
 validates the sender, processes `/capture`, `/list_pending`, `/approve`,
 `/reject`, `/help`, and `/status` commands.
 
-**Capture flow:** `/capture <text>` routes through the Action API
-(`http://localhost:8788`). The bot does not write capture files or append
-event log entries directly — it delegates all capture lifecycle operations
-to the Action API.
+**Capture and review flow:** `/capture <text>`, `/p`, `/list_pending`,
+`/view`, `/a`, `/r`, `/approve`, and `/reject` all route through the
+Action API (`http://localhost:8788`). The bot does not write capture files,
+move review files, update frontmatter, or append event log entries directly
+— it delegates all capture and review lifecycle operations to the Action API.
 
 ## Prerequisites
 
@@ -49,10 +50,10 @@ python3 telegram_capture_bot.py --poll --interval 3
 2. Run `python3 telegram_capture_bot.py --check` to verify.
 3. Ensure the Action API is running on `http://localhost:8788`.
 4. Send `/capture test message` to your bot on Telegram.
-5. **Do NOT use raw `--once` for first `/capture` validation.** Use
-   `--capture-test` instead. Raw `--once` may process stale review commands
-   (/approve, /reject, /p, /view, /a, /r) that have accumulated in the
-   Telegram update queue, causing unintended filesystem mutations.
+5. **Do NOT use raw `--once` for first `/capture` or `/p`/`/view`/`/a`/`/r` validation.** Use
+   `--capture-test` for capture testing, or wait for a safe `--review-test` mode. Raw
+   `--once` may process stale review commands that have accumulated in the
+   Telegram update queue.
 6. Run `python3 telegram_capture_bot.py --capture-test` to safely process
    the `/capture` command.
 7. Bot replies with `Capture created: <capture_id>\nStatus: pending_review\nNo AI processing has started.`
@@ -62,7 +63,11 @@ python3 telegram_capture_bot.py --poll --interval 3
 ## Review Lifecycle
 
 After a capture is created, it sits in `30_Capture/pending_review/`.
-You can review and close it from Telegram using numbered commands:
+You can review and close it from Telegram using numbered commands.
+
+**All review commands route through the Action API (`http://localhost:8788`).**
+The Telegram bot does not directly list, read, move, or mutate capture review
+files. It only calls Action API endpoints and formats replies.
 
 ### Quick commands (phone-friendly)
 
@@ -99,6 +104,47 @@ You can review and close it from Telegram using numbered commands:
 - `/a` and `/r` without a number only act when **exactly one** pending capture exists.
 - If multiple are pending, they refuse with a prompt to use `/p`.
 - `/a latest` and `/r latest` require the explicit word `latest`.
+- **Direct filesystem safety**: The Telegram bot never directly lists `30_Capture/pending_review/`, never reads pending capture files, never moves review files, and never appends review lifecycle events. All review operations are delegated to the Action API.
+
+### Action API endpoint mapping
+
+| Command | Action API Endpoint | Method |
+|---------|-------------------|--------|
+| `/p` | `GET /captures/pending` | GET |
+| `/list_pending` | `GET /captures/pending` | GET |
+| `/view <n>` | `GET /captures/pending/<n>` | GET |
+| `/view latest` | `GET /captures/pending/latest` | GET |
+| `/view <capture_id>` | `GET /captures/<capture_id>` | GET |
+| `/a <n>` or `/a latest` | `GET /captures/pending/<n>` then `POST /captures/<id>/approve` | GET + POST |
+| `/a` (single pending) | `GET /captures/pending` then `POST /captures/<id>/approve` | GET + POST |
+| `/r <n>` or `/r latest` | `GET /captures/pending/<n>` then `POST /captures/<id>/reject` | GET + POST |
+| `/r` (single pending) | `GET /captures/pending` then `POST /captures/<id>/reject` | GET + POST |
+| `/approve <capture_id>` | `POST /captures/<capture_id>/approve` | POST |
+| `/reject <capture_id>` | `POST /captures/<capture_id>/reject` | POST |
+
+### What the Action API owns
+
+- Capture pending listing and file reads
+- Capture approve/reject file moves between `pending_review/`, `approved/`, `rejected/`
+- Capture frontmatter status updates (`status`, `processed_at`)
+- Review lifecycle event logging to `50_Event_Log/events.jsonl`
+
+### What the Telegram bot does not do
+
+- Does not directly list `30_Capture/pending_review/`
+- Does not directly read pending capture files
+- Does not directly move capture files
+- Does not directly update capture frontmatter
+- Does not directly append capture review events
+- Does not directly mutate `30_Capture/`
+- Does not directly mutate `50_Event_Log/events.jsonl`
+
+### Approval scope
+
+Capture approval through the Action API only moves the capture from
+`pending_review/` to `approved/`. It does **not** trigger AI extraction,
+proposal generation, file processor execution, vault writes, n8n workflows,
+or any automation beyond the file move and event log.
 
 ## `/status` Command
 
@@ -130,16 +176,18 @@ Safety:
 
 `/status` is the first real Telegram command after the receive-test guard. `/capture` is still not the next command unless separately implemented. Live bot execution still requires explicit manual approval.
 
-### What happens
+### What happens (Action API owns all mutation)
 
-- **Approve**: pending file moves to `30_Capture/approved/`, frontmatter
-  `status` set to `approved`, `processed_at` timestamp added, event logged.
-- **Reject**: pending file moves to `30_Capture/rejected/`, frontmatter
-  `status` set to `rejected`, `processed_at` timestamp added, event logged.
+- **Approve**: Telegram bot calls `POST /captures/<id>/approve` on Action API.
+  Action API moves file from `pending_review/` to `approved/`, updates
+  frontmatter (`status`, `processed_at`), and appends event to the event log.
+- **Reject**: Telegram bot calls `POST /captures/<id>/reject` on Action API.
+  Action API moves file from `pending_review/` to `rejected/`, updates
+  frontmatter (`status`, `processed_at`), and appends event to the event log.
 
-**Note**: Approve/reject only moves the review file. It does **not** write
-into the main vault (`10_Vaults/LifeOS/`). Approval means queued for later
-processing, not automatic vault integration.
+**Note**: Approve/reject only moves the review file. It does **not** trigger
+AI extraction, proposal generation, file processor execution, vault writes,
+n8n workflows, or any automation beyond the file move and event log.
 
 ## What Gets Written
 
@@ -257,8 +305,8 @@ The bot now supports `--receive-test` mode. **Always use `--receive-test` for th
 
 ### Next Step After Success
 
-1. `/capture` now routes through the Action API — test with the Action API running
-2. Plan the review commands (`/p`, `/view`, `/a`, `/r`) as Action API calls
+1. `/capture` and all review commands now route through the Action API
+2. Add a safe `--review-test` mode or perform tightly scoped controlled validation of `/p`, `/view`, `/a`, `/r` through Action API without raw `--once`
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)
 
