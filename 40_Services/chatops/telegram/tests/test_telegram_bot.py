@@ -60,10 +60,13 @@ class TestExtractAndAuth(unittest.TestCase):
         with patch.object(bot, 'tg_api') as mock_tg:
             with patch.object(bot, 'append_event'):
                 bot.reject_unauthorized(CHAT_ID)
-                mock_tg.assert_called_once_with('sendMessage', {
-                    'chat_id': CHAT_ID,
-                    'text': 'Unauthorized'
-                })
+                mock_tg.assert_called_once()
+                args = mock_tg.call_args[0]
+                self.assertEqual(args[0], 'sendMessage')
+                text = args[1]['text']
+                self.assertIn('ACCESS', text)
+                self.assertIn('DENIED', text)
+                self.assertIn('not authorized', text.lower())
 
     def test_reject_unauthorized_appends_event(self):
         with patch.object(bot, 'tg_api'):
@@ -83,10 +86,13 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
             with patch.object(bot, 'handle_capture') as mock_handle:
                 bot.process_update(update)
                 mock_handle.assert_not_called()
-                mock_tg.assert_called_once_with('sendMessage', {
-                    'chat_id': CHAT_ID,
-                    'text': 'Unauthorized'
-                })
+                mock_tg.assert_called_once()
+                args = mock_tg.call_args[0]
+                self.assertEqual(args[0], 'sendMessage')
+                text = args[1]['text']
+                self.assertIn('ACCESS', text)
+                self.assertIn('DENIED', text)
+                self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
     @patch.object(bot, 'append_event')
@@ -96,10 +102,13 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
             with patch.object(bot, 'handle_capture') as mock_handle:
                 bot.process_capture_test_update(update)
                 mock_handle.assert_not_called()
-                mock_tg.assert_called_once_with('sendMessage', {
-                    'chat_id': CHAT_ID,
-                    'text': 'Unauthorized'
-                })
+                mock_tg.assert_called_once()
+                args = mock_tg.call_args[0]
+                self.assertEqual(args[0], 'sendMessage')
+                text = args[1]['text']
+                self.assertIn('ACCESS', text)
+                self.assertIn('DENIED', text)
+                self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
     @patch.object(bot, 'append_event')
@@ -109,10 +118,13 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
             with patch.object(bot, 'handle_p') as mock_p:
                 bot.process_review_test_update(update)
                 mock_p.assert_not_called()
-                mock_tg.assert_called_once_with('sendMessage', {
-                    'chat_id': CHAT_ID,
-                    'text': 'Unauthorized'
-                })
+                mock_tg.assert_called_once()
+                args = mock_tg.call_args[0]
+                self.assertEqual(args[0], 'sendMessage')
+                text = args[1]['text']
+                self.assertIn('ACCESS', text)
+                self.assertIn('DENIED', text)
+                self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
     @patch.object(bot, 'append_event')
@@ -120,10 +132,13 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
         update = make_update('/help', sender_id=UNAUTHORIZED_SENDER)
         with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
             bot.process_receive_test_update(update)
-            mock_tg.assert_called_once_with('sendMessage', {
-                'chat_id': CHAT_ID,
-                'text': 'Unauthorized'
-            })
+            mock_tg.assert_called_once()
+            args = mock_tg.call_args[0]
+            self.assertEqual(args[0], 'sendMessage')
+            text = args[1]['text']
+            self.assertIn('ACCESS', text)
+            self.assertIn('DENIED', text)
+            self.assertIn('not authorized', text.lower())
 
 
 class TestReceiveTestSafeMode(unittest.TestCase):
@@ -389,7 +404,7 @@ class TestActiveHandlersDoNotTouchFilesystem(unittest.TestCase):
                 for stale in ['move_capture_file', 'update_capture_frontmatter',
                               'find_pending_capture', 'list_pending_review_files',
                               'resolve_pending_index', 'parse_frontmatter',
-                              'format_pending_queue', 'load_pending_capture_summary',
+                              'load_pending_capture_summary',
                               'list_pending_captures', 'get_first_line_content']:
                     self.assertNotIn(stale, names,
                                      f"{h.__name__} references stale helper {stale}")
@@ -431,10 +446,12 @@ class TestActionAPIFallback(unittest.TestCase):
     @patch.object(bot, 'tg_api')
     def test_action_api_unavailable_reply(self, mock_tg, mock_api):
         bot.action_api_unavailable_reply(CHAT_ID)
-        mock_tg.assert_called_once_with('sendMessage', {
-            'chat_id': CHAT_ID,
-            'text': 'LifeOS review unavailable. No action was taken.'
-        })
+        mock_tg.assert_called_once()
+        args = mock_tg.call_args[0]
+        self.assertEqual(args[0], 'sendMessage')
+        text = args[1]['text']
+        self.assertIn('ACTION API', text)
+        self.assertIn('UNAVAILABLE', text)
 
 
 class TestTelegramEventIdReceipts(unittest.TestCase):
@@ -594,7 +611,7 @@ class TestOfflineReviewValidation(unittest.TestCase):
             bot.handle_view('/view 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('Review Card', text)
+        self.assertIn('REVIEW CARD', text)
         self.assertIn('cap_123', text)
         self.assertIn('pending_review', text)
         self.assertIn('Test note content text.', text)
@@ -918,7 +935,7 @@ class TestViewSummaryAndButtons(unittest.TestCase):
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]["text"]
         # Should contain summary fields but NOT full content body
-        self.assertIn("Review Card", text)
+        self.assertIn("REVIEW CARD", text)
         self.assertIn("cap_20260707_120000_a1b2c3_slug", text)
         self.assertIn("pending_review", text)
         # Should contain preview line

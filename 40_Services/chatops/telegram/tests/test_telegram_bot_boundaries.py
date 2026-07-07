@@ -116,7 +116,10 @@ class TelegramBoundaryTests(unittest.TestCase):
 
         mock_api.assert_called_once_with('/captures', {'text': 'test content'})
         mock_tg.assert_called_once()
-        self.assertIn('Capture created: cap_test', mock_tg.call_args[0][1]['text'])
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('CAPTURE', text)
+        self.assertIn('cap_test', text)
+        self.assertIn('no vault processing', text.lower())
         for name in STALE_HELPERS:
             self.assertFalse(hasattr(bot, name), name)
 
