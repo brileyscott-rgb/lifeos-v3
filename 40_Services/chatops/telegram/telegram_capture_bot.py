@@ -21,6 +21,7 @@ APPROVED_DIR = os.path.join(CAPTURE_DIR, 'approved')
 REJECTED_DIR = os.path.join(CAPTURE_DIR, 'rejected')
 EVENT_LOG = os.path.join(LIFEOS_ROOT, '50_Event_Log', 'events.jsonl')
 STATUS_API_URL = "http://localhost:8787/status"
+ACTION_API_URL = "http://localhost:8788"
 
 ALLOWED_USER_ID = None
 BOT_TOKEN = None
@@ -87,6 +88,19 @@ def tg_api(method, payload=None):
         return json.loads(body)
     except Exception as e:
         return {"ok": False, "description": str(e)}
+
+
+def call_action_api(endpoint, payload=None):
+    url = f"{ACTION_API_URL}{endpoint}"
+    data = json.dumps(payload).encode() if payload else None
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return json.loads(e.read())
+    except Exception:
+        return None
 
 
 def validate_event_log():
@@ -254,86 +268,19 @@ def handle_capture(text, chat_id, sender_id, msg):
         return
 
     content = parts[1].strip()
-    now = datetime.now()
-    timestamp = now.strftime('%Y%m%d_%H%M%S')
-    slug = slugify(content)
-    capture_id = f"cap_{timestamp}_telegram_note_{slug}"
+    result = call_action_api('/captures', {'text': content})
+    if result is None or not result.get('success'):
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'LifeOS capture unavailable. No action was taken.'
+        })
+        return
 
-    file_base = f"{timestamp}_telegram_note_{slug}"
-    note_path = os.path.join(NOTES_DIR, f"{file_base}.md")
-    pending_path = os.path.join(PENDING_DIR, f"{file_base}.md")
-
-    note_content = f"""# Telegram Capture Source
-
-**Captured at:** {now.isoformat()}
-
-```
-{content}
-```
-"""
-    with open(note_path, 'w') as f:
-        f.write(note_content)
-
-    returned_event_id = append_event('chatops.telegram.capture_received', {
-        'capture_id': capture_id,
-        'source': 'telegram',
-        'capture_type': 'note',
-        'pending_review': True,
-        'bot_token_logged': False,
-        'docker_services_started': False,
-        'docker_images_pulled_or_built': False,
-        'real_secrets_added': False,
-        'old_lifeos_migration_started': False,
-        'n8n_workflow_activated': False,
-    })
-
-    pending = f"""---
-capture_id: {capture_id}
-source: telegram
-capture_type: note
-status: pending_review
-approval_required: true
-created_at: {now.isoformat()}
-processed_at:
-target_domain:
-target_project:
-event_id: {returned_event_id}
----
-
-# Capture Summary
-
-## Raw Message
-
-```
-{content}
-```
-
-## Parsed Intent
-
-Quick note capture.
-
-## Suggested Routing
-
-Pending human review.
-
-## Approval Decision
-
-Pending.
-
-## Processing Notes
-
-Captured by local Telegram bot handler.
-"""
-    with open(pending_path, 'w') as f:
-        f.write(pending)
-
+    capture_id = result.get('capture_id', 'unknown')
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': f'Captured: {capture_id}'
+        'text': f'Capture created: {capture_id}\nStatus: pending_review\nNo AI processing has started.'
     })
-    print(f"Captured: {capture_id}")
-    print(f"  Note: {note_path}")
-    print(f"  Pending: {pending_path}")
 
 
 def handle_help(chat_id):

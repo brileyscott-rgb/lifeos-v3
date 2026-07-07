@@ -10,8 +10,12 @@
 
 Local manual-test Telegram bot handler for LifeOS V3. Polls the Telegram API,
 validates the sender, processes `/capture`, `/list_pending`, `/approve`,
-`/reject`, `/help`, and `/status` commands, writes capture files, moves
-reviewed files to approved/rejected folders, and appends events.
+`/reject`, `/help`, and `/status` commands.
+
+**Capture flow:** `/capture <text>` routes through the Action API
+(`http://localhost:8788`). The bot does not write capture files or append
+event log entries directly — it delegates all capture lifecycle operations
+to the Action API.
 
 ## Prerequisites
 
@@ -40,8 +44,12 @@ python3 telegram_capture_bot.py --poll --interval 3
 1. Ensure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_USER_ID` are set in
    `40_Services/config/telegram/.env`.
 2. Run `python3 telegram_capture_bot.py --check` to verify.
-3. Send `/capture test message` to your bot on Telegram.
-4. Run `python3 telegram_capture_bot.py --once` to process it.
+3. Ensure the Action API is running on `http://localhost:8788`.
+4. Send `/capture test message` to your bot on Telegram.
+5. Run `python3 telegram_capture_bot.py --once` to process it.
+6. Bot replies with `Capture created: <capture_id>\nStatus: pending_review\nNo AI processing has started.`
+7. If Action API is unavailable, bot replies:
+   `LifeOS capture unavailable. No action was taken.`
 
 ## Review Lifecycle
 
@@ -127,13 +135,16 @@ processing, not automatic vault integration.
 
 ## What Gets Written
 
-| Path | Description |
-|------|-------------|
-| `30_Capture/notes/YYYYMMDD_HHMMSS_*.md` | Source capture file |
-| `30_Capture/pending_review/YYYYMMDD_HHMMSS_*.md` | Pending review file with frontmatter |
-| `30_Capture/approved/YYYYMMDD_HHMMSS_*.md` | Approved capture (moved from pending_review) |
-| `30_Capture/rejected/YYYYMMDD_HHMMSS_*.md` | Rejected capture (moved from pending_review) |
-| `50_Event_Log/events.jsonl` | Appended event for each action |
+The Telegram bot no longer writes files directly. All capture file creation,
+event logging, and review lifecycle operations are handled by the Action API
+(`http://localhost:8788`).
+
+| Path | Writer | Description |
+|------|--------|-------------|
+| `30_Capture/pending_review/YYYYMMDD_HHMMSS_*.md` | Action API | Pending review file with frontmatter |
+| `30_Capture/approved/YYYYMMDD_HHMMSS_*.md` | Action API | Approved capture (moved from pending_review) |
+| `30_Capture/rejected/YYYYMMDD_HHMMSS_*.md` | Action API | Rejected capture (moved from pending_review) |
+| `50_Event_Log/events.jsonl` | Action API | Appended event for each action |
 
 Runtime state (gitignored):
 
@@ -238,8 +249,8 @@ The bot now supports `--receive-test` mode. **Always use `--receive-test` for th
 
 ### Next Step After Success
 
-1. Confirm `/capture` command works safely (run with `--once` after verifying update queue is safe)
-2. Plan the `/capture` test with explicit file-creation approval
+1. `/capture` now routes through the Action API — test with the Action API running
+2. Plan the review commands (`/p`, `/view`, `/a`, `/r`) as Action API calls
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)
 
