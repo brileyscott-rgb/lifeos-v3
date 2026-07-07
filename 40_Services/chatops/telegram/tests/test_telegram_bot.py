@@ -391,9 +391,10 @@ class TestActiveHandlersDoNotTouchFilesystem(unittest.TestCase):
                                      f"{h.__name__} references stale helper {stale}")
 
 
-class TestNoDirectEventLogAppendByReviewHandlers(unittest.TestCase):
-    def test_review_handlers_do_not_call_append_event_directly(self):
+class TestNoDirectEventLogAppendByActiveHandlers(unittest.TestCase):
+    def test_active_handlers_do_not_call_append_event_directly(self):
         handlers = [
+            bot.handle_capture,
             bot.handle_list_pending,
             bot.handle_approve,
             bot.handle_reject,
@@ -410,6 +411,15 @@ class TestNoDirectEventLogAppendByReviewHandlers(unittest.TestCase):
                 names = source.co_names
                 self.assertNotIn('append_event', names,
                                  f"{h.__name__} calls append_event directly")
+
+
+class TestTelemetryBoundaryCheck(unittest.TestCase):
+    def test_append_event_raises_on_mutation_event(self):
+        forbidden_event = 'chatops.telegram.capture_received'
+        with self.assertRaises(ValueError) as ctx:
+            bot.append_event(forbidden_event, {})
+        self.assertIn("Direct logging of non-operational event", str(ctx.exception))
+
 
 
 class TestActionAPIFallback(unittest.TestCase):

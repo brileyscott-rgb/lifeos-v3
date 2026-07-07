@@ -171,6 +171,18 @@ def make_event_id(event_type, existing_ids=None):
 
 
 def append_event(event_type, details):
+    """
+    Appends local operational telemetry/security events to the local log.
+    All state mutations and audit events must be dispatched via the Action API
+    rather than being logged directly by the Telegram bot.
+    """
+    allowed_operational_events = {
+        'chatops.telegram.unauthorized_sender_rejected',
+        'chatops.telegram.help_requested',
+    }
+    if event_type not in allowed_operational_events:
+        raise ValueError(f"Direct logging of non-operational event '{event_type}' is forbidden. Mutations must go through Action API.")
+
     lines = validate_event_log()
     existing_ids = set()
     for line in lines:
@@ -187,29 +199,16 @@ def append_event(event_type, details):
             'type': 'human',
             'id': f'telegram:{ALLOWED_USER_ID}'
         },
-        'approval_tier': 'A1' if event_type in {
-            'chatops.telegram.capture_received',
-            'chatops.telegram.approval_received',
-            'chatops.telegram.rejection_received',
-        } else 'A0',
+        'approval_tier': 'A0',
         'status': 'completed',
         'summary': '',
         'details': details
     }
-    if event_type == 'chatops.telegram.capture_received':
-        event['summary'] = 'Received Telegram note capture and queued it for pending review.'
-    elif event_type == 'chatops.telegram.unauthorized_sender_rejected':
+    if event_type == 'chatops.telegram.unauthorized_sender_rejected':
         event['summary'] = 'Rejected unauthorized Telegram sender.'
     elif event_type == 'chatops.telegram.help_requested':
         event['summary'] = 'Telegram help requested.'
-    elif event_type == 'chatops.telegram.status_requested':
-        event['summary'] = 'Telegram status requested.'
-    elif event_type == 'chatops.telegram.approval_received':
-        event['summary'] = 'Approved Telegram capture and moved it to approved queue.'
-    elif event_type == 'chatops.telegram.rejection_received':
-        event['summary'] = 'Rejected Telegram capture and moved it to rejected queue.'
-    elif event_type == 'chatops.telegram.pending_list_requested':
-        event['summary'] = 'Listed pending Telegram captures.'
+
     with open(EVENT_LOG, 'a+') as f:
         f.seek(0, os.SEEK_END)
         pos = f.tell()
@@ -221,6 +220,7 @@ def append_event(event_type, details):
             f.write('\n')
         f.write(json.dumps(event, ensure_ascii=False))
     return event_id
+
 
 
 def slugify(text):
