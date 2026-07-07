@@ -6,6 +6,7 @@ import sys
 import threading
 import tempfile
 import unittest
+from datetime import datetime
 from http.server import HTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -330,6 +331,19 @@ class TestActionAPI(unittest.TestCase):
         cid2 = server._make_capture_id("same text")
         self.assertNotEqual(cid1, cid2)
 
+    def test_same_second_same_text_capture_filenames_are_unique(self):
+        with patch("server.datetime") as fake_datetime:
+            fixed = datetime(2026, 1, 1, 0, 0, 0, tzinfo=server.timezone.utc)
+            fake_datetime.now.return_value = fixed
+            fake_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            file1 = server._write_capture_file("cap_same_1", "same text")
+            file2 = server._write_capture_file("cap_same_2", "same text")
+        self.assertIsNotNone(file1)
+        self.assertIsNotNone(file2)
+        self.assertNotEqual(file1, file2)
+        self.assertTrue((self.capture_base / "pending_review" / file1).exists())
+        self.assertTrue((self.capture_base / "pending_review" / file2).exists())
+
     def test_approved_list(self):
         self._add_file("approved", "approved_test.md", "cap_approved_test", status="approved")
         files = server._list_capture_files(server.APPROVED_DIR)
@@ -361,6 +375,34 @@ class TestActionAPI(unittest.TestCase):
         with patch("server.EVENT_LOG", bad_path):
             eid = server._append_event("test.event", {"test": True})
             self.assertIsNone(eid)
+
+    def test_create_capture_rolls_back_file_when_event_append_fails(self):
+        capture_id = server._make_capture_id("rollback create")
+        file_name, err = server._create_capture_with_event(capture_id, "rollback create")
+        self.assertIsNone(err)
+        self.assertTrue((self.capture_base / "pending_review" / file_name["file_name"]).exists())
+
+        for f in (self.capture_base / "pending_review").iterdir():
+            f.unlink()
+        with patch("server._append_event", return_value=None):
+            result, err = server._create_capture_with_event("cap_create_rollback", "rollback create")
+        self.assertIsNone(result)
+        self.assertEqual(err, "event_append_failed")
+        self.assertEqual(list((self.capture_base / "pending_review").iterdir()), [])
+
+    def test_move_capture_rolls_back_when_event_append_fails(self):
+        file_name = self._create_capture("rollback approve")
+        pending_file = self.capture_base / "pending_review" / file_name
+        original = pending_file.read_text("utf-8")
+        with patch("server._append_event", return_value=None):
+            result, err = server._move_capture(
+                file_name, server.PENDING_DIR, server.APPROVED_DIR, "approved", "test"
+            )
+        self.assertIsNone(result)
+        self.assertEqual(err, "event_append_failed")
+        self.assertTrue(pending_file.exists())
+        self.assertEqual(pending_file.read_text("utf-8"), original)
+        self.assertEqual(list((self.capture_base / "approved").iterdir()), [])
 
 
 class TestActionAPIHTTP(TestActionAPI):
@@ -398,6 +440,19 @@ class TestActionAPIHTTP(TestActionAPI):
             f"http://localhost:{self.port}{path}",
             data=body,
             headers={"Content-Type": "application/json"},
+        )
+        try:
+            resp = urllib.request.urlopen(req)
+            return json.loads(resp.read()), resp.status
+        except urllib.request.HTTPError as e:
+            return json.loads(e.read()), e.code
+
+    def _post_raw(self, path, body, headers=None):
+        import urllib.request
+        req = urllib.request.Request(
+            f"http://localhost:{self.port}{path}",
+            data=body,
+            headers=headers or {"Content-Type": "application/json"},
         )
         try:
             resp = urllib.request.urlopen(req)
@@ -494,7 +549,7 @@ class TestActionAPIHTTP(TestActionAPI):
         self.assertEqual(data["capture"]["capture_id"], "cap_http_byid")
 
     def test_capture_by_id_missing(self):
-        data, status = self._get("/captures/nonexistent")
+        data, status = self._get("/captures/cap_nonexistent")
         self.assertEqual(status, 404)
         self.assertFalse(data["success"])
 
@@ -519,18 +574,56 @@ class TestActionAPIHTTP(TestActionAPI):
         data, status = self._post("/captures", {"text": "Hello via HTTP"})
         self.assertEqual(status, 201)
         self.assertTrue(data["success"])
+        self.assertTrue(data["ok"])
         self.assertTrue(data["capture_id"].startswith("cap_"))
         self.assertIn("file_name", data)
         self.assertIn("event_id", data)
+        self.assertIsNone(data["error"])
+        self.assertEqual(data["data"]["capture_id"], data["capture_id"])
+        self.assertEqual(data["data"]["status"], "pending_review")
         pending = self.capture_base / "pending_review"
         self.assertTrue((pending / data["file_name"]).exists())
+        file_content = (pending / data["file_name"]).read_text("utf-8")
+        self.assertIn(f"created_event_id: {data['event_id']}", file_content)
         content = self.event_log_path.read_text("utf-8")
         self.assertIn("telegram.capture_created", content)
+
+    def test_post_captures_same_second_same_text_distinct_files(self):
+        with patch("server.datetime") as fake_datetime:
+            fixed = datetime(2026, 1, 1, 0, 0, 0, tzinfo=server.timezone.utc)
+            fake_datetime.now.return_value = fixed
+            fake_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            data1, status1 = self._post("/captures", {"text": "same text"})
+            data2, status2 = self._post("/captures", {"text": "same text"})
+        self.assertEqual(status1, 201)
+        self.assertEqual(status2, 201)
+        self.assertNotEqual(data1["file_name"], data2["file_name"])
+        pending = self.capture_base / "pending_review"
+        self.assertTrue((pending / data1["file_name"]).exists())
+        self.assertTrue((pending / data2["file_name"]).exists())
+
+    def test_post_captures_oversized_body(self):
+        body = b"{" + (b" " * (server.MAX_REQUEST_BYTES + 1)) + b"}"
+        data, status = self._post_raw("/captures", body)
+        self.assertEqual(status, 413)
+        self.assertFalse(data["success"])
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"], "payload_too_large")
+        self.assertIsNone(data["data"])
+        self.assertIsNone(data["event_id"])
+
+    def test_post_captures_oversized_text(self):
+        data, status = self._post("/captures", {"text": "x" * (server.MAX_CAPTURE_TEXT_CHARS + 1)})
+        self.assertEqual(status, 413)
+        self.assertFalse(data["success"])
+        self.assertEqual(data["error"], "capture_text_too_large")
 
     def test_post_captures_empty_text(self):
         data, status = self._post("/captures", {"text": ""})
         self.assertEqual(status, 400)
         self.assertFalse(data["success"])
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"], "capture_text_required")
         pending = self.capture_base / "pending_review"
         files = list(pending.iterdir())
         self.assertEqual(len([f for f in files if f.is_file()]), 0)
@@ -538,6 +631,13 @@ class TestActionAPIHTTP(TestActionAPI):
     def test_post_captures_missing_text(self):
         data, status = self._post("/captures", {})
         self.assertEqual(status, 400)
+        self.assertFalse(data["success"])
+        self.assertEqual(data["error"], "capture_text_required")
+
+    def test_post_captures_invalid_json_symbolic_error(self):
+        data, status = self._post_raw("/captures", b"not json")
+        self.assertEqual(status, 400)
+        self.assertEqual(data["error"], "invalid_json")
         self.assertFalse(data["success"])
 
     # --- POST /captures/<id>/approve ---
@@ -548,6 +648,9 @@ class TestActionAPIHTTP(TestActionAPI):
         data, status = self._post("/captures/cap_approve_me/approve")
         self.assertEqual(status, 200)
         self.assertTrue(data["success"])
+        self.assertTrue(data["ok"])
+        self.assertIn("event_id", data)
+        self.assertEqual(data["data"]["status"], "approved")
         self.assertFalse(
             (self.capture_base / "pending_review" / "toapprove.md").exists()
         )
@@ -565,6 +668,9 @@ class TestActionAPIHTTP(TestActionAPI):
         data, status = self._post("/captures/cap_reject_me/reject")
         self.assertEqual(status, 200)
         self.assertTrue(data["success"])
+        self.assertTrue(data["ok"])
+        self.assertIn("event_id", data)
+        self.assertEqual(data["data"]["status"], "rejected")
         self.assertFalse(
             (self.capture_base / "pending_review" / "toreject.md").exists()
         )
@@ -578,11 +684,44 @@ class TestActionAPIHTTP(TestActionAPI):
         data, status = self._post("/captures/invalid/approve")
         self.assertEqual(status, 400)
         self.assertFalse(data["success"])
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"], "invalid_capture_id")
 
     def test_post_approve_missing(self):
         data, status = self._post("/captures/cap_nonexistent/approve")
         self.assertEqual(status, 404)
         self.assertFalse(data["success"])
+
+    def test_duplicate_approve_returns_symbolic_not_pending(self):
+        self._add_file("pending_review", "dup.md", "cap_dup", status="pending_review")
+        data, status = self._post("/captures/cap_dup/approve")
+        self.assertEqual(status, 200)
+        data, status = self._post("/captures/cap_dup/approve")
+        self.assertIn(status, (404, 409))
+        self.assertFalse(data["success"])
+        self.assertIn(data["error"], ("capture_not_found", "capture_not_pending"))
+
+    def test_not_found_and_method_errors_have_safe_envelope(self):
+        data, status = self._get("/does-not-exist")
+        self.assertEqual(status, 404)
+        self.assertFalse(data["success"])
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"], "not_found")
+        self.assertIsNone(data["data"])
+        self.assertIsNone(data["event_id"])
+
+        import urllib.request
+        req = urllib.request.Request(
+            f"http://localhost:{self.port}/captures", method="DELETE"
+        )
+        try:
+            urllib.request.urlopen(req)
+            self.fail("DELETE should fail")
+        except urllib.request.HTTPError as e:
+            data = json.loads(e.read())
+            self.assertEqual(e.code, 405)
+            self.assertFalse(data["success"])
+            self.assertEqual(data["error"], "method_not_allowed")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,8 @@ PROCESSED_DIR = CAPTURE_BASE / "processed"
 
 SERVICE_NAME = "lifeos-action-api"
 MODE = "read_write"
+MAX_REQUEST_BYTES = 65536
+MAX_CAPTURE_TEXT_CHARS = 20000
 
 ALLOWED_DIRS = {PENDING_DIR, APPROVED_DIR, REJECTED_DIR, PROCESSED_DIR}
 _SUBDIRS = {PENDING_DIR, APPROVED_DIR, REJECTED_DIR, PROCESSED_DIR}
@@ -83,8 +85,9 @@ def _make_event_id(event_type):
     return candidate
 
 
-def _append_event(event_type, details):
-    event_id = _make_event_id(event_type)
+def _append_event(event_type, details, event_id=None):
+    if event_id is None:
+        event_id = _make_event_id(event_type)
     event = {
         "event_id": event_id,
         "event_type": event_type,
@@ -109,6 +112,52 @@ def _append_event(event_type, details):
         return event_id
     except (OSError, PermissionError):
         return None
+
+
+def _success_response(data, status_code=200):
+    response = {
+        "success": True,
+        "ok": True,
+        "error": None,
+        "event_id": data.get("event_id"),
+        "data": data,
+    }
+    response.update(data)
+    return response, status_code
+
+
+def _error_response(error, status_code=400):
+    return {
+        "success": False,
+        "ok": False,
+        "error": error,
+        "data": None,
+        "event_id": None,
+    }, status_code
+
+
+def _write_text_exclusive(path, text):
+    try:
+        with open(path, "x", encoding="utf-8") as f:
+            f.write(text)
+        return True
+    except FileExistsError:
+        return False
+    except (OSError, PermissionError):
+        return None
+
+
+def _collision_safe_name(directory, file_name):
+    path = directory / file_name
+    if not path.exists():
+        return file_name
+    stem = path.stem
+    suffix = path.suffix
+    for _ in range(100):
+        candidate = f"{stem}_{secrets.token_hex(3)}{suffix}"
+        if not (directory / candidate).exists():
+            return candidate
+    return None
 
 
 def _safe_resolve(path):
@@ -207,7 +256,6 @@ def _resolve_by_id(directory, capture_id):
 
 def _move_capture(file_name, source_dir, target_dir, new_status, processor_type):
     src = source_dir / file_name
-    dst = target_dir / file_name
     if not src.exists():
         return None, "capture_not_found"
     try:
@@ -215,9 +263,16 @@ def _move_capture(file_name, source_dir, target_dir, new_status, processor_type)
     except (OSError, PermissionError):
         return None, "read_error"
     now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    event_type = f"telegram.capture_{new_status}"
+    event_id = _make_event_id(event_type)
+    target_file_name = _collision_safe_name(target_dir, file_name)
+    if target_file_name is None:
+        return None, "mutation_failed"
+    dst = target_dir / target_file_name
     lines = text.splitlines()
     inside = False
     new_lines = []
+    event_id_written = False
     for line in lines:
         stripped = line.rstrip("\n").rstrip("\r")
         if stripped == "---" and not inside:
@@ -233,20 +288,30 @@ def _move_capture(file_name, source_dir, target_dir, new_status, processor_type)
                 new_lines.append(f"status: {new_status}")
             elif stripped.startswith("processed_at:"):
                 new_lines.append(f"processed_at: {now_ts}")
+            elif stripped.startswith("processed_event_id:"):
+                new_lines.append(f"processed_event_id: {event_id}")
+                event_id_written = True
             else:
                 new_lines.append(line)
         else:
             new_lines.append(line)
+    if not event_id_written:
+        try:
+            end_idx = new_lines.index("---", 1)
+            new_lines.insert(end_idx, f"processed_event_id: {event_id}")
+        except ValueError:
+            pass
     new_text = "\n".join(new_lines)
     try:
-        dst.write_text(new_text, "utf-8")
+        written = _write_text_exclusive(dst, new_text)
+        if not written:
+            return None, "mutation_failed"
         src.unlink()
     except (OSError, PermissionError):
         return None, "write_error"
-    event_type = f"telegram.capture_{new_status}"
     details = {
         "capture_id": "",
-        "file_name": file_name,
+        "file_name": target_file_name,
         "source": "telegram_operator",
         "previous_status": "pending_review",
         "new_status": new_status,
@@ -255,18 +320,33 @@ def _move_capture(file_name, source_dir, target_dir, new_status, processor_type)
         if line.startswith("capture_id:"):
             details["capture_id"] = line.split(":", 1)[1].strip()
             break
-    event_id = _append_event(event_type, details)
-    if event_id is None:
+    appended_event_id = _append_event(event_type, details, event_id=event_id)
+    if appended_event_id is None:
+        try:
+            if not src.exists():
+                src.write_text(text, "utf-8")
+            if dst.exists():
+                dst.unlink()
+        except (OSError, PermissionError):
+            pass
         return None, "event_append_failed"
-    return {"capture_id": details["capture_id"], "file_name": file_name, "event_id": event_id}, None
+    return {
+        "capture_id": details["capture_id"],
+        "file_name": target_file_name,
+        "status": new_status,
+        "event_id": event_id,
+    }, None
 
 
-def _write_capture_file(capture_id, text, source="telegram_operator"):
+def _write_capture_file(capture_id, text, source="telegram_operator", event_id=None):
     now_ts = datetime.now(timezone.utc)
-    file_name = f"{now_ts.strftime('%Y%m%d_%H%M%S')}_{_slugify(text)}.md"
+    rand_suffix = secrets.token_hex(3)
+    file_name = f"{now_ts.strftime('%Y%m%d_%H%M%S')}_{rand_suffix}_{_slugify(text)}.md"
     file_path = PENDING_DIR / file_name
+    created_event_id = event_id or ""
     content = f"""---
 capture_id: {capture_id}
+created_event_id: {created_event_id}
 source: {source}
 capture_type: note
 status: pending_review
@@ -302,11 +382,39 @@ Pending.
 
 Captured by {SERVICE_NAME}.
 """
-    try:
-        file_path.write_text(content, "utf-8")
-    except (OSError, PermissionError):
+    written = _write_text_exclusive(file_path, content)
+    if not written:
         return None
     return file_name
+
+
+def _create_capture_with_event(capture_id, text):
+    event_type = "telegram.capture_created"
+    event_id = _make_event_id(event_type)
+    file_name = _write_capture_file(capture_id, text, event_id=event_id)
+    if file_name is None:
+        return None, "mutation_failed"
+    event_id = _append_event(event_type, {
+        "capture_id": capture_id,
+        "text_preview": text[:100],
+        "file_name": file_name,
+        "source": "telegram_operator",
+    }, event_id=event_id)
+    if event_id is None:
+        try:
+            file_path = PENDING_DIR / file_name
+            if file_path.exists():
+                file_path.unlink()
+        except (OSError, PermissionError):
+            pass
+        return None, "event_append_failed"
+    return {
+        "capture_id": capture_id,
+        "file_name": file_name,
+        "relative_path": f"30_Capture/pending_review/{file_name}",
+        "status": "pending_review",
+        "event_id": event_id,
+    }, None
 
 
 class ActionHandler(BaseHTTPRequestHandler):
@@ -320,14 +428,27 @@ class ActionHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _read_body(self):
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            return None, "invalid_json"
+        if length > MAX_REQUEST_BYTES:
+            return None, "payload_too_large"
         if length == 0:
-            return None
+            return None, "invalid_json"
         try:
             raw = self.rfile.read(length)
-            return json.loads(raw.decode("utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return None
+            return json.loads(raw.decode("utf-8")), None
+        except (UnicodeDecodeError, json.JSONDecodeError, OSError):
+            return None, "invalid_json"
+
+    def _send_error(self, error, status=400):
+        data, status_code = _error_response(error, status)
+        self._send_json(data, status_code)
+
+    def _send_success(self, data, status=200):
+        response, status_code = _success_response(data, status)
+        self._send_json(response, status_code)
 
     @staticmethod
     def _check_path_security(path_str):
@@ -351,12 +472,12 @@ class ActionHandler(BaseHTTPRequestHandler):
     def _handle_captures_pending_index(self, index_str):
         result = _resolve_by_index(PENDING_DIR, index_str)
         if result is None:
-            self._send_json({"success": False, "error": "capture_not_found"}, 404)
+            self._send_error("capture_not_found", 404)
             return
         file_path = PENDING_DIR / result["file_name"]
         data = _read_capture_file(file_path)
         if data is None:
-            self._send_json({"success": False, "error": "read_error"}, 500)
+            self._send_error("mutation_failed", 500)
             return
         self._send_json({
             "success": True,
@@ -368,14 +489,17 @@ class ActionHandler(BaseHTTPRequestHandler):
         })
 
     def _handle_captures_id(self, capture_id):
+        if not self._check_path_security(capture_id):
+            self._send_error("invalid_capture_id", 400)
+            return
         result = _resolve_by_id(PENDING_DIR, capture_id)
         if result is None:
-            self._send_json({"success": False, "error": "capture_not_found"}, 404)
+            self._send_error("capture_not_found", 404)
             return
         file_path = PENDING_DIR / result["file_name"]
         data = _read_capture_file(file_path)
         if data is None:
-            self._send_json({"success": False, "error": "read_error"}, 500)
+            self._send_error("mutation_failed", 500)
             return
         self._send_json({
             "success": True,
@@ -393,60 +517,52 @@ class ActionHandler(BaseHTTPRequestHandler):
     # --- POST handlers ---
 
     def _handle_captures_create(self):
-        body = self._read_body()
-        if body is None or not body.get("text") or not body["text"].strip():
-            self._send_json({"success": False, "error": "text_required"}, 400)
+        body, err = self._read_body()
+        if err:
+            self._send_error(err, 413 if err == "payload_too_large" else 400)
             return
-        text = body["text"].strip()
+        text_value = body.get("text") if isinstance(body, dict) else None
+        if not isinstance(text_value, str) or not text_value.strip():
+            self._send_error("capture_text_required", 400)
+            return
+        text = text_value.strip()
+        if len(text) > MAX_CAPTURE_TEXT_CHARS:
+            self._send_error("capture_text_too_large", 413)
+            return
         capture_id = _make_capture_id(text)
-        file_name = _write_capture_file(capture_id, text)
-        if file_name is None:
-            self._send_json({"success": False, "error": "write_error"}, 500)
+        data, err = _create_capture_with_event(capture_id, text)
+        if err:
+            self._send_error(err, 500)
             return
-        event_id = _append_event("telegram.capture_created", {
-            "capture_id": capture_id,
-            "text_preview": text[:100],
-            "file_name": file_name,
-            "source": "telegram_operator",
-        })
-        if event_id is None:
-            self._send_json({"success": False, "error": "event_append_failed"}, 500)
-            return
-        self._send_json({
-            "success": True,
-            "capture_id": capture_id,
-            "file_name": file_name,
-            "relative_path": f"30_Capture/pending_review/{file_name}",
-            "event_id": event_id,
-        }, 201)
+        self._send_success(data, 201)
 
     def _handle_captures_approve(self, capture_id):
         if not self._check_path_security(capture_id):
-            self._send_json({"success": False, "error": "invalid_capture_id"}, 400)
+            self._send_error("invalid_capture_id", 400)
             return
         result = _resolve_by_id(PENDING_DIR, capture_id)
         if result is None:
-            self._send_json({"success": False, "error": "capture_not_found"}, 404)
+            self._send_error("capture_not_found", 404)
             return
         data, err = _move_capture(result["file_name"], PENDING_DIR, APPROVED_DIR, "approved", SERVICE_NAME)
         if err:
-            self._send_json({"success": False, "error": err}, 500)
+            self._send_error(err, 500)
             return
-        self._send_json({"success": True, **data})
+        self._send_success(data)
 
     def _handle_captures_reject(self, capture_id):
         if not self._check_path_security(capture_id):
-            self._send_json({"success": False, "error": "invalid_capture_id"}, 400)
+            self._send_error("invalid_capture_id", 400)
             return
         result = _resolve_by_id(PENDING_DIR, capture_id)
         if result is None:
-            self._send_json({"success": False, "error": "capture_not_found"}, 404)
+            self._send_error("capture_not_found", 404)
             return
         data, err = _move_capture(result["file_name"], PENDING_DIR, REJECTED_DIR, "rejected", SERVICE_NAME)
         if err:
-            self._send_json({"success": False, "error": err}, 500)
+            self._send_error(err, 500)
             return
-        self._send_json({"success": True, **data})
+        self._send_success(data)
 
     def _handle_captures(self):
         self._send_json({
@@ -470,13 +586,13 @@ class ActionHandler(BaseHTTPRequestHandler):
         elif path.startswith("/captures/") and len(path) > len("/captures/"):
             capture_id = path[len("/captures/"):]
             if "/" in capture_id or "approve" in capture_id or "reject" in capture_id:
-                self._send_json({"error": "not_found"}, 404)
+                self._send_error("not_found", 404)
                 return
             self._handle_captures_id(capture_id)
         elif path == "/captures":
             self._handle_captures()
         else:
-            self._send_json({"error": "not_found"}, 404)
+            self._send_error("not_found", 404)
 
     def do_POST(self):
         path = self.path.rstrip("/")
@@ -488,22 +604,22 @@ class ActionHandler(BaseHTTPRequestHandler):
                 capture_id = base[len("/captures/"):]
                 self._handle_captures_approve(capture_id)
             else:
-                self._send_json({"error": "not_found"}, 404)
+                self._send_error("not_found", 404)
         elif path.endswith("/reject"):
             base = path[: -len("/reject")]
             if base.startswith("/captures/"):
                 capture_id = base[len("/captures/"):]
                 self._handle_captures_reject(capture_id)
             else:
-                self._send_json({"error": "not_found"}, 404)
+                self._send_error("not_found", 404)
         else:
-            self._send_json({"error": "not_found"}, 404)
+            self._send_error("not_found", 404)
 
     def do_PUT(self):
-        self._send_json({"error": "method_not_allowed"}, 405)
+        self._send_error("method_not_allowed", 405)
 
     def do_DELETE(self):
-        self._send_json({"error": "method_not_allowed"}, 405)
+        self._send_error("method_not_allowed", 405)
 
     def log_message(self, format, *args):
         pass
