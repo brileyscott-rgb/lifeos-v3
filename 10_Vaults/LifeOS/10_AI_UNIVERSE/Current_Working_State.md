@@ -133,6 +133,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Status API adopted under unified compose with localhost:8787 mapping (2026-07-07)**: Legacy `lifeos-status-api` (from `status_api` compose project) was stopped, removed, and replaced with a unified compose container built from `40_Services/compose/lifeos.yaml`. Status API is now reachable at `localhost:8787/health` and `localhost:8787/status`. Action API was not touched. n8n remains tolerated localhost-only drift. Telegram bot remained capture-first and was not restarted. No public ingress, no WEBHOOK_URL, no Cloudflare. Unified compose now owns Status API. Action API adoption remains a future gated phase requiring separate approval.
 
+- **Action API unified compose adoption plan created (2026-07-07)**: `docs/superpowers/plans/2026-07-07-action-api-unified-compose-adoption-plan.md` documents the controlled procedure for adopting the manual `lifeos-action-api` under unified compose. No runtime changes made. Action API remains manual/unlabeled on `localhost:8788` until Phase 5 approval. Status API is unified-compose-owned and healthy on `localhost:8787`. n8n remains tolerated localhost-only drift. `compose_n8n_data` side-effect volume observed (empty, created during Status API adoption); do not remove.
+
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.
 
 - **Telegram `/view`, `/a`, `/r` live validation deferred (2026-07-07)**: By user decision, live validation of `/view`, `/a`, and `/r` review commands was deferred to avoid blocking capture-first operating mode. Review commands are API-backed in code. If they fail in practice, they may be fixed later.
