@@ -32,6 +32,9 @@ python3 telegram_capture_bot.py --check
 # Safe receive test (acknowledges one update, no commands executed)
 python3 telegram_capture_bot.py --receive-test
 
+# Safe capture test (only /capture allowed, all other commands blocked)
+python3 telegram_capture_bot.py --capture-test
+
 # Process pending updates once
 python3 telegram_capture_bot.py --once
 
@@ -46,9 +49,14 @@ python3 telegram_capture_bot.py --poll --interval 3
 2. Run `python3 telegram_capture_bot.py --check` to verify.
 3. Ensure the Action API is running on `http://localhost:8788`.
 4. Send `/capture test message` to your bot on Telegram.
-5. Run `python3 telegram_capture_bot.py --once` to process it.
-6. Bot replies with `Capture created: <capture_id>\nStatus: pending_review\nNo AI processing has started.`
-7. If Action API is unavailable, bot replies:
+5. **Do NOT use raw `--once` for first `/capture` validation.** Use
+   `--capture-test` instead. Raw `--once` may process stale review commands
+   (/approve, /reject, /p, /view, /a, /r) that have accumulated in the
+   Telegram update queue, causing unintended filesystem mutations.
+6. Run `python3 telegram_capture_bot.py --capture-test` to safely process
+   the `/capture` command.
+7. Bot replies with `Capture created: <capture_id>\nStatus: pending_review\nNo AI processing has started.`
+8. If Action API is unavailable, bot replies:
    `LifeOS capture unavailable. No action was taken.`
 
 ## Review Lifecycle
@@ -253,6 +261,82 @@ The bot now supports `--receive-test` mode. **Always use `--receive-test` for th
 2. Plan the review commands (`/p`, `/view`, `/a`, `/r`) as Action API calls
 3. Proceed step by step through the Telegram Control Plane roadmap
 4. Only after stable local command handling: plan n8n webhook path (requires Cloudflare tunnel approval)
+
+## Capture Test Mode (`--capture-test`)
+
+### Purpose
+
+Safe capture-only validation mode for live `/capture` testing. Prevents the
+bot from accidentally dispatching `/status`, `/approve`, `/reject`, `/view`,
+`/p`, `/a`, `/r`, `/list_pending`, or any unknown command when processing
+a real Telegram update.
+
+### Warning: Do Not Use Raw `--once` for First `/capture` Validation
+
+Raw `--once` calls the normal `process_update()` dispatcher, which handles
+ALL commands. If the Telegram update queue contains stale review commands
+(e.g., an older `/approve` or `/reject` that was typed but never processed),
+`--once` will execute them against the filesystem. This is unsafe during
+live capture validation.
+
+**Always use `--capture-test` for the first `/capture` validation.**
+
+### Behavior
+
+- Loads environment normally.
+- Fetches at most one update from Telegram using the existing offset.
+- Validates sender authorization before any action.
+- Only allows `/capture <text>`.
+- If the update is not `/capture <text>`, replies:
+  `LifeOS capture-test mode is active. No action was taken.`
+- If the update is `/capture` without text, replies:
+  `Usage: /capture <text>`
+- If authorized and is `/capture <text>`, calls `handle_capture()` which
+  routes through the Action API.
+- Never calls `process_update()` — normal command dispatch is completely bypassed.
+- Always updates offset for the one processed update.
+- Exits immediately after one update.
+
+### Commands Blocked by `--capture-test`
+
+- `/status`
+- `/pending`
+- `/view`
+- `/approve`
+- `/reject`
+- `/p`
+- `/a`
+- `/r`
+- `/list_pending`
+- Any unknown or unrecognized command
+
+### Boundaries Preserved
+
+- **Telegram bot does not write capture files.** Only the Action API creates
+  capture files under `30_Capture/pending_review/` and appends entries to
+  `50_Event_Log/events.jsonl`.
+- **No AI processing or proposal generation** is triggered by `--capture-test`.
+- **No controlled file processor** is invoked.
+- **No n8n, Docker, tunnels, or webhooks** are started.
+- **No service restart** occurs.
+
+### How to Use
+
+1. Ensure `40_Services/config/telegram/.env` has `TELEGRAM_BOT_TOKEN` and
+   `TELEGRAM_ALLOWED_USER_ID`.
+2. Run `python3 telegram_capture_bot.py --check` to verify configuration.
+3. Ensure the LifeOS Action API is running on `http://localhost:8788`.
+4. Send `/capture test message` to the bot on Telegram.
+5. Run `python3 telegram_capture_bot.py --capture-test`.
+6. Bot replies with `Capture created: <capture_id>\nStatus: pending_review\nNo AI processing has started.`
+7. If Action API is unreachable, bot replies:
+   `LifeOS capture unavailable. No action was taken.`
+
+### Note on Offset
+
+`--capture-test` updates the Telegram offset for the single processed update,
+same as `--once` and `--receive-test`. This prevents re-processing the same
+update in subsequent test runs.
 
 ## Not Implemented Yet
 

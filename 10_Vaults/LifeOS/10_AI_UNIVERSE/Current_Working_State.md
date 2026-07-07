@@ -83,6 +83,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram receive-test live validation passed (2026-07-06)**: Validated `--receive-test` end-to-end against live Telegram bot `@my_lifeOS_08bot`. Sent `/receive_test` from Telegram mobile. `--receive-test` safely acknowledged the update without dispatching normal commands (`/capture`, `/status`, `/approve`, `/reject`, `/list_pending`, etc.). Bot replied: `LifeOS receive test OK. No action was taken.` `30_Capture/` file list unchanged (0 diff). `50_Event_Log/events.jsonl` stayed at 25 lines — no capture files created, no event log entries appended. `--check` and `py_compile` passed. No `/capture`, `/status`, n8n, Docker, tunnel, webhook, AI, proposal, or file processor actions invoked. Commit: `46e1f0c`.
 
+- **Capture-only receive validation mode added (2026-07-06)**: Added `--capture-test` mode to `telegram_capture_bot.py`. `process_capture_test_update()` only allows `/capture <text>`, blocks all other commands with a safe no-action reply. `cmd_capture_test()` fetches one update, routes through the capture-test handler, updates offset, and exits. Raw `--once` is intentionally avoided for capture validation because it dispatches all commands including filesystem-based review handlers. Normal `process_update()` is never called. README updated with `--capture-test` usage, warning against raw `--once`, and documentation of blocked commands and preserved boundaries. Next step: controlled live `/capture` validation through `--capture-test`.
+
 ## Active Deferrals
 
 - None active. The earlier off-machine Git backup deferral was superseded by GitHub remote setup at `2026-07-06T02:11:21Z`.

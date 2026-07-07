@@ -869,6 +869,54 @@ def process_receive_test_update(update):
     print("Receive test: safe acknowledgement sent.")
 
 
+def process_capture_test_update(update):
+    """Capture-test handler. Only allows /capture <text>. Never dispatches normal commands."""
+    msg = update.get('message', {})
+    text = msg.get('text', '')
+    sender_id, chat_id = extract_sender_id(update)
+
+    if chat_id is None:
+        print("Capture test: update has no chat_id, skipping.")
+        return
+
+    if not is_authorized_sender(sender_id):
+        print("Capture test: unauthorized sender rejected")
+        reject_unauthorized(chat_id)
+        return
+
+    cmd = (text or '').strip().lower().split()[0] if text else ''
+    if '@' in cmd:
+        cmd = cmd.split('@')[0]
+
+    if cmd == '/capture':
+        handle_capture(text, chat_id, sender_id, msg)
+    else:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'LifeOS capture-test mode is active. No action was taken.'
+        })
+        print(f"Capture test: blocked non-capture command '{cmd}'")
+
+
+def cmd_capture_test():
+    """Capture-test mode: fetch at most one update, only allow /capture, exit."""
+    load_env()
+    offset = load_offset()
+    updates = tg_api('getUpdates', {'offset': offset, 'timeout': 2})
+    if not updates.get('ok'):
+        print("FAIL: getUpdates failed:", updates.get('description'))
+        sys.exit(1)
+    result = updates.get('result', [])
+    if not result:
+        print("No new updates to test.")
+        return
+    update = result[0]
+    process_capture_test_update(update)
+    new_offset = update['update_id'] + 1
+    save_offset(new_offset)
+    print("Capture test complete.")
+
+
 def cmd_receive_test():
     """Receive-test mode: fetch at most one update, safely acknowledge, exit."""
     load_env()
@@ -894,6 +942,7 @@ def main():
     parser.add_argument('--once', action='store_true', help='Process new updates once')
     parser.add_argument('--poll', action='store_true', help='Poll mode (foreground, Ctrl+C to stop)')
     parser.add_argument('--receive-test', action='store_true', help='Receive-test mode: safely acknowledge one update without dispatching commands')
+    parser.add_argument('--capture-test', action='store_true', help='Capture-test mode: safely process only /capture from one update, block all other commands')
     parser.add_argument('--interval', type=int, default=3, help='Poll interval in seconds (default: 3)')
     args = parser.parse_args()
 
@@ -903,6 +952,8 @@ def main():
         cmd_once()
     elif args.poll:
         cmd_poll(args.interval)
+    elif args.capture_test:
+        cmd_capture_test()
     elif args.receive_test:
         cmd_receive_test()
     else:
