@@ -170,6 +170,8 @@ Completed:
 
 - **Telegram capture-first operating docs stabilized (2026-07-07)**: Documentation updated to match current runtime reality. The local Telegram polling service is the active interim capture-first path and is enabled on login as a systemd user service. `/capture` automatic polling is validated through Action API. `/p` is validated through `--review-test`. `/view`, `/a`, and `/r` live validation remains deferred by user decision. n8n, tunnels, webhooks, AI proposals, and controlled file processor remain inactive. Known stabilization backlog includes stale Telegram filesystem helpers, runtime artifact tracking policy, Action API atomicity, Action API host deployment contract, and review-action validation.
 
+- **Telegram/n8n next-phase gameplan added (2026-07-07)**: Added a roadmap/gameplan document for the next LifeOS Telegram, Action API, n8n, Docker, and future homelab phases: `docs/superpowers/specs/2026-07-07-lifeos-telegram-n8n-next-phase-gameplan.md`. The plan prioritizes runtime artifact policy, Telegram bot helper cleanup, Action API hardening, event traceability, review-command risk handling, and tests before adding buttons, n8n webhooks, Cloudflare tunnels, AI proposals, controlled file processor, Docker expansion, or Kubernetes. Documentation-only; no code or service changes.
+
 Next:
 1. Phase B2 readiness cleanup was completed earlier. Temporary tunnel POC passed — confirms n8n webhook reachability via Cloudflare tunnel.
 2. Phase B3: Controlled domain-based Cloudflare Tunnel setup — requires user-provided Cloudflare domain, tunnel token, or credentials JSON. Quick Tunnel is not a substitute for production.

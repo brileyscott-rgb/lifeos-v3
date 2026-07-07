@@ -51,6 +51,16 @@ mutation commands should fail safely with a no-action message.
 lifecycle events directly. Some bot telemetry events may still be written
 by legacy/local bot telemetry paths; this is a known boundary cleanup item.
 
+## Next-Phase Gameplan
+
+The next-phase roadmap is documented at
+`docs/superpowers/specs/2026-07-07-lifeos-telegram-n8n-next-phase-gameplan.md`.
+It keeps the system in capture-first local polling mode and prioritizes
+runtime artifact policy, Telegram helper cleanup, Action API hardening,
+`event_id` traceability, review-command risk handling, and offline tests
+before buttons, n8n webhooks, Cloudflare tunnels, AI proposals, controlled
+file processing, Docker expansion, homelab expansion, or Kubernetes.
+
 ## Purpose
 
 Local active Telegram bot handler for LifeOS V3. Polls the Telegram API,

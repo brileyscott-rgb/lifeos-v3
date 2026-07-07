@@ -29,6 +29,10 @@ cd /home/lifeos/40_Services/n8n
 - [ ] Never store credentials in workflow JSON
 - [ ] Get explicit user approval per workflow
 
+Note: n8n Telegram webhook activation is deferred until Telegram local polling
+boundaries, Action API hardening, runtime tracking policy, and review-command
+risk handling are complete.
+
 ## First Workflow: LifeOS Status Digest
 
 1. Open n8n UI at `http://localhost:5678`
