@@ -3,22 +3,22 @@
 # Quick reference links for LifeOS operators
 
 - Developer:
-    - Status API Docs:
+    - Status API:
         - abbr: SA
-          href: http://localhost:8787/
+          href: http://localhost:8787/status
 
-    - Action API Docs:
+    - Action API:
         - abbr: AA
-          href: http://localhost:8788/
+          href: http://localhost:8788/health
 
-    - n8n Workflows:
+    - n8n:
         - abbr: N8
           href: http://localhost:5678/
 
-    - LifeOS Vault:
-        - abbr: LV
+    - Telegram Bot Logs:
+        - abbr: TB
           href: ""
-          description: Obsidian vault (local AppImage)
+          description: journalctl --user -u lifeos-telegram-bot -f
 
 - Monitoring:
     - Uptime Kuma:
@@ -29,17 +29,43 @@
         - abbr: DZ
           href: http://localhost:3002/
 
-    - Docker ps:
-        - abbr: DP
-          href: ""
-
-- Docs:
     - Service Inventory:
         - abbr: SI
           href: ""
-          description: lifeos_services.py --text
+          description: python3 40_Services/scripts/lifeos_services.py --text
 
     - Observability Report:
         - abbr: OR
           href: ""
-          description: lifeos_observability.py --text
+          description: python3 40_Services/scripts/lifeos_observability.py --text
+
+    - Monitor Plan:
+        - abbr: MP
+          href: ""
+          description: 40_Services/docs/Uptime_Kuma_Monitor_Plan.md
+
+- Docs:
+    - Docker MCP Service Map:
+        - abbr: DM
+          href: ""
+          description: 40_Services/docs/Docker_MCP_Service_Map.md
+
+    - MCP Security Policy:
+        - abbr: MS
+          href: ""
+          description: 40_Services/docs/MCP_Security_Policy.md
+
+    - OpenHands Sandbox Policy:
+        - abbr: OH
+          href: ""
+          description: 40_Services/openhands/Sandbox_Policy.md
+
+    - n8n Roadmap:
+        - abbr: NR
+          href: ""
+          description: 40_Services/docs/N8N_Automation_Roadmap.md
+
+    - Capture Pipeline Design:
+        - abbr: CD
+          href: ""
+          description: docs/superpowers/specs/2026-07-08-agentic-capture-pipeline.md

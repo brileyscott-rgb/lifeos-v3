@@ -8,6 +8,9 @@ layout:
   Core:
     style: row
     columns: 4
+  Capture Pipeline (Planned):
+    style: row
+    columns: 2
   Observability:
     style: row
     columns: 2

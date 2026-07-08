@@ -73,16 +73,24 @@
         server: my-docker
         container: lifeos-dozzle
 
-# --- AI (Planned — Placeholders) ---
+# --- Capture Pipeline (Planned) ---
+- Capture Pipeline (Planned):
+    - Capture API:
+        icon: si-json
+        href: ""
+        description: Dedicated capture API service (planned)
+
+    - Agentic Capture Pipeline:
+        icon: si-robot
+        href: ""
+        description: Agent-based capture classification and processing (planned)
+
+# --- AI (Planned) ---
 - AI (Planned):
     - Ollama:
         icon: ollama
         href: ""
         description: Local LLM inference server (placeholder)
-        widget:
-          type: customapi
-          url: ""
-          display: none
 
     - Open WebUI:
         icon: open-webui
@@ -94,12 +102,17 @@
         href: ""
         description: Multi-model proxy/router (placeholder)
 
-    - MCP Gateway:
+    - mcpo:
         icon: si-json
         href: ""
-        description: Controlled MCP server gateway (placeholder)
+        description: MCP-to-OpenAI proxy for Open WebUI (placeholder)
 
-# --- Memory (Planned — Placeholders) ---
+    - LifeOS MCP Server:
+        icon: si-json
+        href: ""
+        description: Custom LifeOS MCP server (placeholder)
+
+# --- Memory (Planned) ---
 - Memory (Planned):
     - Qdrant:
         icon: qdrant
@@ -128,19 +141,29 @@
     - Docker/Service Map:
         icon: si-markdown
         href: ""
-        description: Docker and MCP service inventory (local read)
+        description: Service inventory, ports, volumes, health checks
+
+    - MCP Security Policy:
+        icon: si-markdown
+        href: ""
+        description: Deny-by-default rules, tool allowlist, sandbox→staging→prod
+
+    - OpenHands Sandbox Policy:
+        icon: si-markdown
+        href: ""
+        description: Mount policy, allowed/rejected use cases, export pipeline
+
+    - n8n Automation Roadmap:
+        icon: si-markdown
+        href: ""
+        description: 4-phase automation plan, activation checklist
+
+    - Uptime Kuma Monitor Plan:
+        icon: si-markdown
+        href: ""
+        description: Monitor definitions, alert priorities, setup instructions
 
     - Current Working State:
         icon: si-markdown
         href: ""
         description: LifeOS AI universe current state (local read)
-
-    - n8n Roadmap:
-        icon: si-markdown
-        href: ""
-        description: n8n automation roadmap (local read)
-
-    - MCP Security Policy:
-        icon: si-markdown
-        href: ""
-        description: MCP security policies and deny-by-default rules (local read)

@@ -107,6 +107,7 @@ New services must follow the same security boundaries:
 
 This dashboard stack is designed to integrate with future LifeOS services:
 
+- **Uptime Kuma monitors:** Defined in `40_Services/docs/Uptime_Kuma_Monitor_Plan.md`. Configure Core (Status API, Action API, n8n, Homepage, Uptime Kuma self, Dozzle) and Infrastructure (Status Full, ChromaDB) monitors manually through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 - **MCP/mcpo:** Uptime Kuma will monitor MCP server health. Homepage will link to MCP tools once active.
 - **OpenHands:** Homepage will link to OpenHands sandbox once active. Container visible in Dozzle.
 - **n8n:** Uptime Kuma already monitoring n8n health. n8n workflows may push alerts to Uptime Kuma push monitor.

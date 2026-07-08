@@ -47,6 +47,7 @@ KNOWN_SERVICE_PATHS = {
     "mcp_security_policy": LIFEOS_ROOT / "40_Services" / "docs" / "MCP_Security_Policy.md",
     "openhands_scaffold": LIFEOS_ROOT / "40_Services" / "openhands" / "README.md",
     "n8n_roadmap": LIFEOS_ROOT / "40_Services" / "docs" / "N8N_Automation_Roadmap.md",
+    "uptime_kuma_monitor_plan": LIFEOS_ROOT / "40_Services" / "docs" / "Uptime_Kuma_Monitor_Plan.md",
     "telegram_config": LIFEOS_ROOT / "40_Services" / "config" / "telegram",
     "secrets_dir": LIFEOS_ROOT / "40_Services" / "secrets",
     "event_log": LIFEOS_ROOT / "50_Event_Log" / "events.jsonl",
@@ -200,8 +201,15 @@ def get_suggested_action(service_state):
     if not paths.get("n8n_compose_unified", {}).get("exists"):
         issues.append("Unified compose missing — run baseline setup")
 
+    dashboard_containers = [
+        c for c in docker.get("running_containers", [])
+        if any(n in c.get("name", "") for n in ("homepage", "uptime-kuma", "dozzle"))
+    ]
+    if dashboard_containers and paths.get("uptime_kuma_monitor_plan", {}).get("exists"):
+        issues.append("Configure Uptime Kuma monitors per monitor plan (3001)")
+
     if not issues:
-        return "All checks passed. Ready for observability/MCP V2."
+        return "All checks passed. Configure Uptime Kuma monitors from monitor plan."
     else:
         return "; ".join(issues)
 
