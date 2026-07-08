@@ -306,12 +306,12 @@ Next:
 9. **mcpo sandbox test** — Run the safe first-test plan from `40_Services/mcpo/README.md` to validate MCP integration against an isolated test-data folder only.
 10. **n8n internal workflow design** — Build n8n workflows for internal automation.
 11. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
-12. ~~**Capture API V1 implemented (2026-07-08)**~~ — Queue-only Capture API created at `127.0.0.1:8789`. Accepts POST /captures with JSON payloads, validates, generates capture IDs, appends to append-only JSONL queue with `fcntl.flock` atomic writes. Bearer token auth configured via env vars. Buffer vault (`LifeOS_Capture_Buffer/`) and media archive (`LifeOS_Media_Archive/`) directory structures initialized with safety READMEs. Queue-to-Markdown processor reads JSONL queue and writes review-draft Markdown files to buffer vault only (no AI, no scraping, no canonical vault writes). Client setup docs created (curl, iOS Shortcuts, bookmarklet, n8n). No HMAC auth (deferred to V2 when external clients exist). No Docker compose service (script-only V1). No processor activation, no AI, no URL scraping. All paths gitignored. 382 tests passing across all suites.
-Next:
-- Manual Uptime Kuma monitor creation/update in web UI
-- Manual Capture API smoke test from host (curl POST)
-- mcpo sandbox test
-- n8n internal workflow design (deferred)
+12. ~~**Capture API V1 deployed (2026-07-08)**~~ — Capture API V1 operational as systemd user service at `127.0.0.1:8789`. Bearer token generated and stored in gitignored `.env` (mode 600). Systemd unit uses `EnvironmentFile=` for safe secret injection. No linger enabled (user session required; same pattern as Telegram bot). Live smoke tests: health check returns 200, authenticated POST returns capture_id, queue-to-markdown produces valid Markdown in buffer vault. Tailscale available (100.114.67.45) but service stays local-only — cross-device binding is documented as manual step. No public exposure, no canonical vault writes, no AI processing. 382 tests passing across all suites.
+13. **Manual Uptime Kuma monitor setup** — Configure the "Create now" monitors per `Uptime_Kuma_Monitor_Plan.md`. Uptime Kuma is already running at `127.0.0.1:3001`. No auto-remediation.
+14. **Phone/desktop capture setup** — Install iOS Shortcut or bookmarklet from client setup docs. Requires Tailscale binding change if cross-device access needed.
+15. **mcpo sandbox test** — Run the safe first-test plan from `40_Services/mcpo/README.md` to validate MCP integration against an isolated test-data folder only.
+16. **n8n internal workflow design** — Build n8n workflows for internal automation.
+17. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
 ## Known Stabilization Backlog
 

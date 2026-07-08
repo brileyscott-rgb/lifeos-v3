@@ -1,0 +1,14 @@
+[Unit]
+Description=LifeOS Capture API (Tailscale-only HTTP intake)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lifeos
+EnvironmentFile=/home/lifeos/40_Services/capture_api/.env
+ExecStart=/usr/bin/python3 /home/lifeos/40_Services/capture_api/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
