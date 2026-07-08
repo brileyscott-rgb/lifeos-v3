@@ -1,7 +1,7 @@
 # LifeOS Docker + MCP Service Map
 
 > Read-only inventory of all LifeOS services, their Docker/MCP status, and risk levels.
-> Updated: 2026-07-08 — Foundation V1
+> Updated: 2026-07-08 — Dashboard deployed; Capture API added
 
 ## Current Services
 
@@ -12,20 +12,22 @@
 | `n8n_n8n_1` | Docker (legacy compose) | `127.0.0.1:5678` | HTTP 200 on port | Medium-High | Deferred |
 | `odysseus_chromadb_1` | Docker (legacy, not LifeOS) | `127.0.0.1:8100` | None | Low-Medium | No |
 | `lifeos-telegram-bot` | systemd user service | None (outbound) | systemctl status | Low | No |
+| **Dashboard Stack** | | | | | |
+| `lifeos-homepage` | Docker (dashboard compose) | `127.0.0.1:3000` | HTTP 200 | Low | No |
+| `lifeos-uptime-kuma` | Docker (dashboard compose) | `127.0.0.1:3001` | HTTP 200 | Low | No |
+| `lifeos-dozzle` | Docker (dashboard compose) | `127.0.0.1:3002` | HTTP 200 | Low-Medium* | No |
 
 ## Planned Services
 
 | Service | Phase | Port | Health Check | Risk | MCP Exposure |
 |---------|-------|------|-------------|------|-------------|
-| **Dashboard Stack** | Foundation V1 | | | | |
-| Homepage | Foundation V1 | `127.0.0.1:3000` | HTTP 200 | Low | No |
-| Uptime Kuma | Foundation V1 | `127.0.0.1:3001` | HTTP 200 | Low | No |
-| Dozzle | Foundation V1 | `127.0.0.1:3002` | HTTP 200 | Low-Medium* | No |
 | **MCP/mcpo** | Foundation (scaffold) | | | | |
 | LifeOS MCP Server | Foundation (scaffold) | `127.0.0.1:TBD` | TBD | Medium | Self |
 | mcpo Proxy | Foundation (scaffold) | `127.0.0.1:TBD` | TBD | Medium | Self |
 | **OpenHands** | Foundation (scaffold) | | | | |
-| OpenHands Sandbox | Foundation (scaffold) | `127.0.0.1:TBD` | TBD | Medium-High | No |
+| OpenHands Sandbox | Foundation (scaffold) | `127.0.0.1:3003` | TBD | Medium-High | No |
+| **Capture Pipeline** | V1 (roadmap) | | | | |
+| Capture API | V1 (roadmap) | `127.0.0.1:8789` | `GET /health` | Medium | Read-only planned |
 | **AI (Future)** | V2+ | | | | |
 | Ollama | V2+ | `127.0.0.1:11434` | `GET /api/tags` | Medium | No |
 | Open WebUI | V2+ | `127.0.0.1:8080` | HTTP 200 | Medium | mcpo consumer |
@@ -50,13 +52,15 @@
 ## Port Map
 
 ```
-127.0.0.1:3000  → Homepage (dashboard)
-127.0.0.1:3001  → Uptime Kuma (dashboard)
-127.0.0.1:3002  → Dozzle (dashboard)
+127.0.0.1:3000  → Homepage (dashboard compose)
+127.0.0.1:3001  → Uptime Kuma (dashboard compose)
+127.0.0.1:3002  → Dozzle (dashboard compose)
+127.0.0.1:3003  → OpenHands Sandbox (planned)
 127.0.0.1:5678  → n8n (legacy compose)
 127.0.0.1:8100  → ChromaDB (legacy, odysseus)
 127.0.0.1:8787  → Status API (unified compose)
 127.0.0.1:8788  → Action API (unified compose)
+127.0.0.1:8789  → Capture API (planned, V1 roadmap)
 ```
 
 ## Volumes
@@ -119,3 +123,14 @@
 | **Medium-High** | Read-write, credential storage, workflow execution | n8n, OpenHands sandbox |
 | **High** | Broad filesystem access, external API write, secrets access | (none active in V1) |
 | **Critical** | Docker socket, shell execution, full vault access | Permanently rejected |
+
+## Related Docs
+
+- [Dashboard README](../dashboard/README.md) — dashboard stack startup and security notes
+- [Uptime Kuma Monitor Plan](Uptime_Kuma_Monitor_Plan.md) — monitor definitions
+- [N8N Automation Roadmap](N8N_Automation_Roadmap.md) — n8n phases and activation
+- [MCP Security Policy](MCP_Security_Policy.md) — MCP tool allowlist and sandbox rules
+- [Agentic Capture Pipeline](Agentic_Capture_Pipeline.md) — capture pipeline architecture
+- [Capture API Roadmap](Capture_API_Roadmap.md) — Tailscale-only capture intake API
+- [Capture Processor Roadmap](Capture_Processor_Roadmap.md) — Dockerized processors catalog
+- [Observability Control Plane](Observability_Control_Plane.md) — observability policy and runbook

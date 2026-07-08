@@ -206,7 +206,7 @@ deployed and active. Do not create them now.
 
 | Monitor | Type | URL/Method | When to Create |
 |---------|------|------------|---------------|
-| Capture API | HTTP | `http://localhost:TBD/health` | When Capture API is deployed |
+| Capture API | HTTP | `http://localhost:8789/health` | When Capture API is deployed (planned port per `Capture_API_Roadmap.md`) |
 | Queue Processor | Push | Cron push from queue monitor script | When queue processor is active |
 | Pending Capture Count | HTTP — Keyword | Status API `pending_captures` | Already checkable via Status API full monitor |
 
@@ -281,13 +281,13 @@ bot to avoid mixing operations alerts with capture/review traffic.
 
 After creating all "Now" monitors:
 
-1. Open Uptime Kuma status page.
+1. Open Uptime Kuma status page (`http://127.0.0.1:3001`).
 2. Verify all monitors are green ("Up").
 3. Wait 2 heartbeat intervals to confirm stability.
 4. If any monitor is red:
    - Verify the URL is reachable from the Uptime Kuma container: `docker exec lifeos-uptime-kuma curl -s http://localhost:8787/health`
    - Check that the target service is running: `docker ps`
-   - Check container network connectivity: All dashboard containers use the default `dashboard_default` bridge network. They reach `localhost` services via the host network (--network host equivalent). If Uptime Kuma cannot reach `localhost:8787`, verify Docker networking mode.
+   - Check container network connectivity: Dashboard containers use the `dashboard_default` bridge network. They reach host-localhost services via Docker's bridge gateway NAT to host loopback, not `--network host`. Ensure target services bind `127.0.0.1` (not `0.0.0.0`). If Uptime Kuma cannot reach `localhost:8787`, verify the target service is listening on `127.0.0.1` and reachable from the host.
 
 ## Backup
 

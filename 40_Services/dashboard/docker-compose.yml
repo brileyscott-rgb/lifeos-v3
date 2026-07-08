@@ -1,5 +1,5 @@
 # LifeOS Dashboard Stack V1
-# Docker Compose V1 compatible (docker-compose up -d)
+# Docker Compose V2 (docker compose up -d). V1 compatible with version: "3.8" added.
 #
 # Security boundaries:
 # - All ports bound to 127.0.0.1 only (no public exposure)
