@@ -123,6 +123,14 @@ Each step requires explicit approval. No batch activation.
 | No disk monitoring | Could fill disk without warning | Uptime Kuma + script (future) |
 | No service uptime history | Unknown restart patterns | Uptime Kuma (future) |
 
+## Storage Pressure Integration
+
+- Disk >= 90% is a **warning** — run `lifeos_observability.py` to confirm.
+- Disk >= 95% is **critical** — execute safe cleanup from `Storage_Triage_Runbook.md`.
+- Do not activate new observability services while disk is >= 95%.
+- Storage Triage V1 must run before Observability V3 activation if disk remains high.
+- See `40_Services/docs/Storage_Triage_Runbook.md` for safe cleanup procedures and forbidden actions.
+
 ## Deferrals
 
 - Prometheus/Grafana/Loki — Heavy stack, needs separate evaluation

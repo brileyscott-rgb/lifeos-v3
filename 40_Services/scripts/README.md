@@ -121,3 +121,12 @@ python3 40_Services/scripts/lifeos_observability.py --json
 - Does not run git write commands.
 - Does not start, stop, restart, pull, or build Docker containers.
 - Does not call any model API.
+
+## Related
+
+- `40_Services/docs/Storage_Triage_Runbook.md` — Safe disk cleanup procedures, Docker volume policy, and forbidden actions.
+- `40_Services/docs/Observability_Control_Plane.md` — Monitoring policy and storage pressure thresholds.
+
+**Do not run destructive Docker prune commands** (e.g. `docker system prune --volumes`, `docker volume rm`). Docker volumes contain n8n workflows, ChromaDB data, and service state. See Storage Triage Runbook for safe cleanup categories.
+
+Observability scripts (`lifeos_observability.py`) **report** disk usage and warnings. They do not perform cleanup. Cleanup requires explicit human review and execution of the commands documented in the runbook.
