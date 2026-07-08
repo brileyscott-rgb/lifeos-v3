@@ -49,6 +49,10 @@ Videos/
 !70_Backups/**/
 !70_Backups/**/README.md
 
+# Capture pipeline buffer vault and media archive (local-only, not for Git)
+LifeOS_Capture_Buffer/**
+LifeOS_Media_Archive/**
+
 # Raw captures, documents, archives, and migration work can be large/private.
 00_Inbox/**
 30_Documents/**
