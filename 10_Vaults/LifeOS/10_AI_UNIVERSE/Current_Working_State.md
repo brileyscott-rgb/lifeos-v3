@@ -154,9 +154,10 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
     - Status API: read-only, healthy
     - Action API: read-write, healthy
     - No secrets exposed, no public webhooks, no Docker socket, no direct vault writes
-    - Tests: 329/329 passing (208 Telegram + 103 Action API + 18 Status API)
+    - Tests: 330/330 passing (209 Telegram + 103 Action API + 18 Status API)
     - 7 pending captures in queue (test artifacts from previous validation cycles)
-    - **Message format simplified (2026-07-07)**: Removed Unicode box-drawing characters, age/countdown clutter, last_event_time, full ISO timestamps, and internal implementation details from all user-facing cards. Cards are now compact plain-text mobile-first format. Proposal button added to /view inline keyboard alongside View Full. All 329 tests updated and passing.
+    - **Message format simplified (2026-07-07)**: Removed Unicode box-drawing characters, age/countdown clutter, last_event_time, full ISO timestamps, and internal implementation details from all user-facing cards. Cards are now compact plain-text mobile-first format. Proposal button added to /view inline keyboard alongside View Full.
+    - **Review button UX polished (2026-07-08)**: Callback review-mode guard now verifies token first, then blocks only mutation actions (a, r, ca, cr) — read-only actions (v, p, n) always allowed. View Full now sends formatted card with Proposal/Approve/Reject buttons. Proposal button now sends formatted card with View Full/Approve/Reject buttons. Confirm cards show capture preview and vault-safe reminder. Receipts use "Queue updated. Obsidian vault unchanged." Pending queue has blank-line spacing between items. Approve/reject failure handling hardened to check success:false. Review mode currently disabled (no --allow-review in service); enable with --allow-review or TELEGRAM_ALLOW_REVIEW=1 for mutation access.
 
 ## Current Decisions
 

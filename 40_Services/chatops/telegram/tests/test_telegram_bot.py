@@ -903,16 +903,28 @@ class TestCallbackQueryDispatch(unittest.TestCase):
         mock_tg.assert_called_once_with("answerCallbackQuery", {"callback_query_id": "cb_test_1"})
 
     @patch.object(bot, 'tg_api')
-    def test_review_disabled_answers_with_text_and_returns(self, mock_tg):
-        cb_data = self.make_valid_token("n")
+    def test_review_disabled_blocks_mutation_actions(self, mock_tg):
+        cb_data = self.make_valid_token("a")
         update = self.make_callback_update(cb_data)
         bot.ALLOW_REVIEW_COMMANDS = False
         with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
-            bot.process_callback_query(update)
-        mock_tg.assert_called_once_with("answerCallbackQuery", {
+            with patch.object(bot, 'BOT_TOKEN', "test_token"):
+                bot.process_callback_query(update)
+        mock_tg.assert_any_call("answerCallbackQuery", {
             "callback_query_id": "cb_test_1",
-            "text": "Review mode is disabled. Please /p to refresh."
+            "text": "Review actions are disabled. Read-only review still works."
         })
+
+    @patch.object(bot, 'tg_api')
+    def test_review_disabled_allows_readonly_actions(self, mock_tg):
+        cb_data = self.make_valid_token("v")
+        update = self.make_callback_update(cb_data)
+        bot.ALLOW_REVIEW_COMMANDS = False
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            with patch.object(bot, 'BOT_TOKEN', "test_token"):
+                with patch.object(bot, '_handle_view_full') as mock_handler:
+                    bot.process_callback_query(update)
+                    mock_handler.assert_called_once()
 
     @patch.object(bot, 'tg_api')
     def test_invalid_token_answers_with_text_and_returns(self, mock_tg):
@@ -1032,7 +1044,7 @@ class TestViewSummaryAndButtons(unittest.TestCase):
             bot.handle_view("/view 1", CHAT_ID)
         payload = mock_tg.call_args[0][1]
         buttons = payload["reply_markup"]["inline_keyboard"]
-        # View Full Text should have action 'v'
+        # View Full button should have action 'v'
         v_data = buttons[0][0]["callback_data"]
         self.assertTrue(v_data.startswith("rv1|v|"))
         # Approve should have action 'a'
@@ -1061,15 +1073,18 @@ class TestViewSummaryAndButtons(unittest.TestCase):
             }},
         ]
         with patch.object(bot, 'BOT_TOKEN', "test_token"):
-            bot._handle_view_full(CHAT_ID, cap_ref)
+            bot._handle_view_full(CHAT_ID, cap_ref, AUTHORIZED_SENDER)
         self.assertEqual(mock_tg.call_count, 1)
         text = mock_tg.call_args[0][1]["text"]
         self.assertIn("Full content line 1.", text)
         self.assertIn("Line 2.", text)
         self.assertIn("Line 3.", text)
-        # Should NOT have approve/reject buttons
         payload = mock_tg.call_args[0][1]
-        self.assertNotIn("reply_markup", payload)
+        self.assertIn("reply_markup", payload)
+        buttons = payload["reply_markup"]["inline_keyboard"]
+        self.assertEqual(buttons[0][0]["text"], "Proposal")
+        self.assertEqual(buttons[1][0]["text"], "Approve")
+        self.assertEqual(buttons[1][1]["text"], "Reject")
 
     @patch.object(bot, 'call_action_api')
     @patch.object(bot, 'tg_api')
@@ -1077,7 +1092,7 @@ class TestViewSummaryAndButtons(unittest.TestCase):
         cap_ref = bot._make_cap_ref("nonexistent")
         mock_api.return_value = {"success": True, "pending": [], "count": 0}
         with patch.object(bot, 'BOT_TOKEN', "test_token"):
-            bot._handle_view_full(CHAT_ID, cap_ref)
+            bot._handle_view_full(CHAT_ID, cap_ref, AUTHORIZED_SENDER)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]["text"]
         self.assertIn("no longer pending", text)

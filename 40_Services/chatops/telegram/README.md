@@ -1,12 +1,12 @@
 # Telegram ChatOps Local Bot Handler
 
-> **Status: Live — capture + review + proposal.** The Telegram bot is
-> running as a local systemd user polling service (`--poll --interval 3 --allow-review`).
-> Capture, review, and proposal commands are live-validated through Action API.
-> Inline review button UX (approve/reject with confirmation, cancel, view full text)
-> is active in live polling. Deterministic proposal v1 (`/proposal <n>`) is available
+> **Status: Live — capture + read-only review + proposal.** The Telegram bot is
+> running as a local systemd user polling service (`--poll --interval 3`).
+> Capture, read-only review (/p, /view, /proposal), and inline buttons (View Full,
+> Proposal) are live-validated. Approve/reject mutations require `--allow-review`
+> or `TELEGRAM_ALLOW_REVIEW=1` in `.env`. Deterministic proposal v1 is available
 > as a read-only preview with no vault writes. Message cards are compact mobile-first
-> plain-text format (no box-drawing characters, no age/countdown clutter).
+> plain-text format.
 >
 > The future production path will use n8n webhook workflow routing through
 > the LifeOS Action API, but is not yet active.

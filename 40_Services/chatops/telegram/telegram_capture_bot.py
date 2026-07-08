@@ -323,20 +323,10 @@ def process_callback_query(update):
     callback_data = cb.get("data", "")
     cb_id = cb.get("id")
 
-    # 1. Authorization gate
     if not is_authorized_sender(sender_id):
         tg_api("answerCallbackQuery", {"callback_query_id": cb_id})
         return
 
-    # 2. Review-mode guard — protects against stale buttons
-    if not ALLOW_REVIEW_COMMANDS:
-        tg_api("answerCallbackQuery", {
-            "callback_query_id": cb_id,
-            "text": "Review mode is disabled. Please /p to refresh.",
-        })
-        return
-
-    # 3. Token verification (expiry, sender mismatch, etc.)
     token = _verify_token(sender_id, callback_data)
     if token is None:
         tg_api("answerCallbackQuery", {
@@ -345,18 +335,25 @@ def process_callback_query(update):
         })
         return
 
-    # 4. Answer the callback (no text) to stop the loading spinner.
-    tg_api("answerCallbackQuery", {"callback_query_id": cb_id})
-
     action = token["action"]
     cap_ref = token["cap_ref"]
+    mutation_actions = {"a", "r", "ca", "cr"}
+
+    if action in mutation_actions and not ALLOW_REVIEW_COMMANDS:
+        tg_api("answerCallbackQuery", {
+            "callback_query_id": cb_id,
+            "text": "Review actions are disabled. Read-only review still works.",
+        })
+        return
+
+    tg_api("answerCallbackQuery", {"callback_query_id": cb_id})
 
     if action == "n":
         _handle_cancel(chat_id, msg_id)
     elif action == "v":
-        _handle_view_full(chat_id, cap_ref)
+        _handle_view_full(chat_id, cap_ref, sender_id)
     elif action == "p":
-        _handle_proposal_button(chat_id, cap_ref)
+        _handle_proposal_button(chat_id, cap_ref, sender_id)
     elif action == "a":
         _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref)
     elif action == "r":
@@ -367,7 +364,7 @@ def process_callback_query(update):
         _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref)
 
 
-def _handle_view_full(chat_id, cap_ref):
+def _handle_view_full(chat_id, cap_ref, sender_id):
     capture_id, error = _resolve_cap_ref(cap_ref)
     if capture_id is None:
         tg_api("sendMessage", {"chat_id": chat_id, "text": error})
@@ -383,14 +380,45 @@ def _handle_view_full(chat_id, cap_ref):
 
     capture = result["capture"]
     content = capture.get("content", "")
+    cid = capture.get("capture_id", capture_id)
+    ctype = capture.get("capture_type", "unknown")
+    status = capture.get("status", "pending_review")
+    index = capture.get("index")
+
     max_len = 3500
     if len(content) > max_len:
         content = content[:max_len] + "\n... (truncated)"
 
-    tg_api("sendMessage", {"chat_id": chat_id, "text": content})
+    rows = [("Capture", str(index) if index else cid)]
+    if index:
+        rows.append(("ID", cid))
+    rows.append(("Type", ctype))
+    rows.append(("Status", status))
+    body = f"Full text:\n{content}"
+
+    cap_ref2 = _make_cap_ref(cid)
+    token_p = _make_token("p", sender_id, cap_ref2)
+    token_a = _make_token("a", sender_id, cap_ref2)
+    token_r = _make_token("r", sender_id, cap_ref2)
+
+    text = cards.format_card("Full Capture", rows=rows, body=body,
+                             footer="Vault unchanged. Use Proposal, Approve, or Reject when ready.")
+    tg_api("sendMessage", {
+        "chat_id": chat_id,
+        "text": text,
+        "reply_markup": {
+            "inline_keyboard": [
+                [{"text": "Proposal", "callback_data": token_p}],
+                [
+                    {"text": "Approve", "callback_data": token_a},
+                    {"text": "Reject", "callback_data": token_r},
+                ],
+            ],
+        },
+    })
 
 
-def _handle_proposal_button(chat_id, cap_ref):
+def _handle_proposal_button(chat_id, cap_ref, sender_id):
     capture_id, error = _resolve_cap_ref(cap_ref)
     if capture_id is None:
         tg_api("sendMessage", {"chat_id": chat_id, "text": error})
@@ -412,12 +440,33 @@ def _handle_proposal_button(chat_id, cap_ref):
     next_action = next_action_for_type(ctype)
     index = capture.get("index")
 
-    text = cards.format_proposal(
-        capture_id=cid, index=index, title=title,
-        capture_type=ctype, suggested_route=route,
-        next_action=next_action,
-    )
-    tg_api("sendMessage", {"chat_id": chat_id, "text": text})
+    rows = [("Capture", str(index) if index else cid)]
+    if title:
+        rows.append(("Title", title))
+    rows.append(("Type", ctype))
+    rows.append(("Route", route))
+    body = f"Suggested action:\n{next_action}" if next_action else ""
+
+    cap_ref2 = _make_cap_ref(cid)
+    token_v = _make_token("v", sender_id, cap_ref2)
+    token_a = _make_token("a", sender_id, cap_ref2)
+    token_r = _make_token("r", sender_id, cap_ref2)
+
+    text = cards.format_card("Proposal", rows=rows, body=body,
+                             footer="Queue approval only. Obsidian vault stays unchanged.")
+    tg_api("sendMessage", {
+        "chat_id": chat_id,
+        "text": text,
+        "reply_markup": {
+            "inline_keyboard": [
+                [{"text": "View Full", "callback_data": token_v}],
+                [
+                    {"text": "Approve", "callback_data": token_a},
+                    {"text": "Reject", "callback_data": token_r},
+                ],
+            ],
+        },
+    })
 
 
 def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
@@ -430,15 +479,20 @@ def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
     token_n = _make_token("n", sender_id, cap_ref)
 
     result = call_action_api(f"/captures/{capture_id}")
-    preview = capture_id
+    capture_label = str(capture_id)
+    preview = ""
     if result and result.get("success"):
         capture = result.get("capture", {})
+        cap_index = capture.get("index")
+        if cap_index:
+            capture_label = str(cap_index)
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
-    text = cards.format_card("Confirm Approval", rows=[
-        ("ID", capture_id),
-    ])
+    rows = [("Capture", capture_label), ("ID", capture_id)]
+    body = f"Preview:\n{preview}" if preview else ""
+    text = cards.format_card("Confirm Approval", rows=rows, body=body,
+                             footer="This changes capture queue state only. Obsidian vault stays unchanged.")
     tg_api("editMessageText", {
         "chat_id": chat_id,
         "message_id": msg_id,
@@ -464,15 +518,20 @@ def _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref):
     token_n = _make_token("n", sender_id, cap_ref)
 
     result = call_action_api(f"/captures/{capture_id}")
-    preview = capture_id
+    capture_label = str(capture_id)
+    preview = ""
     if result and result.get("success"):
         capture = result.get("capture", {})
+        cap_index = capture.get("index")
+        if cap_index:
+            capture_label = str(cap_index)
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
-    text = cards.format_card("Confirm Rejection", rows=[
-        ("ID", capture_id),
-    ])
+    rows = [("Capture", capture_label), ("ID", capture_id)]
+    body = f"Preview:\n{preview}" if preview else ""
+    text = cards.format_card("Confirm Rejection", rows=rows, body=body,
+                             footer="This changes capture queue state only. Obsidian vault stays unchanged.")
     tg_api("editMessageText", {
         "chat_id": chat_id,
         "message_id": msg_id,
@@ -502,13 +561,24 @@ def _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref):
         })
         return
 
+    if not result.get("success"):
+        error = result.get("error", "unknown")
+        text_reply = cards.format_review_failed(error)
+        tg_api("editMessageText", {
+            "chat_id": chat_id,
+            "message_id": msg_id,
+            "text": text_reply,
+            "reply_markup": {"inline_keyboard": []},
+        })
+        return
+
     cid = result.get("capture_id", capture_id)
     event_id = result.get("event_id")
     rows = [("ID", cid)]
     if event_id:
         rows.append(("Event", event_id))
     text_reply = cards.format_card("Approved", rows=rows,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -532,13 +602,24 @@ def _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref):
         })
         return
 
+    if not result.get("success"):
+        error = result.get("error", "unknown")
+        text_reply = cards.format_review_failed(error)
+        tg_api("editMessageText", {
+            "chat_id": chat_id,
+            "message_id": msg_id,
+            "text": text_reply,
+            "reply_markup": {"inline_keyboard": []},
+        })
+        return
+
     cid = result.get("capture_id", capture_id)
     event_id = result.get("event_id")
     rows = [("ID", cid)]
     if event_id:
         rows.append(("Event", event_id))
     text_reply = cards.format_card("Rejected", rows=rows,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -721,7 +802,7 @@ def handle_approve(text, chat_id):
     if event_id:
         pairs.append(("Event", event_id))
     text_reply = cards.format_card("Approved", rows=pairs,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -751,7 +832,7 @@ def handle_reject(text, chat_id):
     if event_id:
         pairs.append(("Event", event_id))
     text_reply = cards.format_card("Rejected", rows=pairs,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -867,7 +948,7 @@ def handle_a(text, chat_id):
     if event_id:
         pairs.append(("Event", event_id))
     text_reply = cards.format_card("Approved", rows=pairs,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -909,7 +990,7 @@ def handle_r(text, chat_id):
     if event_id:
         pairs.append(("Event", event_id))
     text_reply = cards.format_card("Rejected", rows=pairs,
-                                   footer="No vault write performed.")
+                                   footer="Queue updated. Obsidian vault unchanged.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply

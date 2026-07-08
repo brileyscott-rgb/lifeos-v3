@@ -113,10 +113,10 @@ def format_pending_queue(items, count=None, mode="capture-first", now=None):
         preview = item.get("preview", "") or cap_id
         first_line = preview.split("\n")[0][:60]
         ctype, _ = classify_capture(preview)
-        lines.append(f"{idx}. {first_line}")
-        lines.append(f"   ID: {cap_id}")
+        lines.append(f"\n{idx}. {first_line}")
         lines.append(f"   Type: {ctype}")
-    body = "\n".join(lines)
+        lines.append(f"   ID: {cap_id}")
+    body = "".join(lines)
     footer = "Next: /view <number>"
     return format_card(f"Pending Captures: {count}", body=body, footer=footer)
 
