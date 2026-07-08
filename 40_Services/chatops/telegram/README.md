@@ -1,10 +1,11 @@
 # Telegram ChatOps Local Bot Handler
 
-> **Status: Active capture+review path.** The Telegram bot is currently
+> **Status: Live — capture + review + proposal.** The Telegram bot is
 > running as a local systemd user polling service (`--poll --interval 3 --allow-review`).
-> Both capture and review commands are live-validated through Action API.
+> Capture, review, and proposal commands are live-validated through Action API.
 > Inline review button UX (approve/reject with confirmation, cancel, view full text)
-> is active in live polling.
+> is active in live polling. Deterministic proposal v1 (`/proposal <n>`) is available
+> as a read-only preview with no vault writes.
 >
 > The future production path will use n8n webhook workflow routing through
 > the LifeOS Action API, but is not yet active.
@@ -15,10 +16,26 @@
 Active path:
 Telegram /capture
 → local systemd user polling service
-→ telegram_capture_bot.py --poll --interval 3
+→ telegram_capture_bot.py --poll --interval 3 --allow-review
 → Action API (http://localhost:8788)
 → 30_Capture/pending_review/
 → 50_Event_Log/events.jsonl
+
+Active review path:
+Telegram /p, /view, /a, /r, /approve, /reject
+→ Action API (http://localhost:8788)
+→ approve/reject moves files, appends events
+
+Active proposal path:
+Telegram /proposal <n>
+→ Action API (http://localhost:8788) for capture data
+→ deterministic template-based classification
+→ Telegram operator card reply only (no vault writes)
+
+Active status path:
+Telegram /status
+→ Status API (http://localhost:8787)
+→ read-only status card reply
 
 Inactive/future paths (not started):
 n8n Telegram workflows
@@ -28,9 +45,21 @@ AI proposal processing
 Controlled file processor
 ```
 
-**Review commands are API-backed in code**, but `/view`, `/a`, and `/r` live
-validation remains deferred by user decision. Until validated, use Telegram
-primarily for `/capture`.
+**Live commands (2026-07-07):**
+- `/capture <text>` — create pending capture via Action API
+- `/p` — list pending captures (read-only)
+- `/view <n>` — view capture details with inline review buttons
+- `/a <n>` — approve capture via Action API
+- `/r <n>` — reject capture via Action API
+- `/approve <capture_id>` — approve by ID
+- `/reject <capture_id>` — reject by ID
+- `/list_pending` — alias for list pending
+- `/status` — read-only status via Status API
+- `/proposal <n>` — deterministic proposal preview (no vault writes)
+- `/help` — command list
+
+**Review commands are fully live and validated** through Action API.
+All mutations use inline button confirmation (two-step approve/reject with HMAC callback tokens).
 
 **Service facts:**
 - Service name: `lifeos-telegram-bot.service`

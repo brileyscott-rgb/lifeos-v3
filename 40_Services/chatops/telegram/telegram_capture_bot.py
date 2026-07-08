@@ -543,7 +543,7 @@ def process_update(update):
         text = f'/{m.group(1)} {m.group(2)}'
         cmd = f'/{m.group(1)}'
 
-    read_only_cmds = {'/p', '/view'}
+    read_only_cmds = {'/p', '/view', '/proposal'}
     mutation_cmds = {'/a', '/r', '/list_pending', '/approve', '/reject'}
 
     if cmd in mutation_cmds and not ALLOW_REVIEW_COMMANDS:
@@ -574,6 +574,8 @@ def process_update(update):
         handle_a(text, chat_id)
     elif cmd == '/r':
         handle_r(text, chat_id)
+    elif cmd == '/proposal':
+        handle_proposal(text, chat_id)
     else:
         tg_api('sendMessage', {
             'chat_id': chat_id,
@@ -618,6 +620,7 @@ def handle_help(chat_id):
             '/view <n> — view pending details\n'
             '/a [n|latest] — approve\n'
             '/r [n|latest] — reject\n'
+            '/proposal <n> — get proposal\n'
             '/list_pending\n'
             '/approve <capture_id>\n'
             '/reject <capture_id>\n'
@@ -884,6 +887,59 @@ def handle_r(text, chat_id):
     })
 
 
+def handle_proposal(text, chat_id):
+    parts = text.strip().split(maxsplit=1)
+    target = parts[1].strip() if len(parts) > 1 else ''
+    if not target:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": "Usage: /proposal <index> or /proposal <capture_id>"})
+        return
+    if target.isdigit():
+        endpoint = f'/captures/pending/{target}'
+    elif target == 'latest':
+        endpoint = '/captures/pending/latest'
+    elif target.startswith('cap_'):
+        endpoint = f'/captures/{target}'
+    else:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Invalid target: '{target}'. Use a number, 'latest', or a capture_id."})
+        return
+    result = call_action_api(endpoint)
+    if result is None:
+        action_api_unavailable_reply(chat_id)
+        return
+    if not result.get('success'):
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_proposal_invalid(target)})
+        return
+    capture = result.get('capture', {})
+    capture_id = capture.get('capture_id', '')
+    if not capture_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': cards.format_proposal_invalid(target)})
+        return
+    content = capture.get('content', '')
+    title = cards.infer_title(content)
+    ctype, route = cards.classify_capture(content)
+    next_action = next_action_for_type(ctype)
+    created_at = capture.get('created_at')
+    index = capture.get('index')
+    text_reply = cards.format_proposal(
+        capture_id=capture_id, index=index, title=title,
+        capture_type=ctype, suggested_route=route,
+        next_action=next_action, created_at=created_at
+    )
+    tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
+
+
+def next_action_for_type(ctype):
+    actions = {
+        'link': 'Review the link and decide if it should be saved to knowledge base.',
+        'idea': 'Review the idea. Promising ideas go to Ideas folder after approval.',
+        'note': 'Review the note. Useful notes go to Inbox for later processing.',
+        'task': 'Review the task. If actionable, it should go to the task board after approval.',
+        'project_update': 'Review the update. If significant, append to the project log after approval.',
+        'unknown': 'Review this capture and manually decide the next step.',
+    }
+    return actions.get(ctype, actions['unknown'])
+
+
 def cmd_check():
     load_env()
     me = tg_api('getMe')
@@ -1025,6 +1081,8 @@ def process_review_test_update(update):
         handle_list_pending(chat_id)
     elif cmd == '/view':
         handle_view(text, chat_id)
+    elif cmd == '/proposal':
+        handle_proposal(text, chat_id)
     elif cmd == '/a':
         handle_a(text, chat_id)
     elif cmd == '/r':

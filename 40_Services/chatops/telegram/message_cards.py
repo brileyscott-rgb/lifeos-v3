@@ -11,7 +11,10 @@ def _iso_to_dt(iso_str):
         return None
     try:
         s = iso_str.replace("Z", "+00:00")
-        return datetime.fromisoformat(s)
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except (ValueError, TypeError):
         return None
 
@@ -172,3 +175,66 @@ def format_status_api_unavailable():
     return format_box("STATUS API", rows=[("STATE", "UNAVAILABLE")],
                       body="LifeOS status unavailable.",
                       footer="NO ACTION")
+
+
+def format_proposal(capture_id, index=None, title=None, capture_type=None,
+                    suggested_route=None, next_action=None, created_at=None,
+                    now=None):
+    rows = []
+    if index:
+        rows.append(("INDEX", str(index)))
+    rows.append(("ID", capture_id))
+    if created_at:
+        rows.append(("AGE", format_age(created_at, now=now)))
+    rows.append(("TYPE", capture_type or "unknown"))
+    rows.append(("ROUTE", suggested_route or "Inbox (pending review)"))
+    title_line = title or "(untitled)"
+    body_lines = [title_line]
+    if next_action:
+        body_lines.append("")
+        body_lines.append("Proposed next action:")
+        body_lines.append(next_action)
+    body = "\n".join(body_lines)
+    footer = "Approve/reject first. No vault write yet.\nNo AI was used for this proposal."
+    return format_box("PROPOSAL", rows=rows, body=body, footer=footer)
+
+
+def format_proposal_invalid(target):
+    body = f"Could not find capture: {target}"
+    footer = "Use /p to list pending captures."
+    return format_box("PROPOSAL", rows=[("STATE", "INVALID")],
+                      body=body, footer=footer)
+
+
+def format_proposal_api_unavailable():
+    return format_box("PROPOSAL", rows=[("STATE", "UNAVAILABLE")],
+                      body="LifeOS proposal unavailable.",
+                      footer="NO ACTION")
+
+
+def classify_capture(text):
+    if not text:
+        return "unknown", "Inbox"
+    t = text.strip().lower()
+    if t.startswith(("http://", "https://")):
+        return "link", "Reference/source"
+    if t.startswith("idea:") or t.startswith("idea ") or "\nidea " in t:
+        return "idea", "Ideas"
+    if t.startswith("task:") or t.startswith("todo:") or t.startswith("task ") or t.startswith("todo "):
+        return "task", "Action/task"
+    if any(kw in t for kw in ("project", "update", "progress", "milestone")):
+        return "project_update", "Project update"
+    if len(t) < 140:
+        return "note", "Inbox"
+    return "unknown", "Inbox"
+
+
+def infer_title(text, max_len=60):
+    if not text:
+        return "(untitled)"
+    line = text.strip().split("\n")[0].strip()
+    if line.startswith(("http://", "https://")):
+        return line
+    if len(line) <= max_len:
+        return line
+    return line[:max_len - 3].rstrip() + "..."

@@ -141,6 +141,22 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Telegram review commands live-validated and `--allow-review` enabled (2026-07-07)**: Review commands `/p`, `/view`, `/a`, and `/r` were live-validated using `--review-test` mode, then the live polling service was updated with `--allow-review` flag and restarted. Inline review button UX (approve/reject with confirmation, cancel, view full text, stateless HMAC callback tokens) is now active in live polling. All mutations route through Action API. Capture functionality unchanged. Status API and Action API remain healthy on unified compose. n8n remains tolerated localhost-only drift.
 
+- **Telegram operator flow finalization — crash fix and proposal v1 (2026-07-07)**: The live Telegram polling service was crashing in a restart loop (counter 139) due to a `TypeError` in `message_cards.py:format_age()` — naive datetimes from the Action API (when `created_at` lacked timezone suffix) could not be subtracted from aware `datetime.now(timezone.utc)`. Fixed by adding `dt.replace(tzinfo=timezone.utc)` for naive parsed datetimes in `_iso_to_dt()`. After fix, service restarted cleanly and has been stable. All 313 tests passing (192 Telegram + 103 Action API + 18 Status API).
+
+  - **Proposal v1 implemented (2026-07-07)**: New `/proposal <n|latest|capture_id>` command added to the Telegram bot. Deterministic template-based — no AI/model/external API calls. Heuristics classify captures as `link`, `idea`, `note`, `task`, `project_update`, or `unknown` based on text content, and suggest a LifeOS route. Proposal is returned as a formatted operator card in Telegram only — no vault writes, no file creation, no n8n involvement. Proposal v1 is a read-only preview; approval gates remain unchanged.
+
+  - **Live operator state (2026-07-07)**:
+    - Telegram service: `active (running)`, enabled on login, capture-first + `--allow-review`
+    - Commands live: `/capture`, `/p`, `/view`, `/a`, `/r`, `/approve`, `/reject`, `/list_pending`, `/status`, `/proposal`, `/help`
+    - Inline review buttons active (approve/reject with confirmation, view full text, cancel)
+    - All mutations route through Action API; `/status` routes through Status API
+    - n8n: local-only, no `/lifeos` mount, Status Digest workflow inactive
+    - Status API: read-only, healthy
+    - Action API: read-write, healthy
+    - No secrets exposed, no public webhooks, no Docker socket, no direct vault writes
+    - Tests: 313/313 passing
+    - 7 pending captures in queue (test artifacts from previous validation cycles)
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)
@@ -242,13 +258,14 @@ Completed:
 - **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
 
 Next:
-1. ~~**Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.~~ **Resolved (2026-07-07).** Centralized `append_event` in bot to enforce local operational/telemetry logging only.
-2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).** Event_id now displayed in mutation response receipts.
-3. ~~**/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.~~ **Resolved (2026-07-07).** ALLOW_REVIEW_COMMANDS guard added; capture-first default enforced.
-4. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).** Inline Review Buttons V1 implemented and offline-tested.
-5. ~~**Docker Compose baseline** — Stabilize docker-compose.yml for local services.~~ **Resolved (2026-07-07).** Unified `40_Services/compose/lifeos.yaml` created. Legacy compose files marked as reference. No containers started, built, or pulled.
-6. **n8n internal workflow design** — Build n8n workflows for internal automation.
-7. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
+1. ~~**Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.~~ **Resolved (2026-07-07).**
+2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).**
+3. ~~**/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.~~ **Resolved (2026-07-07).**
+4. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).**
+5. ~~**Docker Compose baseline** — Stabilize docker-compose.yml for local services.~~ **Resolved (2026-07-07).**
+6. ~~**Telegram operator flow finalization** — Fix crash, add proposal v1, close feature.~~ **Resolved (2026-07-07).** Crash: `_iso_to_dt()` naive datetime fix. Proposal: `/proposal <n>` deterministic template. Service stable. 313 tests passing.
+7. **n8n internal workflow design** — Build n8n workflows for internal automation.
+8. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 
 ## Known Stabilization Backlog
 
