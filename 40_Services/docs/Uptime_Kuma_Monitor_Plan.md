@@ -31,13 +31,13 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Status API` |
 | **Type** | HTTP(s) |
-| **URL** | `http://localhost:8787/health` |
+| **URL** | `http://lifeos-status-api:8787/health` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 60 seconds |
 | **Retries** | 3 |
 | **Alert priority** | High |
 | **Create** | **Now** |
-| **Notes** | Core read-only service. If this is down, no system status is visible. |
+| **Notes** | Core read-only service. If this is down, no system status is visible. Monitored via Docker DNS on `lifeos_internal` network. |
 | **Expected response body** | `{"service":"lifeos-status-api","status":"ok","mode":"read_only"}` |
 
 ### 2. Action API Health
@@ -46,13 +46,13 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Action API` |
 | **Type** | HTTP(s) |
-| **URL** | `http://localhost:8788/health` |
+| **URL** | `http://lifeos-action-api:8788/health` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 60 seconds |
 | **Retries** | 3 |
 | **Alert priority** | High |
 | **Create** | **Now** |
-| **Notes** | Core read-write service. Telegram captures and review commands fail if this is down. |
+| **Notes** | Core read-write service. Telegram captures and review commands fail if this is down. Monitored via Docker DNS on `lifeos_internal` network. |
 | **Expected response body** | `{"service":"lifeos-action-api","status":"ok","mode":"read_write"}` |
 
 ### 3. n8n
@@ -61,13 +61,13 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS n8n` |
 | **Type** | HTTP(s) |
-| **URL** | `http://localhost:5678` |
+| **URL** | `http://n8n_n8n_1:5678` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 120 seconds |
 | **Retries** | 2 |
 | **Alert priority** | Medium |
 | **Create** | **Now** |
-| **Notes** | n8n may return a redirect (302) to the login page if Basic Auth is active but unauthenticated. Accept any response (2xx, 3xx) as "Up" by checking "Accepted Status Codes" and adding 200,302. If n8n is not yet adopted into unified compose, this monitor still works against the legacy instance. |
+| **Notes** | n8n may return a redirect (302) to the login page if Basic Auth is active but unauthenticated. Accept any response (2xx, 3xx) as "Up" by checking "Accepted Status Codes" and adding 200,302. Monitored via Docker DNS on `lifeos_internal` network. |
 
 ### 4. Dashboard Homepage
 
@@ -75,13 +75,13 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Homepage` |
 | **Type** | HTTP(s) |
-| **URL** | `http://localhost:3000` |
+| **URL** | `http://lifeos-homepage:3000` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 120 seconds |
 | **Retries** | 2 |
 | **Alert priority** | Low |
 | **Create** | **Now** |
-| **Notes** | Dashboard landing page. Non-critical but useful to know if it's down. |
+| **Notes** | Dashboard landing page. Non-critical but useful to know if it's down. Monitored via Docker DNS on `dashboard_default` network. |
 
 ### 5. Uptime Kuma (self)
 
@@ -95,7 +95,7 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 | **Retries** | 1 |
 | **Alert priority** | Low |
 | **Create** | **Now** |
-| **Notes** | Self-check. Accept 200/302. A separate "Health Checks" page in Uptime Kuma can also check internal Uptime Kuma status via the status page. |
+| **Notes** | Self-check of the Uptime Kuma web UI from inside its own container. `localhost:3001` is correct for this monitor only, because the check runs inside the Uptime Kuma container itself. Accept 200/302. |
 
 ### 6. Dozzle
 
@@ -103,13 +103,13 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Dozzle` |
 | **Type** | HTTP(s) |
-| **URL** | `http://localhost:3002` |
+| **URL** | `http://lifeos-dozzle:8080` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 120 seconds |
 | **Retries** | 2 |
 | **Alert priority** | Low |
 | **Create** | **Now** |
-| **Notes** | Container log viewer. Non-critical. If down, use `docker logs` as fallback. |
+| **Notes** | Container log viewer. Non-critical. If down, use `docker logs` as fallback. Uses internal Docker port 8080 (not host port 3002). Monitored via Docker DNS on `dashboard_default` network. |
 
 ---
 
@@ -121,14 +121,14 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Status — Full` |
 | **Type** | HTTP(s) — Keyword |
-| **URL** | `http://localhost:8787/status` |
+| **URL** | `http://lifeos-status-api:8787/status` |
 | **Keyword** | `"status": "ok"` |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 300 seconds |
 | **Retries** | 2 |
 | **Alert priority** | Medium |
 | **Create** | **Now** |
-| **Notes** | Verifies the full status endpoint returns valid JSON with `"status": "ok"`. Catches partial API failures that the `/health` endpoint might miss. |
+| **Notes** | Verifies the full status endpoint returns valid JSON with `"status": "ok"`. Catches partial API failures that the `/health` endpoint might miss. Monitored via Docker DNS on `lifeos_internal` network. |
 
 ### 8. Docker Daemon Available
 
@@ -149,7 +149,7 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS Disk Usage` |
 | **Type** | HTTP(s) — Keyword |
-| **URL** | `http://localhost:8787/status` |
+| **URL** | `http://lifeos-status-api:8787/status` |
 | **Keyword** | N/A — use custom script (see notes) |
 | **Expected status code** | 200 |
 | **Heartbeat interval** | 600 seconds |
@@ -188,12 +188,12 @@ through the Uptime Kuma web UI at `http://127.0.0.1:3001`.
 |-------|-------|
 | **Monitor name** | `LifeOS ChromaDB` |
 | **Type** | TCP Port |
-| **Hostname** | `localhost` |
-| **Port** | 8100 |
+| **Hostname** | `odysseus_chromadb_1` |
+| **Port** | 8000 |
 | **Heartbeat interval** | 300 seconds |
 | **Alert priority** | Low |
-| **Create** | **Now** |
-| **Notes** | ChromaDB is a legacy `odysseus` service, not LifeOS-owned. Monitor its TCP port to track whether it's running. Low priority alert. |
+| **Create** | **Later** |
+| **Notes** | ChromaDB is on the `odysseus_default` network, not `lifeos_internal`. Uptime Kuma does not currently attach to `odysseus_default` (ChromaDB is a legacy service, not LifeOS-owned). If intra-network monitoring is needed, add `odysseus_default` as an external network to Uptime Kuma. For now, verify ChromaDB availability from the host (`docker ps`) or use a Push Monitor from a host cron job. Low priority alert. |
 
 ---
 
@@ -285,9 +285,11 @@ After creating all "Now" monitors:
 2. Verify all monitors are green ("Up").
 3. Wait 2 heartbeat intervals to confirm stability.
 4. If any monitor is red:
-   - Verify the URL is reachable from the Uptime Kuma container: `docker exec lifeos-uptime-kuma curl -s http://localhost:8787/health`
+   - Verify the URL is reachable from the Uptime Kuma container: `docker exec lifeos-uptime-kuma curl -s http://lifeos-status-api:8787/health`
    - Check that the target service is running: `docker ps`
-   - Check container network connectivity: Dashboard containers use the `dashboard_default` bridge network. They reach host-localhost services via Docker's bridge gateway NAT to host loopback, not `--network host`. Ensure target services bind `127.0.0.1` (not `0.0.0.0`). If Uptime Kuma cannot reach `localhost:8787`, verify the target service is listening on `127.0.0.1` and reachable from the host.
+   - Verify network membership: Uptime Kuma is on both `dashboard_default` and `lifeos_internal` Docker networks. Core services (Status API, Action API, n8n) are on `lifeos_internal`. Dashboard services (Homepage, Dozzle) are on `dashboard_default`. Ensure the monitor URL uses the correct container DNS name, not `localhost`.
+   - `localhost` inside the Uptime Kuma container points to the Uptime Kuma container itself, not the host and not other containers. Use Docker DNS names (e.g., `lifeos-status-api`, `lifeos-action-api`, `n8n_n8n_1`, `lifeos-homepage`, `lifeos-dozzle`) for cross-container monitors.
+   - Uptime Kuma does NOT have Docker socket access. Docker daemon health is inferred from individual service monitors.
 
 ## Backup
 

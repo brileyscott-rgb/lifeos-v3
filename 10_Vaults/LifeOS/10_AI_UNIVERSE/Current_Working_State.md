@@ -301,11 +301,12 @@ Next:
 5. ~~**Docker Compose baseline** — Stabilize docker-compose.yml for local services.~~ **Resolved (2026-07-07).**
 6. ~~**Telegram operator flow finalization** — Fix crash, add proposal v1, close feature.~~ **Resolved (2026-07-07).** Crash: `_iso_to_dt()` naive datetime fix. Proposal: `/proposal <n>` deterministic template. Service stable. 313 tests passing.
 
-7. **Manual Uptime Kuma monitor setup** — Configure the 8 "Create now" monitors per `Uptime_Kuma_Monitor_Plan.md`. Uptime Kuma is already running at `127.0.0.1:3001`. No auto-remediation.
-8. **mcpo sandbox test** — Run the safe first-test plan from `40_Services/mcpo/README.md` to validate MCP integration against an isolated test-data folder only.
-9. **n8n internal workflow design** — Build n8n workflows for internal automation.
-10. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
-11. **Capture API implementation** — **Deferred.** Do not create Capture API yet per current roadmap.
+7. ~~**Uptime Kuma networking fixed (2026-07-08)**~~ — Uptime Kuma attached to `lifeos_internal` Docker network for internal service monitoring. Dashboard docker-compose.yml updated with external `lifeos_internal` network declaration. Monitor plan corrected to use Docker DNS/service names instead of `localhost` (which resolves to the Kuma container itself, not the target service). No public exposure, no Docker socket added to Uptime Kuma, existing services remain healthy. Next action: create/update Uptime Kuma monitors in UI using corrected values. See `40_Services/docs/Uptime_Kuma_Monitor_Plan.md` for updated monitor URLs.
+8. **Manual Uptime Kuma monitor setup** — Configure the "Create now" monitors per `Uptime_Kuma_Monitor_Plan.md`. Uptime Kuma is already running at `127.0.0.1:3001`. No auto-remediation.
+9. **mcpo sandbox test** — Run the safe first-test plan from `40_Services/mcpo/README.md` to validate MCP integration against an isolated test-data folder only.
+10. **n8n internal workflow design** — Build n8n workflows for internal automation.
+11. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
+12. **Capture API implementation** — **Deferred.** Do not create Capture API yet per current roadmap.
 
 ## Known Stabilization Backlog
 

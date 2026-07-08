@@ -20,6 +20,9 @@ All services bind `127.0.0.1` only. No public exposure.
 Uses `docker compose` (plugin). Also compatible with Docker Compose V1 (`docker-compose`).
 
 ```bash
+# Create required external network (one-time, if it doesn't exist)
+docker network create lifeos_internal || true
+
 # Start
 docker-compose -f /home/lifeos/40_Services/dashboard/docker-compose.yml up -d
 
@@ -81,6 +84,8 @@ justification.
 - No `0.0.0.0` or public-facing bindings.
 - No Cloudflare tunnel, no Tailscale funnel, no reverse proxy.
 - Dashboard access requires SSH tunneling or local browser.
+- Uptime Kuma is attached to the `lifeos_internal` Docker network (in addition to the default `dashboard_default` network) for internal service health checks against Status API, Action API, and n8n. No other dashboard service is on `lifeos_internal`.
+- Uptime Kuma has no Docker socket access.
 
 ## How to Add Services
 

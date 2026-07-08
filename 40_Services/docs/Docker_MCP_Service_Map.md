@@ -39,6 +39,8 @@
 
 *Dozzle has read-only Docker socket access — documented and controlled risk.
 
+Uptime Kuma is attached to both `dashboard_default` and `lifeos_internal` Docker networks for internal service health checks. No other dashboard service is on `lifeos_internal`. Uptime Kuma has no Docker socket access.
+
 ## Startup Methods
 
 | Startup Method | Services |

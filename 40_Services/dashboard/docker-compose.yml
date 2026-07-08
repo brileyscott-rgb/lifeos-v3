@@ -56,6 +56,9 @@ services:
         max-file: "3"
     security_opt:
       - no-new-privileges:true
+    networks:
+      - default
+      - lifeos_internal
 
   dozzle:
     image: amir20/dozzle:latest
@@ -75,6 +78,10 @@ services:
         max-file: "3"
     security_opt:
       - no-new-privileges:true
+
+networks:
+  lifeos_internal:
+    external: true
 
 volumes:
   homepage_icons:
