@@ -26,9 +26,9 @@ class TestPlanImportPath(unittest.TestCase):
         self.assertFalse("\\" in path)
 
     def test_path_starts_with_knowledge_root(self):
-        """All paths must be under 03_KNOWLEDGE/."""
+        """All paths must be under 04_KNOWLEDGE/."""
         path = plan_import_path("Some Title", "random text")
-        self.assertTrue(path.startswith("03_KNOWLEDGE/"))
+        self.assertTrue(path.startswith("04_KNOWLEDGE/"))
 
     def test_path_ends_with_md_extension(self):
         """All paths must end with .md."""
@@ -94,7 +94,7 @@ class TestPlanImportPath(unittest.TestCase):
         """Path traversal attempts in title should not affect the output path."""
         path = plan_import_path("../../../etc/passwd", "docker")
         self.assertFalse(".." in path.split("/"))
-        self.assertTrue(path.startswith("03_KNOWLEDGE/"))
+        self.assertTrue(path.startswith("04_KNOWLEDGE/"))
 
     def test_category_scoring_prefers_specificity(self):
         """More keyword matches should score higher and win."""

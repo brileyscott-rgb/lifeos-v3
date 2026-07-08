@@ -23,7 +23,7 @@ def _make_valid_proposal():
             "content_hash": "abc123def456",
             "version": "0.1",
             "source_refs": ["cap_test_123"],
-            "proposed_vault_path": "03_KNOWLEDGE/AI/Test_Note.md",
+            "proposed_vault_path": "04_KNOWLEDGE/AI/Test_Note.md",
         },
         "body": (
             "## Proposal Summary\n"
@@ -35,7 +35,7 @@ def _make_valid_proposal():
             "## MCP Context Used\n"
             "Test context.\n\n"
             "## Proposed Vault File\n"
-            "Path: 03_KNOWLEDGE/AI/Test_Note.md\n\n"
+            "Path: 04_KNOWLEDGE/AI/Test_Note.md\n\n"
             "## Proposed YAML\n"
             "type: knowledge\n\n"
             "## Proposed Note Body\n"
@@ -55,7 +55,7 @@ def _make_valid_proposal():
             "## Safety Notice\n"
             "Buffer-only.\n"
         ),
-        "proposed_vault_path": "03_KNOWLEDGE/AI/Test_Note.md",
+        "proposed_vault_path": "04_KNOWLEDGE/AI/Test_Note.md",
         "classification": {"classification": "knowledge", "confidence": "medium"},
         "mode": "create",
     }
@@ -109,7 +109,7 @@ class TestVerifyProposalFail(unittest.TestCase):
     def test_path_traversal_in_proposed_path_fails(self):
         """Path traversal ('..') in proposed path should fail."""
         proposal = _make_valid_proposal()
-        proposal["proposed_vault_path"] = "03_KNOWLEDGE/../etc/passwd"
+        proposal["proposed_vault_path"] = "04_KNOWLEDGE/../etc/passwd"
         result = verify_proposal(proposal)
         self.assertEqual(result["verdict"], "fail")
         self.assertTrue(any("traversal" in issue.lower() for issue in result["issues"]))
@@ -122,7 +122,7 @@ class TestVerifyProposalFail(unittest.TestCase):
         self.assertEqual(result["verdict"], "fail")
 
     def test_path_not_under_knowledge_root_fails(self):
-        """Path not starting with 03_KNOWLEDGE/ should fail."""
+        """Path not starting with 04_KNOWLEDGE/ should fail."""
         proposal = _make_valid_proposal()
         proposal["proposed_vault_path"] = "02_PROJECTS/Some_Project.md"
         result = verify_proposal(proposal)
@@ -209,7 +209,7 @@ class TestVerifyProposalEdgeCases(unittest.TestCase):
         proposal = {
             "status": "pending",
             "frontmatter": {"content_hash": "abc", "version": "1.0"},
-            "proposed_vault_path": "03_KNOWLEDGE/AI/Note.md",
+            "proposed_vault_path": "04_KNOWLEDGE/AI/Note.md",
         }
         result = verify_proposal(proposal)
         self.assertEqual(result["verdict"], "fail")

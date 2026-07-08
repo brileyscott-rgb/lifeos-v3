@@ -118,10 +118,10 @@ def _check_knowledge_root(proposal: dict) -> dict:
     path = _resolve_path(proposal)
     if not path:
         return {"passed": False, "detail": "proposed_vault_path is empty."}
-    if not path.startswith("03_KNOWLEDGE/"):
+    if not path.startswith("04_KNOWLEDGE/"):
         return {
             "passed": False,
-            "detail": f"Path must start with '03_KNOWLEDGE/', got '{path}'",
+            "detail": f"Path must start with '04_KNOWLEDGE/', got '{path}'",
         }
     return {"passed": True, "detail": "Path is under Knowledge root."}
 
@@ -238,7 +238,7 @@ def verify_proposal(proposal: dict) -> dict:
         ...     "status": "pending",
         ...     "frontmatter": {"content_hash": "abc123", "version": "1.0"},
         ...     "body": "Proposal Summary\\nSource Capture\\nClassification\\n...",
-        ...     "proposed_vault_path": "03_KNOWLEDGE/AI/Note.md",
+        ...     "proposed_vault_path": "04_KNOWLEDGE/AI/Note.md",
         ... })
         >>> result["verdict"] in ("pass", "pass_with_warnings", "fail")
         True

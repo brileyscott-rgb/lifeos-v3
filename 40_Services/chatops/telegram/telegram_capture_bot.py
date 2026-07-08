@@ -1184,17 +1184,19 @@ def handle_proposal_view(text, chat_id):
         })
         return
 
-    status = data.get('status', 'unknown')
-    title = data.get('proposed_title', 'untitled')
-    classification = data.get('classification', 'unknown')
-    path = data.get('proposed_vault_path', 'unknown')
-    summary = data.get('summary', 'No summary')
-    if len(summary) > 300:
-        summary = summary[:300] + '...'
+    proposal = data.get("proposal", {})
+    fm = proposal.get("frontmatter", {})
+    body = proposal.get("body", "")
+    status = fm.get("status", "unknown")
+    classification = fm.get("classification", "unknown")
+    path = fm.get("proposed_vault_path", "unknown")
+    # Extract a summary from the proposal body (first ~300 chars after YAML frontmatter)
+    summary = body[:300] if body else "No summary"
+    if len(body) > 300:
+        summary = summary + "..."
 
     text_reply = f"""Proposal: {proposal_id}
 Status: {status}
-Title: {title[:100]}
 Type: {classification}
 Destination: {path}
 

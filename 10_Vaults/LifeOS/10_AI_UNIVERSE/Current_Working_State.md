@@ -354,8 +354,9 @@ Next:
   - **Proposal Packets**: Buffer-only YAML+Markdown with content hash, source trail, QA checklist. Stored at `/home/lifeos/LifeOS_Capture_Buffer/03_Review_Packets/proposals/`.
   - **Controlled Importer** (`40_Services/capture_processors/approved_proposal_importer.py`): Sole vault writer. Validates type/schema/status/hash/path/staleness. Create-only. Atomic writes. 20 tests.
   - **Telegram /kt**: New commands: `/kt`, `/proposal_view`, `/proposal_approve`, `/proposal_import_confirm`, `/proposal_revise`, `/proposal_reject`. Two-step import confirmation. 221 Telegram tests.
-  - **Safety**: MCP read-only. Agents are deterministic modules. Proposals buffer-only. Two-step approval required. Controlled importer sole vault writer. n8n/mcpo/OpenHands inactive. No filesystem/shell/Docker MCP. No public exposure.
+  - **Safety**: MCP read-only. Agents are deterministic modules. Proposals buffer-only. Two-step approval required. Controlled importer sole vault writer. n8n workflows inactive (container running, tolerated drift). mcpo/OpenHands scaffold-only. No filesystem/shell/Docker MCP. No public exposure.
   - **Tests**: 543 total (38+11+98+20+221+103+18+45). Python stdlib only. Zero pip/npm deps.
+  - **Post-review fixes**: Fixed `03_KNOWLEDGE` → `04_KNOWLEDGE` path (actual vault uses `04_KNOWLEDGE`). Fixed proposal format mismatch (orchestrator now emits `capture_to_vault_proposal` format importer expects). Fixed `/proposal_view` JSON nesting.
 
 ## Known Stabilization Backlog
 

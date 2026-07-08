@@ -74,7 +74,7 @@ def plan_import_path(title: str, capture_text: str) -> str:
 
     Scores each knowledge category by keyword match count in the
     capture text. Picks the highest-scoring category. Falls back
-    to "03_KNOWLEDGE/Reference/" if no keywords match.
+    to "04_KNOWLEDGE/Reference/" if no keywords match.
 
     The filename is sanitized via the security module. The returned
     path is always vault-relative and safe for use in vault operations.
@@ -87,15 +87,15 @@ def plan_import_path(title: str, capture_text: str) -> str:
 
     Returns:
         A vault-relative path like:
-        "03_KNOWLEDGE/AI/Some_Title.md"
+        "04_KNOWLEDGE/AI/Some_Title.md"
 
         Never returns absolute paths or paths containing "../".
 
     Example:
         >>> plan_import_path("What is Docker", "Docker is a container runtime")
-        '03_KNOWLEDGE/Systems/What_is_Docker.md'
+        '04_KNOWLEDGE/Systems/What_is_Docker.md'
         >>> plan_import_path("Cool thought", "no matching keywords here")
-        '03_KNOWLEDGE/Reference/Cool_thought.md'
+        '04_KNOWLEDGE/Reference/Cool_thought.md'
     """
     text_lower = capture_text.lower() if capture_text else ""
 
@@ -123,7 +123,7 @@ def plan_import_path(title: str, capture_text: str) -> str:
     filename = safe_name + ".md"
 
     # Build the vault-relative path
-    relative_path = f"03_KNOWLEDGE/{best_category}/{filename}"
+    relative_path = f"04_KNOWLEDGE/{best_category}/{filename}"
 
     # Validate (raises ValueError on path traversal or other issues)
     validate_vault_path(relative_path)

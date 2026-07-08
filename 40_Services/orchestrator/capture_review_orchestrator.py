@@ -310,9 +310,13 @@ def build_proposal_packet(
 
     # Build frontmatter
     frontmatter = {
-        "type": "review_packet",
-        "schema_version": "0.1",
+        "type": "capture_to_vault_proposal",
+        "schema_version": "1",
         "proposal_id": proposal_id,
+        "proposal_version": "1",
+        "approval_required": "true",
+        "import_status": "not_imported",
+        "proposed_note_type": "knowledge",
         "status": "pending",
         "capture_id": capture_id,
         "classification": classification.get("classification", "unknown"),
@@ -322,7 +326,6 @@ def build_proposal_packet(
         "proposed_vault_path": import_path,
         "source": source,
         "created_at": now_ts,
-        "approval_required": True,
         "importable": classification.get("classification") == "knowledge",
     }
 
@@ -826,7 +829,7 @@ def _cmd_approve_import(args):
     try:
         updated = update_proposal_status(
             args.proposal_id,
-            "approved",
+            "approved_for_import",
             extra_fields={
                 "approved_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "qa_verdict": qa_result["verdict"],

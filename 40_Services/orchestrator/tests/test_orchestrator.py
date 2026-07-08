@@ -205,14 +205,14 @@ class TestProposalIO(unittest.TestCase):
         self.sample_proposal = {
             "proposal_id": "prop_test_123",
             "frontmatter": {
-                "type": "review_packet",
+                "type": "capture_to_vault_proposal",
                 "schema_version": "0.1",
                 "status": "pending",
                 "capture_id": "cap_test_abc",
                 "content_hash": "abc123",
                 "version": "0.1",
                 "source_refs": ["cap_test_abc"],
-                "proposed_vault_path": "03_KNOWLEDGE/AI/Test.md",
+                "proposed_vault_path": "04_KNOWLEDGE/AI/Test.md",
                 "classification": "knowledge",
                 "created_at": "2026-07-08T12:00:00Z",
             },
@@ -293,14 +293,14 @@ class TestProposalApproval(unittest.TestCase):
         self.sample_proposal = {
             "proposal_id": "prop_approve_test",
             "frontmatter": {
-                "type": "review_packet",
+                "type": "capture_to_vault_proposal",
                 "schema_version": "0.1",
                 "status": "pending",
                 "capture_id": "cap_test_abc",
                 "content_hash": "abc123",
                 "version": "0.1",
                 "source_refs": ["cap_test_abc"],
-                "proposed_vault_path": "03_KNOWLEDGE/AI/Test_Note.md",
+                "proposed_vault_path": "04_KNOWLEDGE/AI/Test_Note.md",
                 "classification": "knowledge",
                 "created_at": "2026-07-08T12:00:00Z",
             },
@@ -321,7 +321,7 @@ class TestProposalApproval(unittest.TestCase):
                 "## Safety Notice\nBuffer-only.\n"
             ),
             "status": "pending",
-            "proposed_vault_path": "03_KNOWLEDGE/AI/Test_Note.md",
+            "proposed_vault_path": "04_KNOWLEDGE/AI/Test_Note.md",
             "classification": {"classification": "knowledge", "confidence": "medium"},
         }
 
@@ -417,7 +417,7 @@ class TestBuildProposalPacket(unittest.TestCase):
                 "review_notes": "V0 deterministic.",
             },
         }
-        import_path = "03_KNOWLEDGE/Systems/Docker_Container_Platform.md"
+        import_path = "04_KNOWLEDGE/Systems/Docker_Container_Platform.md"
 
         proposal = orch.build_proposal_packet(
             capture_text, capture_data, classification, curated, import_path,
@@ -440,7 +440,7 @@ class TestBuildProposalPacket(unittest.TestCase):
             "yaml_frontmatter": {"type": "knowledge", "status": "draft", "source_refs": ["cap_test"], "tags": [], "approval_required": True, "domain": "knowledge", "created": "now"},
             "body_sections": {k: k for k in ["summary", "definition_context", "key_details", "why_it_matters", "how_it_connects", "source_trail", "related_concepts", "review_notes"]},
         }
-        import_path = "03_KNOWLEDGE/Reference/Test.md"
+        import_path = "04_KNOWLEDGE/Reference/Test.md"
 
         proposal = orch.build_proposal_packet(
             capture_text, capture_data, classification, curated, import_path,

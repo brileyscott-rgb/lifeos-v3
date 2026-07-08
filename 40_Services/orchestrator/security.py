@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 FORBIDDEN_OUTPUT_ROOTS = {"/home/lifeos/10_Vaults/LifeOS"}
 BUFFER_ROOT = "/home/lifeos/LifeOS_Capture_Buffer"
 VAULT_ROOT = "/home/lifeos/10_Vaults/LifeOS"
-KNOWLEDGE_ROOT = "/home/lifeos/10_Vaults/LifeOS/03_KNOWLEDGE"
+KNOWLEDGE_ROOT = "/home/lifeos/10_Vaults/LifeOS/04_KNOWLEDGE"
 PROPOSAL_DIR = "/home/lifeos/LifeOS_Capture_Buffer/03_Review_Packets/proposals"
 
 # Pattern matching for forbidden characters in parameters
@@ -101,7 +101,7 @@ def validate_vault_path(relative_path: str) -> str:
     - Hidden files (starting with .)
 
     Args:
-        relative_path: A vault-relative path like "03_KNOWLEDGE/AI/Note.md".
+         relative_path: A vault-relative path like "04_KNOWLEDGE/AI/Note.md".
 
     Returns:
         The validated path unchanged if it passes all checks.
@@ -110,8 +110,8 @@ def validate_vault_path(relative_path: str) -> str:
         ValueError: If the path fails any validation rule.
 
     Example:
-        >>> validate_vault_path("03_KNOWLEDGE/AI/Note.md")
-        '03_KNOWLEDGE/AI/Note.md'
+        >>> validate_vault_path("04_KNOWLEDGE/AI/Note.md")
+        '04_KNOWLEDGE/AI/Note.md'
         >>> validate_vault_path("/absolute/path")
         Traceback (most recent call last):
         ValueError: Path must be vault-relative
