@@ -24,7 +24,7 @@ Every candidate is assigned to one of five groups:
 
 Sandbox = isolated test-data folder only. Read-only. No vault, no secrets, no Docker socket.
 
-### 1. @modelcontextprotocol/server-time (Sandbox Tested 2026-07-08)
+### 1. MCP Time Server (Community Package — Sandbox Tested 2026-07-08)
 
 | Field | Value |
 |-------|-------|
