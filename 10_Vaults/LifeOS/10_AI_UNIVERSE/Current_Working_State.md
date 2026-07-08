@@ -205,6 +205,26 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
    - **Agents deployed**: Evidence Collector (existing state audit), Reality Checker (pre-implementation risk challenge, 10 candidates), Code Reviewer (post-implementation review). Reality checker identified "Not an MCP Server" misclassification pattern, infrastructure prerequisites gap, read-only deception pattern, and supply-chain risk concentration.
    - **Next safe action**: mcpo sandbox test per `40_Services/mcpo/README.md` or manual Uptime Kuma monitor setup per `Uptime_Kuma_Monitor_Plan.md`.
 
+- **MCP Time Server sandbox test completed (2026-07-08)**: First LifeOS MCP protocol validation. Mode A stdio smoke test only.
+   - **Package used**: `@guanxiong/mcp-server-time` (community npm package v1.0.0). Official `@modelcontextprotocol/server-time` npm package does not exist (404 from npm registry). Official Python `mcp-server-time` (v2026.6.4) exists on PyPI but requires `uvx` (not installed) or `pip install` (forbidden by LifeOS policy).
+   - **What was verified**:
+     - Package invocation: `npx -y @guanxiong/mcp-server-time` — resolved and executed from npm registry
+     - Server startup: printed "MCP 时间服务器已启动" (Chinese: MCP Time Server started)
+     - MCP tool list: exposed 2 tools — `get_current_time` (timezone + format args) and `get_time_info` (detailed time info with timezone)
+     - MCP tool call: `get_current_time` with timezone "America/Chicago" returned `2026-07-08T13:17:50.000Z` — correct ISO time
+     - JSON-RPC protocol: proper JSON-RPC 2.0 request/response confirmed
+   - **What was NOT verified** (incomplete without a client):
+     - OpenCode or any MCP client consuming the tools
+     - MCP transport beyond stdio (no SSE, no HTTP)
+     - LifeOS-specific MCP tool integration
+   - **mcpo bridge test**: **Skipped.** Three independent agent assessments (evidence-collector, devops-automator, reality-checker) concurred: mcpo has no consumer in LifeOS V1 (no Open WebUI, no AI chat interface, no configured MCP client). Testing mcpo now would prove protocol translation without proving any actual AI integration. Revisit when Open WebUI or other MCP consumer is deployed.
+   - **Safety preserved**: No filesystem access (stdio only). No network ports bound. No Docker containers started. No secrets exposed. No packages installed globally (npx ephemeral). No processes left running (verified clean). No vault, capture, or event log access. No mcpo, n8n, OpenHands, or other service activation.
+   - **Documentation**: Created `40_Services/mcp/sandbox/time-test/README.md` and `results.md` with full test trace, safety checks, and package provenance notes.
+   - **Test suites**: All 436 tests passing. All 7 Docker containers healthy. Telegram bot + Capture API active.
+   - **Agents deployed**: Evidence Collector (existing state audit), DevOps Automator (runtime strategy — recommended Mode A), Reality Checker (challenge report — recommended defer, but test executed per user direction), Code Reviewer (post-implementation review pending).
+   - **Known caveats**: The community package `@guanxiong/mcp-server-time` is used because the official invocation path is unavailable. The npm cache now contains the package (~10-50MB in `~/.npm/_npx/`). The test validated the MCP protocol but not any LifeOS integration.
+   - **Next recommended MCP phase**: Custom LifeOS MCP server — build a minimal read-only MCP server exposing `lifeos.status` (calling the Status API). This proves the LifeOS-specific MCP integration pattern (API-backed, no filesystem, bounded scope) that will be used in production. Preceded by: MCP client configuration (OpenCode MCP config). Also: manual Uptime Kuma monitor setup, n8n internal workflow design.
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)

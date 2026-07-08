@@ -24,17 +24,18 @@ Every candidate is assigned to one of five groups:
 
 Sandbox = isolated test-data folder only. Read-only. No vault, no secrets, no Docker socket.
 
-### 1. @modelcontextprotocol/server-time
+### 1. @modelcontextprotocol/server-time (Sandbox Tested 2026-07-08)
 
 | Field | Value |
 |-------|-------|
 | **Source** | Official MCP Servers (`modelcontextprotocol/servers`) |
 | **Category** | mcp-server |
 | **Risk Tier** | **A0** — fully read-only, no filesystem, no network, no deps |
+| **Sandbox Status** | **Tested (Mode A stdio smoke test)** — see `40_Services/mcp/sandbox/time-test/results.md` |
 | **Why Sandbox** | The single safest MCP server. Zero risk. Proves MCP client/server integration without any data exposure. |
-| **Sandbox Test** | `npx -y @modelcontextprotocol/server-time` via stdio. Verify time tools available. Confirm no filesystem or network access. |
+| **Sandbox Test** | `npx -y @guanxiong/mcp-server-time` (community npm package) via stdio JSON-RPC. Official `@modelcontextprotocol/server-time` npm package does not exist. Official Python `mcp-server-time` requires uvx (not installed). Tool list and tool call verified via piped JSON-RPC. |
 | **Production Path** | Never — use only to validate MCP protocol integration. Not needed in production. |
-| **Notes** | Already rated "Sandbox" in existing candidate catalog as part of Official MCP Servers suite. Individual test recommended. |
+| **Notes** | MCP protocol confirmed working on this system. Next: custom LifeOS MCP server with API-backed tools. |
 
 ### 2. @modelcontextprotocol/server-fetch (Domain-Allowlisted)
 
