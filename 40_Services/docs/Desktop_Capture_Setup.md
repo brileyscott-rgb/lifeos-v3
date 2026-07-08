@@ -2,26 +2,40 @@
 
 ## Quick Start: curl
 
-### No Auth (dev/test only, `LIFEOS_CAPTURE_REQUIRE_AUTH=false`)
+### Using the Tailscale URL (recommended)
+
+The Capture API is bound to the Tailscale network. Use the MagicDNS name:
 
 ```bash
-curl -s http://127.0.0.1:8789/health
-curl -s -X POST http://127.0.0.1:8789/captures \
+export CAPTURE_URL="http://lenovog3-mint.tail7687a5.ts.net:8789"
+export CAPTURE_TOKEN="your-token-here"
+
+curl -s $CAPTURE_URL/health
+curl -s -X POST $CAPTURE_URL/captures \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CAPTURE_TOKEN" \
   -d '{"content": "Remember to configure Docker monitoring", "source": "desktop"}'
 ```
 
-### Bearer Token (production)
+### Loading from .env (safest)
 
 ```bash
-export CAPTURE_TOKEN="your-token-here"
+set -a && . /home/lifeos/40_Services/capture_api/.env && set +a
 
-curl -s http://127.0.0.1:8789/health
+CAPTURE_URL="http://${LIFEOS_CAPTURE_HOST}:${LIFEOS_CAPTURE_PORT}"
 
-curl -s -X POST http://127.0.0.1:8789/captures \
+curl -s $CAPTURE_URL/health
+curl -s -X POST $CAPTURE_URL/captures \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $CAPTURE_TOKEN" \
+  -H "Authorization: Bearer ${LIFEOS_CAPTURE_BEARER_TOKEN}" \
   -d '{"content": "Add queue monitoring to Uptime Kuma", "source": "desktop", "tags": ["monitoring", "devops"]}'
+```
+
+### Local-only (dev/test, `LIFEOS_CAPTURE_REQUIRE_AUTH=false`)
+
+```bash
+# Only works if service is bound to 127.0.0.1 (currently bound to Tailscale)
+curl -s http://127.0.0.1:8789/health
 ```
 
 ### URL Capture
