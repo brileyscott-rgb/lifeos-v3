@@ -62,6 +62,12 @@ See `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.
 - `lifeos_internal` uses `external: true`.
 - Activation must later verify/create the network, but this review phase must not run that command.
 
+## Related Control Plane Docs
+
+- `40_Services/docs/Docker_Service_Map.md` — Complete service inventory with ports, data paths, healthchecks, backup needs, risk levels, and future MCP exposure.
+- `40_Services/docs/Service_Profiles.md` — Profile definitions (core, automation, memory, ai, observability, experiments) with start order, dependencies, and phase restrictions.
+- `40_Services/docs/MCP_Roadmap.md` — MCP server roadmap with read-only-first tools, deny-by-default policy, and V1/V2/V3 tool catalog.
+
 ## Deferrals
 
 - Cloudflare tunnel

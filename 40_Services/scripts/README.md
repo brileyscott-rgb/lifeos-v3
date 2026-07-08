@@ -4,6 +4,37 @@ Read-only system status reporting for LifeOS V3.
 
 ## Scripts
 
+### `lifeos_services.py`
+
+Read-only service inventory script. Reports Docker containers, Telegram service status, known service path presence, git state, and suggested next actions.
+
+**Reads:**
+- `git rev-parse` (repo root, commit, dirty state)
+- `docker ps` (running containers)
+- `systemctl --user status` (Telegram bot)
+- Filesystem path checks for known service files
+
+**Writes: nothing.** Read-only by design. No Docker mutations, no git writes, no secrets printed.
+
+**Usage:**
+```bash
+# Human-readable text (default)
+python3 40_Services/scripts/lifeos_services.py
+
+# Explicit text mode
+python3 40_Services/scripts/lifeos_services.py --text
+
+# JSON output (for n8n or MCP consumption)
+python3 40_Services/scripts/lifeos_services.py --json
+```
+
+**JSON output fields:**
+- `git.repo_root`, `git.commit`, `git.dirty`, `git.dirty_count`
+- `docker.docker_available`, `docker.compose_version`, `docker.running_containers`
+- `telegram.active`, `telegram.enabled`
+- `paths.<name>.exists` for each known service path
+- `suggested_action`
+
 ### `lifeos_status.py`
 
 Read-only status reporter for n8n consumption and human inspection.
