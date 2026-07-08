@@ -10,6 +10,7 @@ import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
+import subprocess
 
 import message_cards as cards
 
@@ -26,6 +27,7 @@ REJECTED_DIR = os.path.join(CAPTURE_DIR, 'rejected')
 EVENT_LOG = os.path.join(LIFEOS_ROOT, '50_Event_Log', 'events.jsonl')
 STATUS_API_URL = "http://localhost:8787/status"
 ACTION_API_URL = "http://localhost:8788"
+ORCHESTRATOR_SCRIPT = os.path.join(LIFEOS_ROOT, '40_Services', 'orchestrator', 'capture_review_orchestrator.py')
 
 ALLOWED_USER_ID = None
 BOT_TOKEN = None
@@ -656,8 +658,8 @@ def process_update(update):
         text = f'/{m.group(1)} {m.group(2)}'
         cmd = f'/{m.group(1)}'
 
-    read_only_cmds = {'/p', '/view', '/proposal'}
-    mutation_cmds = {'/a', '/r', '/list_pending', '/approve', '/reject'}
+    read_only_cmds = {'/p', '/view', '/proposal', '/kt', '/proposal_view'}
+    mutation_cmds = {'/a', '/r', '/list_pending', '/approve', '/reject', '/proposal_revise', '/proposal_reject', '/proposal_approve', '/proposal_import_confirm'}
 
     if cmd in mutation_cmds and not ALLOW_REVIEW_COMMANDS:
         tg_api('sendMessage', {
@@ -689,6 +691,18 @@ def process_update(update):
         handle_r(text, chat_id)
     elif cmd == '/proposal':
         handle_proposal(text, chat_id)
+    elif cmd == '/kt':
+        handle_kt(text, chat_id)
+    elif cmd == '/proposal_view':
+        handle_proposal_view(text, chat_id)
+    elif cmd == '/proposal_revise':
+        handle_proposal_revise(text, chat_id)
+    elif cmd == '/proposal_reject':
+        handle_proposal_reject(text, chat_id)
+    elif cmd == '/proposal_approve':
+        handle_proposal_approve(text, chat_id)
+    elif cmd == '/proposal_import_confirm':
+        handle_proposal_import_confirm(text, chat_id)
     else:
         tg_api('sendMessage', {
             'chat_id': chat_id,
@@ -733,7 +747,13 @@ def handle_help(chat_id):
             '/view <n> — view pending details\n'
             '/a [n|latest] — approve\n'
             '/r [n|latest] — reject\n'
-            '/proposal <n> — get proposal\n'
+            '/proposal <n|latest|id> — Show capture classification proposal\n'
+            '/kt <n|latest|id> — Generate Knowledge-template proposal (buffer-only)\n'
+            '/proposal_view <id> — View full proposal details\n'
+            '/proposal_approve <id> — Approve proposal for import (step 1)\n'
+            '/proposal_import_confirm <id> — Execute import to vault (step 2)\n'
+            '/proposal_revise <id> <text> — Request revision\n'
+            '/proposal_reject <id> — Reject proposal\n'
             '/list_pending\n'
             '/approve <capture_id>\n'
             '/reject <capture_id>\n'
@@ -1050,6 +1070,305 @@ def next_action_for_type(ctype):
     return actions.get(ctype, actions['unknown'])
 
 
+def handle_kt(text, chat_id):
+    """Generate Knowledge-template proposal using the Capture Review Orchestrator."""
+    parts = text.strip().split(maxsplit=1)
+    target = parts[1].strip() if len(parts) > 1 else 'latest'
+
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': 'Generating Knowledge proposal from capture buffer...'
+    })
+
+    try:
+        result = subprocess.run(
+            ['python3', ORCHESTRATOR_SCRIPT, 'propose-knowledge',
+             '--capture', target, '--output', 'json'],
+            capture_output=True, text=True, timeout=30,
+            cwd=LIFEOS_ROOT,
+        )
+        if result.returncode != 0:
+            error_msg = (result.stderr or result.stdout or 'Unknown error').strip()
+            if len(error_msg) > 300:
+                error_msg = error_msg[:300] + '...'
+            tg_api('sendMessage', {
+                'chat_id': chat_id,
+                'text': f'Proposal generation failed: {error_msg}'
+            })
+            return
+
+        data = json.loads(result.stdout.strip())
+    except subprocess.TimeoutExpired:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Proposal generation timed out (30s). Try a shorter capture.'
+        })
+        return
+    except json.JSONDecodeError:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Proposal generation returned invalid response.'
+        })
+        return
+    except Exception as e:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Proposal generation error: {str(e)[:200]}'
+        })
+        return
+
+    if not data.get('success'):
+        error = data.get('error', 'Unknown error')
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Could not generate proposal: {error}'
+        })
+        return
+
+    proposal_id = data.get('proposal_id', 'unknown')
+    classification = data.get('classification', 'unknown')
+    title = data.get('proposed_title', 'untitled')
+    proposed_path = data.get('proposed_vault_path', 'unknown')
+    proposal_path = data.get('proposal_path', '')
+
+    importer_note = ''
+    if classification != 'knowledge':
+        importer_note = '\n\nNote: V0 only imports knowledge type. Import blocked.'
+
+    text_reply = f"""Knowledge Proposal Generated
+ID: {proposal_id}
+Type: {classification}
+Title: {title[:100]}
+Path: {proposed_path}
+
+Proposal created in buffer. Obsidian vault unchanged.
+Import requires explicit confirmation.{importer_note}
+
+/proposal_view {proposal_id} - View full proposal
+/proposal_approve {proposal_id} - Approve for import
+/proposal_revise {proposal_id} <text> - Request revision
+/proposal_reject {proposal_id} - Reject"""
+
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': text_reply
+    })
+
+
+def handle_proposal_view(text, chat_id):
+    """View details of a generated proposal."""
+    parts = text.strip().split(maxsplit=1)
+    proposal_id = parts[1].strip() if len(parts) > 1 else ''
+    if not proposal_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /proposal_view <proposal_id>'})
+        return
+
+    try:
+        result = subprocess.run(
+            ['python3', ORCHESTRATOR_SCRIPT, 'view-proposal',
+             '--proposal-id', proposal_id, '--output', 'json'],
+            capture_output=True, text=True, timeout=15,
+            cwd=LIFEOS_ROOT,
+        )
+        if result.returncode != 0:
+            tg_api('sendMessage', {
+                'chat_id': chat_id,
+                'text': f'Proposal not found: {proposal_id}'
+            })
+            return
+        data = json.loads(result.stdout.strip())
+    except:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Error loading proposal: {proposal_id}'
+        })
+        return
+
+    status = data.get('status', 'unknown')
+    title = data.get('proposed_title', 'untitled')
+    classification = data.get('classification', 'unknown')
+    path = data.get('proposed_vault_path', 'unknown')
+    summary = data.get('summary', 'No summary')
+    if len(summary) > 300:
+        summary = summary[:300] + '...'
+
+    text_reply = f"""Proposal: {proposal_id}
+Status: {status}
+Title: {title[:100]}
+Type: {classification}
+Destination: {path}
+
+Summary: {summary}
+
+Buffer-only. Vault unchanged.
+/proposal_approve {proposal_id} - Approve
+/proposal_reject {proposal_id} - Reject"""
+
+    tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
+
+
+def handle_proposal_revise(text, chat_id):
+    """Record revision instructions for a proposal."""
+    parts = text.strip().split(maxsplit=2)
+    if len(parts) < 3:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /proposal_revise <proposal_id> <instruction>'})
+        return
+    proposal_id = parts[1].strip()
+    instruction = parts[2].strip()
+
+    try:
+        result = subprocess.run(
+            ['python3', ORCHESTRATOR_SCRIPT, 'revise-proposal',
+             '--proposal-id', proposal_id, '--instruction', instruction],
+            capture_output=True, text=True, timeout=15,
+            cwd=LIFEOS_ROOT,
+        )
+        data = json.loads(result.stdout.strip()) if result.stdout.strip() else {}
+    except:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Error revising proposal: {proposal_id}'
+        })
+        return
+
+    if data.get('success'):
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Revision recorded for {proposal_id}. Buffer updated. Vault unchanged.'
+        })
+    else:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Revision failed: {data.get("error", "Unknown")}'
+        })
+
+
+def handle_proposal_reject(text, chat_id):
+    """Reject a proposal."""
+    parts = text.strip().split(maxsplit=2)
+    if len(parts) < 2:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /proposal_reject <proposal_id> [reason]'})
+        return
+    proposal_id = parts[1].strip()
+    reason = parts[2].strip() if len(parts) > 2 else 'Rejected by operator'
+
+    try:
+        result = subprocess.run(
+            ['python3', ORCHESTRATOR_SCRIPT, 'reject-proposal',
+             '--proposal-id', proposal_id, '--reason', reason],
+            capture_output=True, text=True, timeout=15,
+            cwd=LIFEOS_ROOT,
+        )
+        data = json.loads(result.stdout.strip()) if result.stdout.strip() else {}
+    except:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Error rejecting proposal: {proposal_id}'
+        })
+        return
+
+    if data.get('success'):
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Proposal {proposal_id} rejected. No vault import occurred.'
+        })
+    else:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Rejection failed: {data.get("error", "Unknown")}'
+        })
+
+
+def handle_proposal_approve(text, chat_id):
+    """First-step approval: mark as approved, show confirmation card. Does NOT import."""
+    parts = text.strip().split(maxsplit=1)
+    proposal_id = parts[1].strip() if len(parts) > 1 else ''
+    if not proposal_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /proposal_approve <proposal_id>'})
+        return
+
+    try:
+        result = subprocess.run(
+            ['python3', ORCHESTRATOR_SCRIPT, 'approve-import',
+             '--proposal-id', proposal_id, '--output', 'json'],
+            capture_output=True, text=True, timeout=15,
+            cwd=LIFEOS_ROOT,
+        )
+        data = json.loads(result.stdout.strip()) if result.stdout.strip() else {}
+    except:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Error approving proposal: {proposal_id}'
+        })
+        return
+
+    if data.get('success'):
+        path = data.get('proposed_vault_path', 'unknown')
+        text_reply = f"""Proposal {proposal_id} approved for import.
+Destination: {path}
+
+To complete the import, send:
+/proposal_import_confirm {proposal_id}
+
+This will write to the canonical vault.
+No import has occurred yet."""
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
+    else:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Approval failed: {data.get("error", "Unknown")}'
+        })
+
+
+def handle_proposal_import_confirm(text, chat_id):
+    """Second-step confirmation: actually import the approved proposal into the vault."""
+    parts = text.strip().split(maxsplit=1)
+    proposal_id = parts[1].strip() if len(parts) > 1 else ''
+    if not proposal_id:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /proposal_import_confirm <proposal_id>'})
+        return
+
+    tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': f'Importing proposal {proposal_id}...'
+    })
+
+    importer_script = os.path.join(LIFEOS_ROOT, '40_Services', 'capture_processors', 'approved_proposal_importer.py')
+    try:
+        result = subprocess.run(
+            ['python3', importer_script,
+             '--proposal-id', proposal_id, '--apply'],
+            capture_output=True, text=True, timeout=30,
+            cwd=LIFEOS_ROOT,
+        )
+        data = json.loads(result.stdout.strip()) if result.stdout.strip() else {}
+    except subprocess.TimeoutExpired:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': 'Import timed out. Proposal remains in buffer.'
+        })
+        return
+    except Exception as e:
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Import error: {str(e)[:200]}'
+        })
+        return
+
+    if data.get('success'):
+        dest = data.get('destination', 'unknown')
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Imported to vault: {dest}'
+        })
+    else:
+        error = data.get('error', 'Unknown import error')
+        tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': f'Import failed: {error}\nProposal remains in buffer.'
+        })
+
+
 def cmd_check():
     load_env()
     me = tg_api('getMe')
@@ -1201,6 +1520,18 @@ def process_review_test_update(update):
         handle_approve(text, chat_id)
     elif cmd == '/reject':
         handle_reject(text, chat_id)
+    elif cmd == '/kt':
+        handle_kt(text, chat_id)
+    elif cmd == '/proposal_view':
+        handle_proposal_view(text, chat_id)
+    elif cmd == '/proposal_revise':
+        handle_proposal_revise(text, chat_id)
+    elif cmd == '/proposal_reject':
+        handle_proposal_reject(text, chat_id)
+    elif cmd == '/proposal_approve':
+        handle_proposal_approve(text, chat_id)
+    elif cmd == '/proposal_import_confirm':
+        handle_proposal_import_confirm(text, chat_id)
     else:
         tg_api('sendMessage', {
             'chat_id': chat_id,

@@ -326,7 +326,7 @@ Completed:
 - **Balanced guardrail model added to Telegram/n8n gameplan (2026-07-07)**: Updated the gameplan to avoid over-restricting useful workflows. Powerful tools such as n8n templates, community nodes, Execute Command, Flowise, Langflow, and repo-discovery automation are now classified by risk and approval tier instead of being treated as blanket prohibitions. The model preserves hard blocks against secrets exposure, unrestricted Telegram shell access, direct AI/n8n vault writes, and public admin UI exposure while allowing reviewed sandbox pilots and approval-gated A5 admin workflows later.
 
 Next:
-1. ~~**Bot telemetry event logging cleanup/alignment** — Ensure Telegram bot docs and code are consistent on what logs events.~~ **Resolved (2026-07-07).**
+1. ~~**Bot telemetry event logging cleanup/alignment**~~ **Resolved (2026-07-07).**
 2. ~~**Telegram receipt event_id display** — If Telegram bot does not yet display event_id in approval/rejection receipts, add it.~~ **Resolved (2026-07-07).**
 3. ~~**/view /a /r validation or capture-only/full-polling decision** — Live validate or finalize guard.~~ **Resolved (2026-07-07).**
 4. ~~**Telegram review button UX** — Add inline button-based review UI.~~ **Resolved (2026-07-07).**
@@ -345,6 +345,17 @@ Next:
 16. **n8n internal workflow design** — Build n8n workflows for internal automation.
 17. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
 18. ~~**Operator utility bundle added (2026-07-08)**~~ — Goal Prompt Generator (`lifeos_goal_prompt.py`) creates OpenCode-ready task prompts with safety boundaries, staging rules, and risk tiers. Capture Queue Summary CLI (`lifeos_capture_summary.py`) reports queue metadata only (sources, types, counts) without exposing capture content. Review Packet Builder V0 (`review_packet_builder.py`) wraps processed Markdown drafts into human-review packets in buffer vault only. Tool Registry (`LifeOS_Tool_Registry.md`) and Permission Tiers (`LifeOS_Tool_Permission_Tiers.md`) document all tools with A0-A5 tier assignments. Dashboard README updated with cross-links to Capture API, Tool Registry, and MCP docs. All new scripts are Python stdlib, read-only/buffer-only, pass TDD tests. 411 tests passing across all suites.
+
+- **Capture-to-Vault Orchestrator V0 implemented (2026-07-08)**: Full gated progression: capture → view → classify → specialist delegation → MCP-refined proposal → user confirmation/revision → controlled vault import.
+  - **Custom MCP Server V0** (`40_Services/mcp/lifeos_mcp_server.py`): stdio JSON-RPC, 5 read-only tools (status, capture_summary, capture_metadata, template_catalog, current_working_state_summary). Python stdlib only. 38 tests.
+  - **MCP Client Helper** (`40_Services/mcp/lifeos_mcp_client.py`): Context-managed stdio subprocess with typed helpers, timeout, process cleanup. 11 tests.
+  - **Orchestrator** (`40_Services/orchestrator/`): CLI with propose-knowledge, view/reject/revise/approve-import. Resolves captures. 98 tests.
+  - **Agent Modules** (`40_Services/orchestrator/agents/`): Deterministic Python (NOT AI/LLM). Classifier (8 types, knowledge-only gate), Knowledge Curator, Import Planner, QA Verifier.
+  - **Proposal Packets**: Buffer-only YAML+Markdown with content hash, source trail, QA checklist. Stored at `/home/lifeos/LifeOS_Capture_Buffer/03_Review_Packets/proposals/`.
+  - **Controlled Importer** (`40_Services/capture_processors/approved_proposal_importer.py`): Sole vault writer. Validates type/schema/status/hash/path/staleness. Create-only. Atomic writes. 20 tests.
+  - **Telegram /kt**: New commands: `/kt`, `/proposal_view`, `/proposal_approve`, `/proposal_import_confirm`, `/proposal_revise`, `/proposal_reject`. Two-step import confirmation. 221 Telegram tests.
+  - **Safety**: MCP read-only. Agents are deterministic modules. Proposals buffer-only. Two-step approval required. Controlled importer sole vault writer. n8n/mcpo/OpenHands inactive. No filesystem/shell/Docker MCP. No public exposure.
+  - **Tests**: 543 total (38+11+98+20+221+103+18+45). Python stdlib only. Zero pip/npm deps.
 
 ## Known Stabilization Backlog
 

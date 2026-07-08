@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import subprocess
 import sys
 import time
 import unittest
@@ -1298,6 +1299,162 @@ class TestIntentAndConfirmFlows(unittest.TestCase):
                 with patch("builtins.open") as mock_open:
                     bot._handle_confirm_approve(self.chat_id, self.msg_id, self.sender_id, self.cap_ref)
                     mock_open.assert_not_called()
+
+
+class TestKtCommand(unittest.TestCase):
+    """Tests for /kt command and proposal flow."""
+
+    def setUp(self):
+        self.patch_tg = patch('telegram_capture_bot.tg_api')
+        self.mock_tg = self.patch_tg.start()
+        with patch.object(bot, '_hmac_key', return_value=b'X' * 32):
+            pass
+
+    def tearDown(self):
+        self.patch_tg.stop()
+
+    @patch('telegram_capture_bot.call_action_api')
+    def test_handle_kt_calls_orchestrator(self, mock_call_api):
+        """/kt should call the orchestrator via subprocess and send result card."""
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+                'success': True,
+                'proposal_id': 'prop_test_001',
+                'classification': 'knowledge',
+                'proposed_title': 'Test Knowledge Note',
+                'proposed_vault_path': '03_KNOWLEDGE/AI/Test_Knowledge_Note.md',
+                'proposal_path': '/tmp/prop_test_001.md',
+            }), stderr='')
+            bot.handle_kt('/kt latest', CHAT_ID)
+            self.assertTrue(self.mock_tg.called)
+            payload = self.mock_tg.call_args_list[1][0][1]  # skip progress message
+            self.assertIn('knowledge', payload.get('text', ''))
+
+    @patch('subprocess.run')
+    def test_handle_kt_orchestrator_failure(self, mock_run):
+        """/kt should handle orchestrator failure gracefully."""
+        mock_run.return_value = MagicMock(returncode=1, stdout='', stderr='Capture not found')
+        bot.handle_kt('/kt invalid', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('failed', text.lower())
+
+    @patch('subprocess.run')
+    def test_handle_proposal_view_returns_details(self, mock_run):
+        """/proposal_view should return proposal details from buffer."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+            'proposal_id': 'prop_test_001',
+            'status': 'pending_human_review',
+            'proposed_title': 'Test Note',
+            'classification': 'knowledge',
+            'proposed_vault_path': '03_KNOWLEDGE/AI/Test.md',
+            'summary': 'A test summary',
+        }), stderr='')
+        bot.handle_proposal_view('/proposal_view prop_test_001', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('prop_test_001', text)
+
+    @patch('subprocess.run')
+    def test_handle_proposal_reject_sets_status(self, mock_run):
+        """/proposal_reject should set proposal to rejected."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+        }), stderr='')
+        bot.handle_proposal_reject('/proposal_reject prop_test_001 Just because', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('rejected', text.lower())
+
+    @patch('subprocess.run')
+    def test_handle_proposal_revise_records_instruction(self, mock_run):
+        """/proposal_revise should record revision instruction."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+        }), stderr='')
+        bot.handle_proposal_revise('/proposal_revise prop_test_001 Change the title', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('Revision', text)
+
+    @patch('subprocess.run')
+    def test_handle_proposal_approve_shows_confirmation(self, mock_run):
+        """/proposal_approve should approve but NOT import."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+            'proposed_vault_path': '03_KNOWLEDGE/AI/Test.md',
+        }), stderr='')
+        bot.handle_proposal_approve('/proposal_approve prop_test_001', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('approved', text.lower())
+        self.assertIn('import_confirm', text.lower())
+
+    @patch('subprocess.run')
+    def test_handle_proposal_import_confirm_executes_import(self, mock_run):
+        """/proposal_import_confirm should call the importer."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+            'destination': '03_KNOWLEDGE/AI/Test.md',
+        }), stderr='')
+        bot.handle_proposal_import_confirm('/proposal_import_confirm prop_test_001', CHAT_ID)
+        self.assertTrue(self.mock_tg.called)
+        text = self.mock_tg.call_args_list[-1][0][1].get('text', '')
+        self.assertIn('Imported', text)
+
+    @patch('subprocess.run')
+    @patch.object(bot, 'append_event')
+    @patch.object(bot, 'tg_api')
+    def test_unauthorized_sender_blocked_from_kt(self, mock_tg, mock_append, mock_run):
+        """process_update should reject unauthorized sender for /kt."""
+        update = make_update('/kt latest', sender_id=UNAUTHORIZED_SENDER)
+        with patch.object(bot, 'ALLOWED_USER_ID', AUTHORIZED_SENDER):
+            bot.process_update(update)
+        mock_tg.assert_called_once()
+        text = mock_tg.call_args[0][1]['text']
+        self.assertIn('Access denied', text)
+
+    def test_command_added_to_dispatch(self):
+        """Verify /kt and proposal handler functions exist."""
+        self.assertTrue(hasattr(bot, 'handle_kt'), '/kt handler missing')
+        self.assertTrue(hasattr(bot, 'handle_proposal_view'), '/proposal_view handler missing')
+        self.assertTrue(hasattr(bot, 'handle_proposal_revise'), '/proposal_revise handler missing')
+        self.assertTrue(hasattr(bot, 'handle_proposal_reject'), '/proposal_reject handler missing')
+        self.assertTrue(hasattr(bot, 'handle_proposal_approve'), '/proposal_approve handler missing')
+        self.assertTrue(hasattr(bot, 'handle_proposal_import_confirm'), '/proposal_import_confirm handler missing')
+
+    @patch('subprocess.run')
+    def test_no_direct_vault_write_from_kt_handler(self, mock_run):
+        """Telegram /kt must not write to vault directly."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True, 'proposal_id': 'test', 'classification': 'knowledge',
+            'proposed_title': 'T', 'proposed_vault_path': '03_KNOWLEDGE/AI/T.md',
+        }), stderr='')
+        with patch('builtins.open') as mock_open:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        vault_writes = [c for c in mock_open.call_args_list if '/10_Vaults/LifeOS/' in str(c)]
+        self.assertEqual(len(vault_writes), 0, "Telegram must not write to vault")
+
+    @patch('subprocess.run')
+    def test_no_shell_execution(self, mock_run):
+        """Telegram must not invoke shell commands."""
+        mock_run.return_value = MagicMock(returncode=0, stdout='{"success":true}', stderr='')
+        bot.handle_kt('/kt latest', CHAT_ID)
+        calls = mock_run.call_args_list
+        for c in calls:
+            args = c[0][0] if c[0] else []
+            self.assertNotIn('shell', str(args).lower())
+
+    @patch('subprocess.run')
+    def test_no_arbitrary_mcp_tool_accepted(self, mock_run):
+        """Telegram must not accept arbitrary MCP tool names from user."""
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd='test', timeout=1)
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if c[0]]
+        has_mcp = any('mcp' in t.lower() and 'tool' in t.lower() for t in texts)
+        self.assertFalse(has_mcp, "Telegram must not accept arbitrary MCP tool names")
 
 
 if __name__ == '__main__':
