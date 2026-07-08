@@ -231,3 +231,72 @@ npm cache clean --force
 | High | 90–95% | Execute safe cleanup from this runbook |
 | Critical | > 95% | Safe cleanup + defer new service activation |
 | Emergency | > 98% | Safe cleanup + escalate non-essential removals for approval |
+
+## Storage Cleanup V3 (2026-07-08)
+
+Executed from approved V2 packet. Full execution record.
+
+### Pre-Cleanup
+- Disk: 97%, 176G total, 162G used, 5.4G free
+- Timeshift: 6 snapshots (Jun 15 – Jul 7)
+- Journald: 2.4GB
+
+### Cleanup Actions Performed
+
+**Timeshift snapshots deleted (4 oldest):**
+- `2026-06-15_11-07-19`
+- `2026-07-02_19-00-01`
+- `2026-07-03_19-00-01`
+- `2026-07-05_20-00-01`
+
+**Timeshift snapshots preserved (2 newest):**
+- `2026-07-06_20-00-01`
+- `2026-07-07_22-00-01`
+
+**Journald vacuum:**
+- Before: 2.4GB → After: 459MB
+
+**Downloads removed (4 files, ~746MB):**
+- `GitHub-Copilot-linux-x64.AppImage` (407MB)
+- `claude-desktop_amd64.deb` (138MB)
+- `Obsidian-1.12.7.AppImage` (119MB, duplicate of Applications/)
+- `obsidian_1.12.7_amd64.deb` (82MB)
+
+**Backup zip removed:**
+- `lifeos_backup_20260706_220113.zip` (935MB)
+
+### Post-Cleanup
+- Disk: 91%, 176G total, 151G used, 17G free
+- Timeshift: 2 snapshots remaining
+- Journald: 459MB (system), 25.9M (user-level query)
+- Downloads: 4KB (empty)
+- Backup zips: 564KB (4 small diagnostic zips preserved)
+
+### Space Reclaimed
+~11GB total (from 97% at 5.4G free → 91% at 17G free). Exact Timeshift contribution is
+difficult to measure due to rsync/hardlink accounting, but Timeshift was the largest
+contributor.
+
+### Protected Items Not Touched
+- Docker volumes (5 volumes, 2 active)
+- Running containers (4, all healthy)
+- `Applications/Obsidian-1.12.7.AppImage` (preserved, daily use)
+- `10_Vaults/`, `30_Capture/`, `50_Event_Log/`
+- `.env` files, secrets, service source
+- ChromaDB/Odysseus volume
+- 4 small diagnostic review zips
+
+### Runtime Health After Cleanup
+- Status API: healthy (read_only)
+- Action API: healthy (read_write)
+- Telegram: active, enabled (systemd user service)
+- Docker: 4 containers running, restart=0, stable
+- All 330 tests passing
+
+### Follow-Up
+- Observability V3 remains deferred while disk >= 90% (currently 91%).
+- Further Timeshift snapshot reduction is possible but not recommended
+  (only 2 snapshots remain).
+- Remaining space consumers: Timeshift (2 snapshots), Docker images (3.45GB),
+  system files, `.cache/mozilla` (299MB), `.local` (582MB).
+- Target: keep disk below 85% for normal operation.

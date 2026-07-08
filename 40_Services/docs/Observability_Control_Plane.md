@@ -128,7 +128,7 @@ Each step requires explicit approval. No batch activation.
 - Disk >= 90% is a **warning** — run `lifeos_observability.py` to confirm.
 - Disk >= 95% is **critical** — execute safe cleanup from `Storage_Triage_Runbook.md`.
 - Do not activate new observability services while disk is >= 95%.
-- Storage Triage V1 must run before Observability V3 activation if disk remains high.
+- Storage Triage V3 (2026-07-08) improved disk from 97% to 91%. Observability V3 activation remains deferred while disk remains at or above 90%.
 - See `40_Services/docs/Storage_Triage_Runbook.md` for safe cleanup procedures and forbidden actions.
 
 ## Deferrals

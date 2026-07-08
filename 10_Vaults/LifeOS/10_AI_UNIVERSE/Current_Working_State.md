@@ -167,6 +167,8 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Storage Triage V2 approval packet created (2026-07-08)**: Read-only large-storage audit to identify remaining disk consumers after V1. Found Timeshift has 6 system snapshots (Jun 15–Jul 7) estimated at 100–140GB — the primary disk consumer. Downloads contain 781MB of duplicate AppImages/installers. Review zips contain a 980MB old backup. /var/log/journal uses 2.5GB. Created `40_Services/docs/Storage_Triage_V2_Approval_Packet.md` with categorized recommendations: safe-with-approval (delete old Timeshift snapshots for 30–80GB, remove Download installers 781MB, remove old backup zip 980MB, reduce journal retention 2GB), needs-backup-first, and do-not-touch categories. Updated `Storage_Triage_Runbook.md` with V2 section. No cleanup performed in V2 — all actions require explicit user approval.
 
+- **Storage Cleanup V3 executed (2026-07-08)**: Approved cleanup from V2 packet. Deleted 4 oldest Timeshift snapshots (Jun 15, Jul 2, Jul 3, Jul 5), preserved 2 newest (Jul 6, Jul 7). Vacuumed journald from 2.4GB to 459MB. Removed 4 redundant Download installers (746MB) and old backup zip (935MB). Applications/Obsidian, 4 diagnostic review zips, Docker volumes, running containers, captures, event logs, vault files, secrets, and service configs preserved. Disk improved from 97% (2.0G free before V1) to 91% (17G free after V3). All 4 containers stable (restart=0), Telegram active. 330/330 tests passing. Observability V3 activation remains deferred while disk >= 90%. Full execution record in `40_Services/docs/Storage_Triage_Runbook.md`.
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)
