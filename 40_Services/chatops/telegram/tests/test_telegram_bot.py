@@ -64,8 +64,7 @@ class TestExtractAndAuth(unittest.TestCase):
                 args = mock_tg.call_args[0]
                 self.assertEqual(args[0], 'sendMessage')
                 text = args[1]['text']
-                self.assertIn('ACCESS', text)
-                self.assertIn('DENIED', text)
+                self.assertIn('Access denied', text)
                 self.assertIn('not authorized', text.lower())
 
     def test_reject_unauthorized_appends_event(self):
@@ -90,8 +89,7 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
                 args = mock_tg.call_args[0]
                 self.assertEqual(args[0], 'sendMessage')
                 text = args[1]['text']
-                self.assertIn('ACCESS', text)
-                self.assertIn('DENIED', text)
+                self.assertIn('Access denied', text)
                 self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
@@ -106,8 +104,7 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
                 args = mock_tg.call_args[0]
                 self.assertEqual(args[0], 'sendMessage')
                 text = args[1]['text']
-                self.assertIn('ACCESS', text)
-                self.assertIn('DENIED', text)
+                self.assertIn('Access denied', text)
                 self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
@@ -122,8 +119,7 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
                 args = mock_tg.call_args[0]
                 self.assertEqual(args[0], 'sendMessage')
                 text = args[1]['text']
-                self.assertIn('ACCESS', text)
-                self.assertIn('DENIED', text)
+                self.assertIn('Access denied', text)
                 self.assertIn('not authorized', text.lower())
 
     @patch.object(bot, 'tg_api')
@@ -136,8 +132,7 @@ class TestUnauthorizedSenderRejectedBeforeAction(unittest.TestCase):
             args = mock_tg.call_args[0]
             self.assertEqual(args[0], 'sendMessage')
             text = args[1]['text']
-            self.assertIn('ACCESS', text)
-            self.assertIn('DENIED', text)
+            self.assertIn('Access denied', text)
             self.assertIn('not authorized', text.lower())
 
 
@@ -483,7 +478,7 @@ class TestActionAPIFallback(unittest.TestCase):
         args = mock_tg.call_args[0]
         self.assertEqual(args[0], 'sendMessage')
         text = args[1]['text']
-        self.assertIn('ACTION API', text)
+        self.assertIn('Action API', text)
         self.assertIn('UNAVAILABLE', text)
 
 
@@ -656,6 +651,7 @@ class TestOfflineReviewValidation(unittest.TestCase):
             'success': True,
             'capture': {
                 'capture_id': 'cap_123',
+                'capture_type': 'note',
                 'status': 'pending_review',
                 'created_at': '2026-07-07T00:00:00Z',
                 'content': 'Test note content text.'
@@ -665,11 +661,9 @@ class TestOfflineReviewValidation(unittest.TestCase):
             bot.handle_view('/view 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('REVIEW CARD', text)
-        self.assertIn('cap_123', text)
+        self.assertIn('Capture', text)
         self.assertIn('pending_review', text)
         self.assertIn('Test note content text.', text)
-        # Verify no file path is exposed (e.g. 30_Capture or pending_review or .md)
         self.assertNotIn('30_Capture', text)
         self.assertNotIn('.md', text)
 
@@ -988,13 +982,9 @@ class TestViewSummaryAndButtons(unittest.TestCase):
             bot.handle_view("/view 1", CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]["text"]
-        # Should contain summary fields but NOT full content body
-        self.assertIn("REVIEW CARD", text)
-        self.assertIn("cap_20260707_120000_a1b2c3_slug", text)
+        self.assertIn("Capture", text)
         self.assertIn("pending_review", text)
-        # Should contain preview line
         self.assertIn("My quick note about something important.", text)
-        # Should NOT contain full second line
         self.assertNotIn("Second line.", text)
 
     @patch.object(bot, 'call_action_api')
@@ -1010,11 +1000,11 @@ class TestViewSummaryAndButtons(unittest.TestCase):
         kb = payload["reply_markup"]
         self.assertIn("inline_keyboard", kb)
         buttons = kb["inline_keyboard"]
-        # Should have 2 rows: [View Full Text], [Approve] [Reject]
         self.assertEqual(len(buttons), 2)
-        self.assertEqual(len(buttons[0]), 1)  # View Full Text
+        self.assertEqual(len(buttons[0]), 2)  # View Full + Proposal
         self.assertEqual(len(buttons[1]), 2)  # Approve + Reject
-        self.assertEqual(buttons[0][0]["text"], "View Full Text")
+        self.assertEqual(buttons[0][0]["text"], "View Full")
+        self.assertEqual(buttons[0][1]["text"], "Proposal")
         self.assertEqual(buttons[1][0]["text"], "Approve")
         self.assertEqual(buttons[1][1]["text"], "Reject")
 

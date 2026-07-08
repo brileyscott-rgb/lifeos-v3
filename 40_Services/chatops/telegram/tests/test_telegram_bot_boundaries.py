@@ -117,9 +117,9 @@ class TelegramBoundaryTests(unittest.TestCase):
         mock_api.assert_called_once_with('/captures', {'text': 'test content'})
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('CAPTURE', text)
+        self.assertIn('Capture saved', text)
         self.assertIn('cap_test', text)
-        self.assertIn('no vault processing', text.lower())
+        self.assertIn('pending_review', text)
         for name in STALE_HELPERS:
             self.assertFalse(hasattr(bot, name), name)
 
@@ -376,7 +376,7 @@ class TestCaptureFirstMode(unittest.TestCase):
                 mock_a.assert_not_called()
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
 
     @patch.object(bot, 'tg_api')
     def test_a1_blocked_in_capture_first(self, mock_tg):
@@ -388,7 +388,7 @@ class TestCaptureFirstMode(unittest.TestCase):
                 mock_a.assert_not_called()
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
 
     @patch.object(bot, 'tg_api')
     def test_r_blocked_in_capture_first(self, mock_tg):
@@ -400,7 +400,7 @@ class TestCaptureFirstMode(unittest.TestCase):
                 mock_r.assert_not_called()
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
 
     @patch.object(bot, 'tg_api')
     def test_r1_blocked_in_capture_first(self, mock_tg):
@@ -412,7 +412,7 @@ class TestCaptureFirstMode(unittest.TestCase):
                 mock_r.assert_not_called()
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
 
     @patch.object(bot, 'tg_api')
     def test_blocked_mutation_does_not_call_action_api(self, mock_tg):
@@ -546,7 +546,7 @@ class TestErrorMessagesUseCards(unittest.TestCase):
         bot.handle_approve('/approve cap_xxx', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
         self.assertIn('not found', text.lower())
 
     @patch.object(bot, 'call_action_api')
@@ -556,7 +556,7 @@ class TestErrorMessagesUseCards(unittest.TestCase):
         bot.handle_reject('/reject cap_xxx', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
         self.assertIn('capture not found', text.lower())
 
     @patch.object(bot, 'call_action_api')
@@ -569,7 +569,7 @@ class TestErrorMessagesUseCards(unittest.TestCase):
         bot.handle_r('/r 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
         self.assertIn('not found', text.lower())
 
     @patch.object(bot, 'call_action_api')
@@ -582,7 +582,7 @@ class TestErrorMessagesUseCards(unittest.TestCase):
         bot.handle_a('/a 1', CHAT_ID)
         mock_tg.assert_called_once()
         text = mock_tg.call_args[0][1]['text']
-        self.assertIn('NO ACTION', text)
+        self.assertIn('No action was taken', text)
         self.assertIn('mutation failed', text.lower())
 
 

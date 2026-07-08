@@ -148,14 +148,15 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
   - **Live operator state (2026-07-07)**:
     - Telegram service: `active (running)`, enabled on login, capture-first + `--allow-review`
     - Commands live: `/capture`, `/p`, `/view`, `/a`, `/r`, `/approve`, `/reject`, `/list_pending`, `/status`, `/proposal`, `/help`
-    - Inline review buttons active (approve/reject with confirmation, view full text, cancel)
+    - Inline review buttons active: [View Full] [Proposal] [Approve] [Reject] with two-step confirmation
     - All mutations route through Action API; `/status` routes through Status API
     - n8n: local-only, no `/lifeos` mount, Status Digest workflow inactive
     - Status API: read-only, healthy
     - Action API: read-write, healthy
     - No secrets exposed, no public webhooks, no Docker socket, no direct vault writes
-    - Tests: 313/313 passing
+    - Tests: 329/329 passing (208 Telegram + 103 Action API + 18 Status API)
     - 7 pending captures in queue (test artifacts from previous validation cycles)
+    - **Message format simplified (2026-07-07)**: Removed Unicode box-drawing characters, age/countdown clutter, last_event_time, full ISO timestamps, and internal implementation details from all user-facing cards. Cards are now compact plain-text mobile-first format. Proposal button added to /view inline keyboard alongside View Full. All 329 tests updated and passing.
 
 ## Current Decisions
 

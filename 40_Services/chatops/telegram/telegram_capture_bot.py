@@ -35,7 +35,7 @@ ALLOW_REVIEW_COMMANDS = False
 TOKEN_VERSION = "rv1"
 TOKEN_TTL = 600       # 10 minutes
 MAC_TRUNC = 12        # hex chars
-ALL_ACTIONS = ("v", "a", "r", "ca", "cr", "n")
+ALL_ACTIONS = ("v", "p", "a", "r", "ca", "cr", "n")
 
 def load_env():
     global BOT_TOKEN, ALLOWED_USER_ID, ALLOW_REVIEW_COMMANDS
@@ -355,6 +355,8 @@ def process_callback_query(update):
         _handle_cancel(chat_id, msg_id)
     elif action == "v":
         _handle_view_full(chat_id, cap_ref)
+    elif action == "p":
+        _handle_proposal_button(chat_id, cap_ref)
     elif action == "a":
         _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref)
     elif action == "r":
@@ -388,6 +390,36 @@ def _handle_view_full(chat_id, cap_ref):
     tg_api("sendMessage", {"chat_id": chat_id, "text": content})
 
 
+def _handle_proposal_button(chat_id, cap_ref):
+    capture_id, error = _resolve_cap_ref(cap_ref)
+    if capture_id is None:
+        tg_api("sendMessage", {"chat_id": chat_id, "text": error})
+        return
+
+    result = call_action_api(f"/captures/{capture_id}")
+    if result is None or not result.get("success"):
+        tg_api("sendMessage", {
+            "chat_id": chat_id,
+            "text": "Capture not found. No action was taken.",
+        })
+        return
+
+    capture = result["capture"]
+    cid = capture.get("capture_id", capture_id)
+    content = capture.get("content", "")
+    title = cards.infer_title(content)
+    ctype, route = cards.classify_capture(content)
+    next_action = next_action_for_type(ctype)
+    index = capture.get("index")
+
+    text = cards.format_proposal(
+        capture_id=cid, index=index, title=title,
+        capture_type=ctype, suggested_route=route,
+        next_action=next_action,
+    )
+    tg_api("sendMessage", {"chat_id": chat_id, "text": text})
+
+
 def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
     capture_id, error = _resolve_cap_ref(cap_ref)
     if capture_id is None:
@@ -404,9 +436,8 @@ def _handle_approve_intent(chat_id, msg_id, sender_id, cap_ref):
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
-    text = cards.format_box("Confirm Approval", rows=[
+    text = cards.format_card("Confirm Approval", rows=[
         ("ID", capture_id),
-        ("PREV", preview),
     ])
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -439,9 +470,8 @@ def _handle_reject_intent(chat_id, msg_id, sender_id, cap_ref):
         content = capture.get("content", "")
         preview = _extract_preview_line(content)[:120]
 
-    text = cards.format_box("Confirm Rejection", rows=[
+    text = cards.format_card("Confirm Rejection", rows=[
         ("ID", capture_id),
-        ("PREV", preview),
     ])
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -474,10 +504,11 @@ def _handle_confirm_approve(chat_id, msg_id, sender_id, cap_ref):
 
     cid = result.get("capture_id", capture_id)
     event_id = result.get("event_id")
-    pairs = [("ID", cid)]
+    rows = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Approved", rows=pairs)
+        rows.append(("Event", event_id))
+    text_reply = cards.format_card("Approved", rows=rows,
+                                   footer="No vault write performed.")
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -503,10 +534,11 @@ def _handle_confirm_reject(chat_id, msg_id, sender_id, cap_ref):
 
     cid = result.get("capture_id", capture_id)
     event_id = result.get("event_id")
-    pairs = [("ID", cid)]
+    rows = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Rejected", rows=pairs)
+        rows.append(("Event", event_id))
+    text_reply = cards.format_card("Rejected", rows=rows,
+                                   footer="No vault write performed.")
 
     tg_api("editMessageText", {
         "chat_id": chat_id,
@@ -659,20 +691,10 @@ def handle_list_pending(chat_id):
         return
     pending = result.get('pending', [])
     count = result.get('count', 0)
-    if count == 0:
-        tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': 'No pending captures.'
-        })
-        return
-    lines = [f'Pending captures: {count}']
-    for item in pending[:10]:
-        lines.append(f"\n{item['index']}. {item.get('capture_id', '')}\n   status: {item.get('status', '')}\n   created: {item.get('created_at', '')}")
-    if count > 10:
-        lines.append(f'\n... and {count - 10} more')
+    text_reply = cards.format_pending_queue(pending, count=count)
     tg_api('sendMessage', {
         'chat_id': chat_id,
-        'text': ''.join(lines)
+        'text': text_reply
     })
 
 
@@ -697,8 +719,9 @@ def handle_approve(text, chat_id):
     event_id = result.get('event_id')
     pairs = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Approved", rows=pairs)
+        pairs.append(("Event", event_id))
+    text_reply = cards.format_card("Approved", rows=pairs,
+                                   footer="No vault write performed.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -726,8 +749,9 @@ def handle_reject(text, chat_id):
     event_id = result.get('event_id')
     pairs = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Rejected", rows=pairs)
+        pairs.append(("Event", event_id))
+    text_reply = cards.format_card("Rejected", rows=pairs,
+                                   footer="No vault write performed.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -768,29 +792,32 @@ def handle_view(text, chat_id):
 
     capture = result["capture"]
     cid = capture.get("capture_id", "")
-    ctype = capture.get("status", "")
-    created = capture.get("created_at", "")
+    ctype = capture.get("capture_type", "unknown")
+    status = capture.get("status", "pending_review")
     content = capture.get("content", "")
+    index = capture.get("index", "?")
 
+    title = cards.infer_title(content)
     preview = _extract_preview_line(content)[:120]
 
     rows = [
-        ("SOURCE", "Telegram"),
-        ("STATE", ctype),
-        ("AGE", cards.format_age(created)),
-        ("ID", cid),
+        ("Title", title),
+        ("Type", ctype),
+        ("Status", status),
     ]
-    summary = cards.format_box("REVIEW CARD", rows=rows, body=preview)
+    body = f"Preview: {preview}" if preview else ""
+    summary = cards.format_card(f"Capture {index}", rows=rows, body=body)
 
-    # Generate tokens for view-full, approve-intent, reject-intent
     cap_ref = _make_cap_ref(cid)
     token_v = _make_token("v", ALLOWED_USER_ID, cap_ref)
+    token_p = _make_token("p", ALLOWED_USER_ID, cap_ref)
     token_a = _make_token("a", ALLOWED_USER_ID, cap_ref)
     token_r = _make_token("r", ALLOWED_USER_ID, cap_ref)
 
     inline_kb = {
         "inline_keyboard": [
-            [{"text": "View Full Text", "callback_data": token_v}],
+            [{"text": "View Full", "callback_data": token_v},
+             {"text": "Proposal", "callback_data": token_p}],
             [
                 {"text": "Approve", "callback_data": token_a},
                 {"text": "Reject", "callback_data": token_r},
@@ -838,8 +865,9 @@ def handle_a(text, chat_id):
     event_id = approve_result.get('event_id')
     pairs = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Approved", rows=pairs)
+        pairs.append(("Event", event_id))
+    text_reply = cards.format_card("Approved", rows=pairs,
+                                   footer="No vault write performed.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply
@@ -879,8 +907,9 @@ def handle_r(text, chat_id):
     event_id = reject_result.get('event_id')
     pairs = [("ID", cid)]
     if event_id:
-        pairs.append(("EVENT", event_id))
-    text_reply = cards.format_box("Rejected", rows=pairs)
+        pairs.append(("Event", event_id))
+    text_reply = cards.format_card("Rejected", rows=pairs,
+                                   footer="No vault write performed.")
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': text_reply

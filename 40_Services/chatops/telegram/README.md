@@ -5,7 +5,8 @@
 > Capture, review, and proposal commands are live-validated through Action API.
 > Inline review button UX (approve/reject with confirmation, cancel, view full text)
 > is active in live polling. Deterministic proposal v1 (`/proposal <n>`) is available
-> as a read-only preview with no vault writes.
+> as a read-only preview with no vault writes. Message cards are compact mobile-first
+> plain-text format (no box-drawing characters, no age/countdown clutter).
 >
 > The future production path will use n8n webhook workflow routing through
 > the LifeOS Action API, but is not yet active.
@@ -200,7 +201,7 @@ files. It only calls Action API endpoints and formats replies.
 | `/p` | `GET /captures/pending` | GET |
 | `/list_pending` | `GET /captures/pending` | GET |
 | `/view <n>` | `GET /captures/pending/<n>` | GET (summary + inline buttons) |
-| View Full Text (button) | `GET /captures/pending` → `GET /captures/<id>` | GET + GET (cap_ref resolved) |
+| View Full / Proposal (buttons) | `GET /captures/pending` → `GET /captures/<id>` | GET + GET (cap_ref resolved) |
 | `/view latest` | `GET /captures/pending/latest` | GET |
 | `/view <capture_id>` | `GET /captures/<capture_id>` | GET |
 | `/a <n>` or `/a latest` | `GET /captures/pending/<n>` then `POST /captures/<id>/approve` | GET + POST |
@@ -503,17 +504,20 @@ When review mode is active (`--allow-review` or `TELEGRAM_ALLOW_REVIEW=1`),
 full capture content:
 
 ```text
-Capture: cap_20260707_120000_a1b2c3_slug
+Capture 1
+Title: My quick note
+Type: note
 Status: pending_review
-Created: 2026-07-07T12:00:00Z
+
 Preview: My quick note about...
 
-[View Full Text]  [Approve]  [Reject]
+[View Full] [Proposal]
+[Approve]  [Reject]
 ```
 
 Button flow (all stateless, HMAC-signed callback tokens, 10-minute expiry):
 
-- **[View Full Text]** — sends the complete capture content as a separate
+- **[View Full]** — sends the complete capture content as a separate
   message with no approve/reject buttons.
 - **[Approve]** — shows a confirmation prompt with [Confirm Approve] and
   [Cancel]. No mutation occurs at this stage.

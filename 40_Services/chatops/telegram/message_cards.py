@@ -40,24 +40,19 @@ def format_age(created_at, now=None):
     return f"{days}d"
 
 
-def _top_line(title):
-    return "\u256d\u2500 LIFEOS :: " + title
+def _hdr(title):
+    return title
 
 
-def _bottom_line():
-    return "\u2570\u2500"
+def _kv(label, value):
+    return f"{label}: {value}"
 
 
-def _row(label, value):
-    return "\u2502 " + label + "  " + str(value)
-
-
-def format_box(title, rows=None, body=None, footer=None):
-    parts = [_top_line(title)]
+def format_card(title, rows=None, body=None, footer=None):
+    parts = [_hdr(title)]
     if rows:
         for label, value in rows:
-            parts.append(_row(label, value))
-    parts.append(_bottom_line())
+            parts.append(_kv(label, value))
     if body:
         parts.append("")
         parts.append(body)
@@ -67,149 +62,141 @@ def format_box(title, rows=None, body=None, footer=None):
     return "\n".join(parts)
 
 
+def format_box(title, rows=None, body=None, footer=None):
+    """Legacy adapter: delegates to plain-text format_card."""
+    return format_card(title, rows=rows, body=body, footer=footer)
+
+
 def format_capture_success(capture_id, event_id=None, queue_index=None,
                            created_at=None, now=None):
     rows = [
-        ("STATE", "QUEUED"),
-        ("AGE", format_age(created_at, now=now) if created_at else "now"),
-        ("SOURCE", "Telegram"),
+        ("ID", capture_id),
+        ("Status", "pending_review"),
     ]
-    text_parts = ["Captured for review.", "", "ID", capture_id]
     if event_id:
-        text_parts.append("")
-        text_parts.append("EVENT")
-        text_parts.append(event_id)
-    body = "\n".join(text_parts)
-    footer = "No vault processing was performed.\nUse /p to review the queue."
-    return format_box("CAPTURE", rows=rows, body=body, footer=footer)
+        rows.append(("Event", event_id))
+    footer = "Next: /p or /proposal <number>"
+    return format_card("Capture saved", rows=rows, footer=footer)
 
 
 def format_capture_failure():
-    body = "LifeOS capture unavailable."
-    footer = "NO ACTION"
-    return format_box("CAPTURE", rows=[("STATE", "FAILED")], body=body, footer=footer)
+    return format_card("Capture failed",
+                       body="LifeOS capture unavailable.",
+                       footer="NO ACTION")
 
 
 def format_status_card(payload, now=None):
     pending = payload.get("pending_captures", "?")
     approved = payload.get("approved_unprocessed_captures", "?")
-    rejected = payload.get("rejected_captures", "?")
+    evt_valid = payload.get("event_log_valid", False)
     evt_count = payload.get("event_log_line_count", "?")
-    evt_type = payload.get("last_event_type", "none")
-    evt_time = payload.get("last_event_time", "")
 
     rows = [
-        ("PENDING", str(pending)),
-        ("APPROVED", str(approved)),
-        ("REJECTED", str(rejected)),
-        ("EVENTS", str(evt_count)),
+        ("Status", "OK"),
+        ("Mode", "local operator"),
     ]
-    evt_line = f"Last: {evt_type} at {evt_time}" if evt_time else "Last: none"
-    footer = "No action taken."
-    return format_box("STATUS", rows=rows, body=evt_line, footer=footer)
+    counts = f"Pending: {pending}  Approved: {approved}"
+    evt_status = f"Event log: {'OK' if evt_valid else 'issue'} ({evt_count} lines)"
+    body = "\n".join([counts, evt_status])
+    footer = "Next: /p or /capture <text>"
+    return format_card("LifeOS Status", rows=rows, body=body, footer=footer)
 
 
 def format_pending_queue(items, count=None, mode="capture-first", now=None):
     count = count if count is not None else len(items)
     if count == 0:
-        return format_box("REVIEW QUEUE", body="No pending captures.")
-    rows = [("PENDING", str(count))]
-    listing = []
+        return format_card("Pending Captures", body="No pending captures.")
+    lines = []
     for item in items:
         idx = item.get("index", "?")
-        preview = item.get("preview", "") or item.get("capture_id", "")
-        created_at = item.get("created_at")
-        if created_at:
-            age = format_age(created_at, now=now)
-            listing.append(f"[{idx}] {age}   {preview[:40]}")
-        else:
-            listing.append(f"[{idx}] {preview[:40]}")
-    body = "\n".join(listing)
-    if mode == "review":
-        footer = "/view 1 or /view1\n/a 1 or /a1\n/r 1 or /r1"
-    else:
-        footer = "/view 1 or /view1\n\nApprove/reject are disabled in capture-first mode."
-    return format_box("REVIEW QUEUE", rows=rows, body=body, footer=footer)
+        cap_id = item.get("capture_id", "")
+        preview = item.get("preview", "") or cap_id
+        first_line = preview.split("\n")[0][:60]
+        ctype, _ = classify_capture(preview)
+        lines.append(f"{idx}. {first_line}")
+        lines.append(f"   ID: {cap_id}")
+        lines.append(f"   Type: {ctype}")
+    body = "\n".join(lines)
+    footer = "Next: /view <number>"
+    return format_card(f"Pending Captures: {count}", body=body, footer=footer)
 
 
 def format_needs_index(command):
-    usage = {"view": "/view 1 or /view1", "a": "/a 1 or /a1", "r": "/r 1 or /r1"}
+    usage = {"view": "/view 1", "a": "/a 1", "r": "/r 1"}
     hint = usage.get(command, f"/{command} <index>")
-    footer = f"Use:\n{hint}\n\nNo action was taken."
-    return format_box("REVIEW", rows=[("STATE", "NEEDS INDEX")], footer=footer)
+    return format_card("Review", rows=[("Status", "NEEDS INDEX")],
+                       footer=f"Use: {hint}\n\nNo action was taken.")
 
 
 def format_review_failed(reason):
     reason_label = reason.replace("_", " ")
-    rows = [("STATE", "NO ACTION"), ("REASON", reason_label)]
-    footer = "No capture was rejected. No files were moved."
-    return format_box("REVIEW FAILED", rows=rows, footer=footer)
+    return format_card("Review failed",
+                       rows=[("Reason", reason_label)],
+                       footer="No action was taken.")
 
 
 def format_capture_first_blocked():
-    rows = [("STATE", "NO ACTION"), ("MODE", "capture-first")]
-    body = "Approve/reject commands are disabled right now."
-    footer = "No capture was approved. No capture was rejected. No files were moved.\n\nUse /p or /view1 for read-only review."
-    return format_box("REVIEW DISABLED", rows=rows, body=body, footer=footer)
+    return format_card("Review disabled",
+                       rows=[("Mode", "capture-first")],
+                       body="Approve/reject commands are disabled right now.",
+                       footer="Use /p or /view <n> for read-only review.\nNo action was taken.")
 
 
 def format_review_disabled():
-    body = "Review commands are disabled in capture-first mode."
-    footer = "No files were moved. No action was taken."
-    return format_box("REVIEW", rows=[("STATE", "DISABLED")], body=body, footer=footer)
+    return format_card("Review",
+                       rows=[("Status", "DISABLED")],
+                       body="Review commands are disabled in capture-first mode.",
+                       footer="No action was taken.")
 
 
 def format_unauthorized():
-    return format_box("ACCESS", rows=[("STATE", "DENIED")],
-                      body="You are not authorized to use this bot.",
-                      footer="NO ACTION")
+    return format_card("Access denied",
+                       body="You are not authorized to use this bot.",
+                       footer="NO ACTION")
 
 
 def format_action_api_unavailable():
-    return format_box("ACTION API", rows=[("STATE", "UNAVAILABLE")],
-                      body="LifeOS review unavailable.",
-                      footer="NO ACTION")
+    return format_card("Action API",
+                       rows=[("Status", "UNAVAILABLE")],
+                       body="LifeOS review unavailable.",
+                       footer="NO ACTION")
 
 
 def format_status_api_unavailable():
-    return format_box("STATUS API", rows=[("STATE", "UNAVAILABLE")],
-                      body="LifeOS status unavailable.",
-                      footer="NO ACTION")
+    return format_card("Status API",
+                       rows=[("Status", "UNAVAILABLE")],
+                       body="LifeOS status unavailable.",
+                       footer="NO ACTION")
 
 
 def format_proposal(capture_id, index=None, title=None, capture_type=None,
                     suggested_route=None, next_action=None, created_at=None,
                     now=None):
-    rows = []
-    if index:
-        rows.append(("INDEX", str(index)))
-    rows.append(("ID", capture_id))
-    if created_at:
-        rows.append(("AGE", format_age(created_at, now=now)))
-    rows.append(("TYPE", capture_type or "unknown"))
-    rows.append(("ROUTE", suggested_route or "Inbox (pending review)"))
-    title_line = title or "(untitled)"
-    body_lines = [title_line]
+    rows = [("Capture", str(index) if index else capture_id)]
+    if title:
+        rows.append(("Title", title))
+    rows.append(("Type", capture_type or "unknown"))
+    rows.append(("Route", suggested_route or "Inbox"))
+    footer_parts = []
     if next_action:
-        body_lines.append("")
-        body_lines.append("Proposed next action:")
-        body_lines.append(next_action)
-    body = "\n".join(body_lines)
-    footer = "Approve/reject first. No vault write yet.\nNo AI was used for this proposal."
-    return format_box("PROPOSAL", rows=rows, body=body, footer=footer)
+        footer_parts.append(f"Next action: {next_action}")
+    footer_parts.append("Reminder: approve/reject first; no vault write yet.")
+    return format_card("Proposal V1", rows=rows,
+                       footer="\n".join(footer_parts))
 
 
 def format_proposal_invalid(target):
-    body = f"Could not find capture: {target}"
-    footer = "Use /p to list pending captures."
-    return format_box("PROPOSAL", rows=[("STATE", "INVALID")],
-                      body=body, footer=footer)
+    return format_card("Proposal",
+                       rows=[("Status", "INVALID")],
+                       body=f"Could not find capture: {target}",
+                       footer="Use /p to list pending captures.")
 
 
 def format_proposal_api_unavailable():
-    return format_box("PROPOSAL", rows=[("STATE", "UNAVAILABLE")],
-                      body="LifeOS proposal unavailable.",
-                      footer="NO ACTION")
+    return format_card("Proposal",
+                       rows=[("Status", "UNAVAILABLE")],
+                       body="LifeOS proposal unavailable.",
+                       footer="NO ACTION")
 
 
 def classify_capture(text):
