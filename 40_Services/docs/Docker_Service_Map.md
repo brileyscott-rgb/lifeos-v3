@@ -10,7 +10,7 @@
 | `lifeos-status-api` | unified (`lifeos.yaml`) | Read-only status endpoint | `127.0.0.1:8787` | healthy |
 | `lifeos-action-api` | unified (`lifeos.yaml`) | Capture/review mutation API | `127.0.0.1:8788` | healthy |
 | `n8n_n8n_1` | legacy (`n8n/docker-compose.yml`) | n8n automation server | `127.0.0.1:5678` | running, not verified |
-| `odysseus_chromadb_1` | unknown/manual | ChromaDB vector store | `127.0.0.1:8100` | running, undocumented |
+| `odysseus_chromadb_1` | odysseus (legacy, not LifeOS) | ChromaDB vector store | `127.0.0.1:8100` | running, partially known |
 
 ## Service Inventory
 
@@ -72,16 +72,17 @@
 | Field | Value |
 |-------|-------|
 | **Service name** | `odysseus_chromadb_1` |
-| **Purpose** | Vector database (likely for AI worker or research embedding storage) |
-| **Startup method** | Unknown/manual Docker container — no known compose project |
+| **Purpose** | Vector database (legacy app, not LifeOS-owned) |
+| **Startup method** | Docker Compose V1 (`docker-compose.yml` from `/home/bdoss08/odysseus`, old user) |
 | **Port** | `127.0.0.1:8100` (container port 8000) |
-| **Config path** | Unknown |
-| **Data path** | Unknown — likely Docker-managed volume |
-| **Healthcheck** | Unknown |
-| **Backup need** | Unknown — depends on data contents |
-| **Risk level** | Low-Medium — undocumented, no known mutation path |
+| **Config path** | Unknown — compose project `odysseus` from old user home |
+| **Data path** | Docker volume `odysseus_chromadb-data` |
+| **Image** | `docker.io/chromadb/chroma:latest` |
+| **Healthcheck** | None configured |
+| **Backup need** | Unknown — depends on legacy `odysseus` app |
+| **Risk level** | Low-Medium — not LifeOS-owned, no known mutation path to LifeOS data |
 | **Future MCP exposure** | `no` — vector DB access should go through semantic janitor, not MCP |
-| **Runtime owner** | Unknown — needs provenance audit |
+| **Runtime owner** | Legacy `odysseus` compose — not a LifeOS service |
 
 ### lifeos-telegram-bot
 

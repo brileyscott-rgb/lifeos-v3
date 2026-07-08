@@ -67,6 +67,16 @@ See `docs/superpowers/plans/2026-07-07-docker-runtime-drift-reconciliation-plan.
 - `40_Services/docs/Docker_Service_Map.md` — Complete service inventory with ports, data paths, healthchecks, backup needs, risk levels, and future MCP exposure.
 - `40_Services/docs/Service_Profiles.md` — Profile definitions (core, automation, memory, ai, observability, experiments) with start order, dependencies, and phase restrictions.
 - `40_Services/docs/MCP_Roadmap.md` — MCP server roadmap with read-only-first tools, deny-by-default policy, and V1/V2/V3 tool catalog.
+- `40_Services/docs/Observability_Control_Plane.md` — Observability V2 policy defining local-only monitoring, health matrix, alert policy, and dashboard policy. No services installed yet.
+- `40_Services/docs/Observability_Runbook.md` — Manual read-only health checks, failure triage steps, activation checklist, and rollback model.
+
+## Observability Status
+
+Observability services (Homepage, Uptime Kuma, Dozzle) are **not yet installed or started**. The Observability Control Plane and Runbook are scaffold-only policy docs. Future activation requires:
+- A separate approved activation plan
+- Observability compose scaffold creation
+- Single-service start with verification
+- No Docker socket, no public ingress, no secrets exposure
 
 ## Deferrals
 

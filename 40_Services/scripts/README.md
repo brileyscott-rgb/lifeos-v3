@@ -70,6 +70,48 @@ python3 40_Services/scripts/lifeos_status.py --json
 - `n8n_scaffold_present`, `n8n_container_running`, `n8n_status_error`
 - `ai_worker_scaffold_present`, `telegram_bot_present`
 
+### `lifeos_observability.py`
+
+Read-only observability report script. Aggregates health data from Status API, Action API, Docker, systemd, and filesystem into a single report with warnings.
+
+**Reads:**
+- Status API `/health` and `/status` (HTTP)
+- Action API `/health` (HTTP)
+- `docker ps` (running containers)
+- `systemctl --user status` (Telegram bot)
+- `git status --short` (dirty count)
+- `df -h /home/lifeos` (disk usage)
+
+**Writes: nothing.** Read-only by design. No secrets printed. No mutation. Python stdlib only.
+
+**Usage:**
+```bash
+# Human-readable text (default)
+python3 40_Services/scripts/lifeos_observability.py
+
+# Explicit text mode
+python3 40_Services/scripts/lifeos_observability.py --text
+
+# JSON output
+python3 40_Services/scripts/lifeos_observability.py --json
+```
+
+**Warnings reported:**
+- `status_api_unreachable`, `action_api_unreachable`
+- `telegram_inactive`, `docker_unavailable`
+- `n8n_running_legacy_compose_observed`
+- `chromadb_provenance_unknown_observed`
+- `git_dirty`, `disk_usage_high` (>= 90%)
+- `event_log_invalid`, `pending_capture_count_high` (>= 10)
+
+### Script Comparison
+
+| Script | Scope | API-backed | Best for |
+|--------|-------|-----------|----------|
+| `lifeos_status.py` | Capture counts, event log, disk, git, n8n | No (local filesystem) | n8n workflow consumption |
+| `lifeos_services.py` | Service inventory, Docker, paths, git | No (local CLI) | Service presence/ownership audit |
+| `lifeos_observability.py` | Health checks, warnings, cross-service | Yes (Status + Action API) | Human operator health check |
+
 ## Safety
 
 - Does not read `.env` or secret files.

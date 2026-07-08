@@ -102,26 +102,33 @@
 **Purpose:** Monitoring, alerting, logging, and system health visualization.
 
 **Candidate services:**
-- `gotify` or `ntfy` — Notification/alerting
-- Container health dashboard (future)
-- Disk usage monitor
-- Capture queue alert
-- Event log watcher
-- MCP server
+- `homepage` — Dashboard landing page linking all LifeOS services
+- `uptime-kuma` — Uptime checks and local alerting
+- `dozzle` — Read-only container log viewer
+- `gotify` or `ntfy` — Notification/alerting (optional later)
+- Glances (optional later) — System metrics
+- Prometheus/Grafana/Loki (optional later) — Heavy metrics/logging stack
 
 **When to start:** After core profile is stable. Read-only first.
 
 **Risk level:** Low — read-only monitoring does not mutate state.
 
-**Backup needs:** Low — log rotation and retention policy.
+**Backup needs:** Low — log rotation and retention policy. Uptime Kuma status data should be backed up if alert history is needed.
 
-**Dependencies:** Core profile, Docker socket or healthcheck endpoints.
+**Dependencies:** Core profile. Must reach Status API and Action API health endpoints. Must NOT have Docker socket access.
+
+**Status:** **Not active yet.** Observability Control Plane V2 defines policy and runbook. No services installed or started.
+
+**Activation:** Requires separate approved plan. One service at a time. Verify local binding before next service.
 
 **Not allowed in this phase:**
 - Heavy monitoring stacks (Prometheus, Grafana)
 - Docker socket exposure to containers
 - Alert fatigue triggers
 - Public-facing dashboards
+- Cloudflare tunnel for dashboard access
+- Auto-remediation or auto-restart
+- Direct vault writes from alert handlers
 
 ### experiments
 
