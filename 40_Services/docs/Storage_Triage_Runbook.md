@@ -9,6 +9,21 @@ Define safe cleanup categories and forbidden actions for LifeOS host
 storage emergencies. Created after Observability V2 reported 99% disk
 usage on 2026-07-08.
 
+## Storage Triage V2
+
+V2 is a **read-only approval packet generation phase**. It identifies
+the most significant disk consumers (especially Timeshift system snapshots,
+Downloads, old backups) without performing any deletions, moves, or prunes.
+
+- See `40_Services/docs/Storage_Triage_V2_Approval_Packet.md` for the
+  current approval packet with categorized cleanup recommendations.
+- V2 identified Timeshift (6 snapshots, estimated 100-140GB) as the
+  primary disk consumer beyond what V1 addressed.
+- No deletion, move, prune, or modification happens in V2.
+- Use V2 before deleting backups, Downloads, old user homes, Docker
+  volumes, or old project directories.
+- All actions require explicit user approval.
+
 ## Current Disk Emergency Summary (2026-07-08)
 
 | Metric | Before | After |
