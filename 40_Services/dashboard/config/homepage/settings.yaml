@@ -1,0 +1,41 @@
+---
+# LifeOS Dashboard — Homepage Settings
+title: LifeOS Dashboard
+description: Local observability and service dashboard for LifeOS V3
+theme: dark
+color: slate
+layout:
+  Core:
+    style: row
+    columns: 4
+  Observability:
+    style: row
+    columns: 2
+  AI (Planned):
+    style: row
+    columns: 3
+  Memory (Planned):
+    style: row
+    columns: 3
+  Sandboxes:
+    style: row
+    columns: 2
+  Docs:
+    style: row
+    columns: 4
+headerStyle: clean
+hideVersion: false
+target: _blank
+favicon: ""
+background:
+  image: ""
+  blur: sm
+  opacity: 50
+links: []
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: false
+  showSearchSuggestions: false
+providers:
+  openweathermap: ""
+  longhorn: ""

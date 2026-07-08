@@ -1,0 +1,146 @@
+---
+# LifeOS Dashboard — Homepage Service Links
+# All services are localhost-only. No public exposure.
+
+# --- Core LifeOS Services ---
+- Core:
+    - Status API:
+        icon: si-json
+        href: http://localhost:8787/status
+        description: Read-only system status and capture queue counts
+        widget:
+          type: customapi
+          url: http://localhost:8787/status
+          display: list
+          mappings:
+            - field: { remap: "service" }
+              label: Service
+            - field: { remap: "status" }
+              label: Status
+            - field: { remap: "mode" }
+              label: Mode
+            - field: { remap: "pending_captures" }
+              label: Pending
+
+    - Action API:
+        icon: si-json
+        href: http://localhost:8788/health
+        description: Read-write capture creation and review mutations
+        widget:
+          type: customapi
+          url: http://localhost:8788/health
+          display: list
+          mappings:
+            - field: { remap: "status" }
+              label: Status
+            - field: { remap: "mode" }
+              label: Mode
+
+    - n8n:
+        icon: n8n
+        href: http://localhost:5678
+        description: Automation workflow server (local-only, Basic Auth)
+        server: my-docker
+        container: n8n_n8n_1
+
+    - Telegram Bot:
+        icon: telegram
+        href: http://localhost:8787/status
+        description: Capture-first polling bot (systemd user service)
+        widget:
+          type: customapi
+          url: http://localhost:8787/status
+          display: list
+          mappings:
+            - field: { remap: "service" }
+              label: Service
+            - field: { remap: "event_log_valid" }
+              label: Event Log Valid
+
+# --- Observability ---
+- Observability:
+    - Uptime Kuma:
+        icon: uptime-kuma
+        href: http://localhost:3001
+        description: Service uptime monitoring and alerts
+        server: my-docker
+        container: lifeos-uptime-kuma
+
+    - Dozzle:
+        icon: dozzle
+        href: http://localhost:3002
+        description: Read-only container log viewer
+        server: my-docker
+        container: lifeos-dozzle
+
+# --- AI (Planned — Placeholders) ---
+- AI (Planned):
+    - Ollama:
+        icon: ollama
+        href: ""
+        description: Local LLM inference server (placeholder)
+        widget:
+          type: customapi
+          url: ""
+          display: none
+
+    - Open WebUI:
+        icon: open-webui
+        href: ""
+        description: Local AI chat interface (placeholder)
+
+    - LiteLLM:
+        icon: litellm
+        href: ""
+        description: Multi-model proxy/router (placeholder)
+
+    - MCP Gateway:
+        icon: si-json
+        href: ""
+        description: Controlled MCP server gateway (placeholder)
+
+# --- Memory (Planned — Placeholders) ---
+- Memory (Planned):
+    - Qdrant:
+        icon: qdrant
+        href: ""
+        description: Vector database for semantic search (placeholder)
+
+    - Search API:
+        icon: si-json
+        href: ""
+        description: Semantic search API (placeholder)
+
+    - Indexer:
+        icon: si-json
+        href: ""
+        description: Knowledge indexer (placeholder)
+
+# --- Sandboxes ---
+- Sandboxes:
+    - OpenHands:
+        icon: si-docker
+        href: ""
+        description: Sandboxed agent lab — not LifeOS executor (planned)
+
+# --- Docs ---
+- Docs:
+    - Docker/Service Map:
+        icon: si-markdown
+        href: ""
+        description: Docker and MCP service inventory (local read)
+
+    - Current Working State:
+        icon: si-markdown
+        href: ""
+        description: LifeOS AI universe current state (local read)
+
+    - n8n Roadmap:
+        icon: si-markdown
+        href: ""
+        description: n8n automation roadmap (local read)
+
+    - MCP Security Policy:
+        icon: si-markdown
+        href: ""
+        description: MCP security policies and deny-by-default rules (local read)

@@ -169,6 +169,15 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
 
 - **Storage Cleanup V3 executed (2026-07-08)**: Approved cleanup from V2 packet. Deleted 4 oldest Timeshift snapshots (Jun 15, Jul 2, Jul 3, Jul 5), preserved 2 newest (Jul 6, Jul 7). Vacuumed journald from 2.4GB to 459MB. Removed 4 redundant Download installers (746MB) and old backup zip (935MB). Applications/Obsidian, 4 diagnostic review zips, Docker volumes, running containers, captures, event logs, vault files, secrets, and service configs preserved. Disk improved from 97% (2.0G free before V1) to 91% (17G free after V3). All 4 containers stable (restart=0), Telegram active. 330/330 tests passing. Observability V3 activation remains deferred while disk >= 90%. Full execution record in `40_Services/docs/Storage_Triage_Runbook.md`.
 
+- **Docker + MCP + OpenHands Foundation V1 started (2026-07-08)**: Built safe local infrastructure foundation for dashboards, Docker service visibility, n8n alignment, mcpo/MCP planning, and OpenHands sandboxing. No public exposure, no direct vault writes, no shell MCP, no full vault mounts, no Docker socket MCP.
+  - **Dashboard V1 added** (`40_Services/dashboard/`): Homepage (127.0.0.1:3000), Uptime Kuma (127.0.0.1:3001), Dozzle (127.0.0.1:3002). Localhost-only. Named volumes for persistence. Dozzle mounts Docker socket read-only (documented risk). Homepage configured with service links for Core, Observability, AI (planned), Memory (planned), Sandboxes, and Docs sections.
+  - **mcpo/MCP scaffold added** (`40_Services/mcpo/`, `40_Services/mcp/`): mcpo README with safe first-test plan (read-only MCP against sandbox folder). MCP README with purpose, read-only-first policy, and custom-vs-generic MCP guidance. MCP Candidate Catalog with 15 entries rated allow/sandbox/defer/reject. MCP Security Policy with deny-by-default, tool allowlist, audit requirements, prompt-injection guidance, and sandbox→staging→production rule. MCP sandbox folder scaffolded. Docker MCP Service Map updated.
+  - **OpenHands sandbox policy added** (`40_Services/openhands/`, `60_Sandboxes/OpenHands/`): Policy defines OpenHands as sandboxed agent lab (not main LifeOS executor). Allowed mounts: only `60_Sandboxes/OpenHands/workspaces/`. Prohibited: vault, home, SSH, config, secrets, Docker socket write. Output must be exported as patches/reports/artifacts, reviewed, then applied with OpenCode. Example docker-compose and Sandbox Policy document created.
+  - **n8n roadmap documented** (`40_Services/docs/N8N_Automation_Roadmap.md`): 4-phase roadmap (Foundation, Read-Only, Gated Mutations, MCP Integration). Activation checklist. Explicitly deferred/rejected items with reasons.
+  - **Service script updated** (`40_Services/scripts/lifeos_services.py`): Now reports dashboard compose, mcpo scaffold, mcp catalog, openhands scaffold, n8n roadmap presence. Dashboard container status included. Python stdlib only, read-only, no secrets.
+  - **Current Working State updated** (this entry).
+  - **Current next phase:** Verification (Phase J), then add Uptime Kuma monitors or mcpo sandbox test.
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)

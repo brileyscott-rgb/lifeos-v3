@@ -1,0 +1,52 @@
+# LifeOS mcpo — Example Docker Compose
+# Scaffold-only. Do not start without explicit approval and sandbox verification.
+# Copy to docker-compose.yml before use.
+#
+# docker-compose -f docker-compose.yml up -d
+# docker-compose -f docker-compose.yml down -v
+
+version: "3.8"
+
+services:
+  # Sandbox-only read-only filesystem MCP server
+  # Mounts only the sandbox test-data folder — no vault, no home, no secrets.
+  mcp-filesystem-sandbox:
+    image: node:20-alpine
+    container_name: lifeos-mcp-fs-sandbox
+    restart: "no"
+    command: |
+      sh -c "npx -y @modelcontextprotocol/server-filesystem /sandbox/test-data"
+    ports:
+      - "127.0.0.1:${MCP_FS_PORT:-9100}:${MCP_FS_PORT:-9100}"
+    volumes:
+      - ../mcp/sandbox/test-data:/sandbox/test-data:ro
+    environment:
+      - MCP_PORT=${MCP_FS_PORT:-9100}
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "1"
+
+  mcpo:
+    image: ghcr.io/open-webui/mcpo:latest
+    container_name: lifeos-mcpo
+    restart: "no"
+    ports:
+      - "127.0.0.1:${MCPO_PORT:-9000}:${MCPO_PORT:-9000}"
+    environment:
+      - MCPO_PORT=${MCPO_PORT:-9000}
+      - MCPO_MCP_SERVERS=mcp-filesystem-sandbox
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "1"
+
+# No named volumes — sandbox test data is host-mounted read-only.
+# No Docker socket, no secrets, no vault, no SSH.

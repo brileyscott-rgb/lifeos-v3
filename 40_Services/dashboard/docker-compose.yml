@@ -1,0 +1,82 @@
+# LifeOS Dashboard Stack V1
+# Docker Compose V1 compatible (docker-compose up -d)
+#
+# Security boundaries:
+# - All ports bound to 127.0.0.1 only (no public exposure)
+# - No Docker socket mounted to Homepage
+# - Dozzle has Docker socket (read-only) for log access — documented risk
+# - No vault mounts, no secret volumes, no SSH mounts, no host home mounts
+# - Named volumes for persistent app data
+#
+# Do not expose this stack via Cloudflare tunnel, Tailscale funnel, or any
+# public ingress without explicit security review and approval.
+
+x-lifeos-boundary:
+  status: active-dashboard-v1
+  notes: >
+    Local-only dashboard stack for LifeOS V3.
+    Homepage provides the landing page linking all services.
+    Uptime Kuma monitors service health with HTTP checks.
+    Dozzle provides read-only container log visibility.
+    No auto-remediation, no public exposure, no vault access.
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: lifeos-homepage
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./config/homepage:/app/config
+      - homepage_icons:/app/public/icons
+      - homepage_data:/app/config/custom.js
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: localhost,127.0.0.1
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: lifeos-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: lifeos-dozzle
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_BASE: "/"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  homepage_icons:
+  homepage_data:
+  uptime_kuma_data:

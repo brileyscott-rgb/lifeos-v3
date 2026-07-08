@@ -11,9 +11,14 @@ Reports:
   - git dirty count
   - docker available yes/no
   - running containers
+  - dashboard containers (homepage, uptime-kuma, dozzle)
   - Telegram service status
   - known service paths exist/missing
   - n8n compose exists/missing
+  - dashboard compose exists/missing
+  - mcpo scaffold exists/missing
+  - mcp catalog exists/missing
+  - openhands scaffold exists/missing
   - Status API path exists/missing
   - Action API path exists/missing
   - suggested next action
@@ -36,6 +41,12 @@ KNOWN_SERVICE_PATHS = {
     "n8n_compose_legacy": LIFEOS_ROOT / "40_Services" / "n8n" / "docker-compose.yml",
     "n8n_compose_unified": LIFEOS_ROOT / "40_Services" / "compose" / "lifeos.yaml",
     "ai_worker_source": LIFEOS_ROOT / "40_Services" / "ai_worker" / "ai_worker.py",
+    "dashboard_compose": LIFEOS_ROOT / "40_Services" / "dashboard" / "docker-compose.yml",
+    "mcpo_scaffold": LIFEOS_ROOT / "40_Services" / "mcpo" / "README.md",
+    "mcp_catalog": LIFEOS_ROOT / "40_Services" / "mcp" / "catalog" / "MCP_Candidate_Catalog.md",
+    "mcp_security_policy": LIFEOS_ROOT / "40_Services" / "docs" / "MCP_Security_Policy.md",
+    "openhands_scaffold": LIFEOS_ROOT / "40_Services" / "openhands" / "README.md",
+    "n8n_roadmap": LIFEOS_ROOT / "40_Services" / "docs" / "N8N_Automation_Roadmap.md",
     "telegram_config": LIFEOS_ROOT / "40_Services" / "config" / "telegram",
     "secrets_dir": LIFEOS_ROOT / "40_Services" / "secrets",
     "event_log": LIFEOS_ROOT / "50_Event_Log" / "events.jsonl",
@@ -235,6 +246,19 @@ def print_text(state):
     if docker["running_containers"]:
         for c in docker["running_containers"]:
             print(f"    - {c['name']}: {c['status']} ({c['ports']})")
+    print()
+
+    print("Dashboard Stack:")
+    dashboard_containers = [
+        c for c in docker.get("running_containers", [])
+        if any(n in c.get("name", "") for n in ("homepage", "uptime-kuma", "dozzle"))
+    ]
+    if dashboard_containers:
+        for c in dashboard_containers:
+            print(f"  {c['name']}: {c['status']} ({c['ports']})")
+        print(f"  Dashboard: {len(dashboard_containers)}/3 services running")
+    else:
+        print("  Dashboard: not running (use dashboard/docker-compose.yml)")
     print()
 
     print("Telegram Bot:")

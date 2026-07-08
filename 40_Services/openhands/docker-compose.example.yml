@@ -1,0 +1,53 @@
+# LifeOS OpenHands — Example Docker Compose
+# Scaffold-only. Do not start without explicit approval and sandbox verification.
+# Copy to docker-compose.yml before use.
+#
+# docker-compose -f docker-compose.yml up -d
+# docker-compose -f docker-compose.yml down -v
+
+version: "3.8"
+
+services:
+  openhands:
+    image: docker.all-hands.dev/all-hands-ai/openhands:latest
+    container_name: lifeos-openhands
+    restart: "no"
+    environment:
+      WORKSPACE_MOUNT_PATH: /opt/workspace_base
+      LLM_API_KEY: ${OPENHANDS_LLM_API_KEY:-}
+      LLM_MODEL: ${OPENHANDS_LLM_MODEL:-anthropic/claude-sonnet-4-20250514}
+      SANDBOX_CONTAINER_IMAGE: docker.all-hands.dev/all-hands-ai/runtime:latest
+      SANDBOX_USER_ID: "1001"
+    ports:
+      - "127.0.0.1:3003:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../60_Sandboxes/OpenHands/workspaces:/opt/workspace_base
+      - openhands_state:/.openhands-state
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+
+volumes:
+  openhands_state:
+
+# WARNING: This compose mounts Docker socket as read-only.
+# OpenHands uses it to create sandbox containers for code execution.
+# This is the minimum requirement for OpenHands to function and is a
+# controlled risk: the sandbox containers are isolated from LifeOS data.
+# Do not change :ro to :rw.
+#
+# Mount policy:
+# - /opt/workspace_base → 60_Sandboxes/OpenHands/workspaces (only)
+# - Docker socket read-only (required for sandbox functionality)
+# - No vault mount
+# - No home mount
+# - No SSH mount
+# - No config mount
+# - No secret files

@@ -1,0 +1,45 @@
+---
+# LifeOS Dashboard — Bookmarks
+# Quick reference links for LifeOS operators
+
+- Developer:
+    - Status API Docs:
+        - abbr: SA
+          href: http://localhost:8787/
+
+    - Action API Docs:
+        - abbr: AA
+          href: http://localhost:8788/
+
+    - n8n Workflows:
+        - abbr: N8
+          href: http://localhost:5678/
+
+    - LifeOS Vault:
+        - abbr: LV
+          href: ""
+          description: Obsidian vault (local AppImage)
+
+- Monitoring:
+    - Uptime Kuma:
+        - abbr: UK
+          href: http://localhost:3001/
+
+    - Dozzle Logs:
+        - abbr: DZ
+          href: http://localhost:3002/
+
+    - Docker ps:
+        - abbr: DP
+          href: ""
+
+- Docs:
+    - Service Inventory:
+        - abbr: SI
+          href: ""
+          description: lifeos_services.py --text
+
+    - Observability Report:
+        - abbr: OR
+          href: ""
+          description: lifeos_observability.py --text

@@ -1,0 +1,19 @@
+---
+# LifeOS Dashboard — Widget Configuration
+# Custom API widgets for LifeOS service health monitoring
+
+# Status API health widget already configured inline in services.yaml
+# Additional widgets can be added here as Uptime Kuma and other
+# observability services come online.
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+
+- datetime:
+    text_size: xl
+    format:
+      timeStyle: short
+      dateStyle: medium
+      hour12: false

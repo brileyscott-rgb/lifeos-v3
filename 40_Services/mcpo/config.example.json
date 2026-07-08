@@ -1,0 +1,30 @@
+{
+  "_comment": "LifeOS mcpo configuration example. Copy to config.json before use.",
+  "mcpo": {
+    "port": 9000,
+    "bind_address": "127.0.0.1",
+    "mcp_servers": [
+      {
+        "name": "filesystem-sandbox",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "/home/lifeos/40_Services/mcp/sandbox/test-data"
+        ],
+        "read_only": true,
+        "allowed_paths": [
+          "/home/lifeos/40_Services/mcp/sandbox/test-data"
+        ]
+      }
+    ],
+    "tool_allowlist": [
+      "read_file",
+      "list_directory",
+      "search_files"
+    ],
+    "deny_by_default": true,
+    "log_level": "info",
+    "audit_log": "/tmp/mcpo-audit.jsonl"
+  }
+}
