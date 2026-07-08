@@ -306,7 +306,12 @@ Next:
 9. **mcpo sandbox test** — Run the safe first-test plan from `40_Services/mcpo/README.md` to validate MCP integration against an isolated test-data folder only.
 10. **n8n internal workflow design** — Build n8n workflows for internal automation.
 11. **Webhook/tunnel** — Activate Telegram webhook + Cloudflare tunnel later.
-12. **Capture API implementation** — **Deferred.** Do not create Capture API yet per current roadmap.
+12. ~~**Capture API V1 implemented (2026-07-08)**~~ — Queue-only Capture API created at `127.0.0.1:8789`. Accepts POST /captures with JSON payloads, validates, generates capture IDs, appends to append-only JSONL queue with `fcntl.flock` atomic writes. Bearer token auth configured via env vars. Buffer vault (`LifeOS_Capture_Buffer/`) and media archive (`LifeOS_Media_Archive/`) directory structures initialized with safety READMEs. Queue-to-Markdown processor reads JSONL queue and writes review-draft Markdown files to buffer vault only (no AI, no scraping, no canonical vault writes). Client setup docs created (curl, iOS Shortcuts, bookmarklet, n8n). No HMAC auth (deferred to V2 when external clients exist). No Docker compose service (script-only V1). No processor activation, no AI, no URL scraping. All paths gitignored. 382 tests passing across all suites.
+Next:
+- Manual Uptime Kuma monitor creation/update in web UI
+- Manual Capture API smoke test from host (curl POST)
+- mcpo sandbox test
+- n8n internal workflow design (deferred)
 
 ## Known Stabilization Backlog
 

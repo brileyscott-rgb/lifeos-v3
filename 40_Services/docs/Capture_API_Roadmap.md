@@ -1,7 +1,8 @@
 # Capture API Roadmap
 
-Status: architecture/scaffold
+Status: **V1 implemented (2026-07-08)** — Queue-only API scaffold complete. See `40_Services/capture_api/app.py`.
 Created: 2026-07-08
+Updated: 2026-07-08 (V1 implementation complete)
 Purpose: define the Tailscale-only Capture API that serves as the single entry point for all capture sources — Telegram, HTTP Shortcuts, bookmarklets, desktop scripts, n8n workflows, and future MCP tools.
 
 ## Overview
