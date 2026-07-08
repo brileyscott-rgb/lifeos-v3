@@ -112,8 +112,10 @@ New services must follow the same security boundaries:
 
 This dashboard stack is designed to integrate with future LifeOS services:
 
-- **Uptime Kuma monitors:** Defined in `40_Services/docs/Uptime_Kuma_Monitor_Plan.md`. Configure Core (Status API, Action API, n8n, Homepage, Uptime Kuma self, Dozzle) and Infrastructure (Status Full, ChromaDB) monitors manually through the Uptime Kuma web UI at `http://127.0.0.1:3001`. Monitor configuration status is not yet verified — assume monitors have not been created until confirmed.
-- **MCP/mcpo:** Uptime Kuma will monitor MCP server health. Homepage will link to MCP tools once active.
-- **OpenHands:** Homepage will link to OpenHands sandbox once active. Container visible in Dozzle.
-- **n8n:** Uptime Kuma monitor for n8n is planned per `Uptime_Kuma_Monitor_Plan.md`. n8n workflows may push alerts to Uptime Kuma push monitor once configured.
+- **Uptime Kuma monitors:** Defined in `40_Services/docs/Uptime_Kuma_Monitor_Plan.md`. Configure monitors manually through the Uptime Kuma web UI at `http://127.0.0.1:3001`. ~~Monitor configuration status is not yet verified — assume monitors have not been created until confirmed.~~ Uptime Kuma is now attached to `lifeos_internal` network for Docker DNS-based service monitoring.
+- **MCP/mcpo:** Uptime Kuma will monitor MCP server health. Homepage will link to MCP tools once active. See [MCP README](../mcp/README.md) and [mcpo README](../mcpo/README.md).
+- **OpenHands:** Homepage will link to OpenHands sandbox once active. Container visible in Dozzle. See [OpenHands README](../openhands/README.md).
+- **n8n:** Uptime Kuma monitor for n8n is planned per `Uptime_Kuma_Monitor_Plan.md`.
+- **Capture API:** Deployed at `127.0.0.1:8789` (Tailscale: `lenovog3-mint.tail7687a5.ts.net:8789`). See [Capture API README](../capture_api/README.md) and [Capture API Roadmap](../docs/Capture_API_Roadmap.md).
+- **Operator Utilities:** See [Tool Registry](../docs/LifeOS_Tool_Registry.md) and [Permission Tiers](../docs/LifeOS_Tool_Permission_Tiers.md) for tool inventory and access rules. See also [MCP Security Policy](../docs/MCP_Security_Policy.md).
 - **Qdrant / Ollama / Open WebUI:** Planned sections in Homepage ready for activation. Uptime Kuma monitors planned.
