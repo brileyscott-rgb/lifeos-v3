@@ -178,6 +178,18 @@ Foundation Lock-In for LifeOS V3 under `/home/lifeos`.
   - **Current Working State updated** (this entry).
   - **Current next phase:** Verification (Phase J), then add Uptime Kuma monitors or mcpo sandbox test.
 
+- **Agentic Capture Pipeline V1 architecture/scaffold completed (2026-07-08)**: Designed end-to-end safe architecture for turning captures from Telegram, HTTP Shortcuts, bookmarklets, web pages, videos, files, and future MCP/n8n inputs into LifeOS-ready draft notes. Architecture documents, policies, specialized agent definitions, review packet format, processor roadmap, and capture API roadmap created. No code implemented.
+  - **Architecture doc:** `40_Services/docs/Agentic_Capture_Pipeline.md` — 8-stage pipeline (intake → queue → processors → buffer vault → specialized agents → review packet → human approval → canonical import). No step writes directly to canonical vault.
+  - **Buffer vault policy:** `40_Services/docs/Headless_Capture_Buffer_Vault_Policy.md` — external buffer at `/home/lifeos/LifeOS_Capture_Buffer/` with 8 directories (00-07). Append-only raw captures, agent workspace, review packets, approved/rejected/failed separation, logs. No canonical vault writes from processors. No direct AI vault writes. Sync conflict prevention. Cleanup/archive and backup policies defined.
+  - **Media archive policy:** `40_Services/docs/Media_Archive_Policy.md` — external media store at `/home/lifeos/LifeOS_Media_Archive/` organized by type/year/month. Large videos not synced into vault. Markdown links to local media. Whisper transcripts marked `machine_generated_unverified`. Copyright awareness. Storage growth monitoring with 5GB/10GB thresholds.
+  - **Specialized agents:** 10 agents defined under `40_Services/agents/capture/` — Intake, Source Extraction, Knowledge Note, Project Note, Idea, Reference, Media Transcript, Metadata Taxonomy, QA Verifier, Import Planner. Each with purpose, inputs, outputs, safety boundaries, templates, review checklists, failure modes, escalation rules, and example output. All agents operate on buffer vault only; none have canonical vault access.
+  - **Review packet format:** `40_Services/docs/Capture_Review_Packet_Format.md` — standard format with capture summary, proposed changes, agent outputs, source trail, risks, QA result, approval checklist, import command, rollback procedure. Five examples: Knowledge, Project, Idea, Reference, Media/Transcript.
+  - **Processor roadmap:** `40_Services/docs/Capture_Processor_Roadmap.md` — 12 Dockerized processors cataloged with purpose, I/O, dependencies, risk level, storage impact, V1/V2/V3 recommendations, and tests needed. V1 priority: metadata, article, pdf, markdown_formatter, duplicate_detector, review_packet_builder.
+  - **Capture API roadmap:** `40_Services/docs/Capture_API_Roadmap.md` — Tailscale-only HTTP API (port 8789) with HMAC auth for external clients, bearer token for internal services, scoped MCP tokens for future. Request/response schemas, rate limiting, queue write behavior, idempotency, curl/iOS/bookmarklet/n8n examples, health endpoints.
+  - **Scaffold placeholders:** `40_Services/capture_api/README.md`, `40_Services/capture_processors/README.md` — architecture/scaffold status markers.
+  - **Safety preserved:** No canonical vault writes implemented. No public exposure. No full vault mounts into processors/MCP/AI containers. No Docker socket or shell MCP exposure. No secrets printed. No existing tests broken. No running services modified.
+  - **Next recommended phase:** Implement Capture API V1 scaffold (Tailscale-only listener, HMAC auth, queue append, health endpoints, /captures POST) with offline tests.
+
 ## Current Decisions
 
 - ChatOps: Telegram (local bot handler created)
