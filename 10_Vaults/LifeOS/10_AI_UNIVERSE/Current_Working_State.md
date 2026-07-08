@@ -166,7 +166,28 @@ Completed:
 - n8n direct filesystem mounts removed; n8n now routes status queries through the API on `lifeos_internal` network.
 - n8n planned workflow `lifeos_status_digest.md` updated with HTTP Request step.
 - Activation checklist updated with HTTP Request workflow instructions.
-- **First manual n8n status workflow test passed**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only (`status: ok`, `mode: read_only`, `event_log_valid: true`, all `limitations` fields present). Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model node, or file-write nodes added.
+- **First manual n8n status workflow test passed (2026-07-06)**: Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status`. Returned JSON valid and read-only:
+  ```
+  service:             lifeos-status-api
+  status:              ok
+  mode:                read_only
+  pending_captures:    1
+  approved_unprocessed_captures: 1
+  rejected_captures:   0
+  processed_captures:  0
+  event_log_valid:     true
+  event_log_line_count: 26
+  last_event_id:       evt_20260706T180606Z_chatops_telegram_approval_received
+  last_event_type:     chatops.telegram.approval_received
+  last_event_time:     2026-07-06T18:06:06Z
+  paths.capture_readable:    true
+  paths.event_log_readable:  true
+  limitations.git_status:    unavailable_without_repo_mount
+  limitations.docker_status: unavailable_without_docker_socket
+  limitations.disk_status:   unavailable_in_status_api_v1
+  ```
+  Workflow saved as inactive. No schedule, Telegram, webhook, Execute Command, AI/model, or file-write nodes added.
+  Next step: decide whether to keep manual-only, add a schedule later, or add Telegram notification later only after explicit approval. Workflow must remain inactive until then.
 - **LifeOS Action API created at `40_Services/action_api/`**: Read-write sibling to Status API. Python stdlib HTTP server on port 8788, joins `lifeos_internal` network. Endpoints for capture create, pending list, approve, reject. Event log append for all operations. Mounts `30_Capture/` and `50_Event_Log/` as read-write. Hardened container: `cap_drop: ALL`, `no-new-privileges`, non-root user. Hardened Action API test suite passes per d5a0042; latest reported count 91/91. Added to n8n compose stack. No shell execution, no Docker socket, no vault access, no secrets.
 
 - **Telegram Operator capture vision locked in design doc**: Telegram Operator will become LifeOS mobile capture intake. `/capture` supports immediate text/link capture and future capture mode (multi-message, timeout, /cancel). Initially supported payloads: text, links, thoughts, ideas, notes. Planned later: photos, voice memos, documents/files. Review flow remains `/pending`, `/view`, `/approve`, `/reject`. Future AI extraction will produce approval-gated proposals, not direct writes. File creation will go through a controlled processor — never from n8n or AI directly. All captures land in `pending_review` first. Separation of capture, extraction, and file creation is enforced architecturally.

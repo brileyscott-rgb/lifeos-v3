@@ -46,6 +46,32 @@ Only after explicit user approval:
 - The Status API does not need environment variables or secrets.
 - The API runs in a separate container on the shared `lifeos_internal` Docker network.
 
+## Manual UI Test Output (2026-07-06)
+
+The following JSON was returned by the Status API during the first manual n8n workflow test:
+
+```
+service:             lifeos-status-api
+status:              ok
+mode:                read_only
+pending_captures:    1
+approved_unprocessed_captures: 1
+rejected_captures:   0
+processed_captures:  0
+event_log_valid:     true
+event_log_line_count: 26
+last_event_id:       evt_20260706T180606Z_chatops_telegram_approval_received
+last_event_type:     chatops.telegram.approval_received
+last_event_time:     2026-07-06T18:06:06Z
+paths.capture_readable:    true
+paths.event_log_readable:  true
+limitations.git_status:    unavailable_without_repo_mount
+limitations.docker_status: unavailable_without_docker_socket
+limitations.disk_status:   unavailable_in_status_api_v1
+```
+
+All limitations fields present and correct. The Status API is read-only and functioning.
+
 ## Verification
 
 - [x] Manual Trigger → HTTP Request → GET `http://lifeos-status-api:8787/status` returns 200
@@ -53,3 +79,7 @@ Only after explicit user approval:
 - [x] Workflow saved as inactive (no activation toggle)
 - [ ] Future schedule trigger (requires explicit user approval)
 - [ ] Future Telegram notification (requires explicit user approval)
+
+## Closeout Decision
+
+Workflow remains inactive. Next step: decide whether to keep manual-only, add a schedule later, or add Telegram notification later only after explicit approval.
