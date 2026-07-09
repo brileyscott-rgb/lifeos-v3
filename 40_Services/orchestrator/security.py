@@ -146,7 +146,7 @@ def sanitize_filename(title: str) -> str:
         >>> sanitize_filename("")
         'untitled'
     """
-    safe = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', title)
+    safe = re.sub(r'[<>:"/\\|?*#\x00-\x1f]', '', title)
     safe = safe.strip('. ')
     safe = re.sub(r'\s+', ' ', safe).strip()
     if not safe:

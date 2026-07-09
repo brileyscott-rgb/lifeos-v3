@@ -58,12 +58,12 @@ REQUIRED_SECTIONS = [
 
 
 def _check_status(proposal: dict) -> dict:
-    """Verify the proposal status is 'pending' or 'approved'."""
-    status = proposal.get("status", "")
-    if status not in ("pending", "approved"):
+    """Verify the proposal status is 'pending', 'approved', or 'approved_for_import'."""
+    status = proposal.get("status", "") or proposal.get("frontmatter", {}).get("status", "")
+    if status not in ("pending", "approved", "approved_for_import"):
         return {
             "passed": False,
-            "detail": f"Status must be 'pending' or 'approved', got '{status}'",
+            "detail": f"Status must be 'pending', 'approved', or 'approved_for_import', got '{status}'",
         }
     return {"passed": True, "detail": f"Status is valid: {status}"}
 

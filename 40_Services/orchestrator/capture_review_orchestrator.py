@@ -302,34 +302,13 @@ def build_proposal_packet(
     capture_id = capture_data.get("capture_id", "unknown")
     proposal_id = generate_proposal_id(capture_id)
     now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    content_hash = compute_content_hash(capture_text)
-
     capture_metadata = mcp_context.get("capture_metadata", {})
     source = capture_metadata.get("source", "unknown")
     working_state = mcp_context.get("working_state_summary")
 
-    # Build frontmatter
-    frontmatter = {
-        "type": "capture_to_vault_proposal",
-        "schema_version": "1",
-        "proposal_id": proposal_id,
-        "proposal_version": "1",
-        "approval_required": "true",
-        "import_status": "not_imported",
-        "proposed_note_type": "knowledge",
-        "status": "pending",
-        "capture_id": capture_id,
-        "classification": classification.get("classification", "unknown"),
-        "classification_confidence": classification.get("confidence", "unknown"),
-        "classification_reasons": classification.get("reasons", []),
-        "content_hash": content_hash,
-        "proposed_vault_path": import_path,
-        "source": source,
-        "created_at": now_ts,
-        "importable": classification.get("classification") == "knowledge",
-    }
-
-    # Build body sections
+    # Build body sections first — the content_hash must be computed
+    # from the body portion (after YAML frontmatter), matching what
+    # the approved_proposal_importer will verify.
     yaml_block = _yaml_dump(curated.get("yaml_frontmatter", {}))
     body_sections = curated.get("body_sections", {})
 
@@ -443,6 +422,32 @@ The buffer copy of this proposal remains in `{PROPOSAL_DIR}/{proposal_id}.md`.
 ## Safety Notice
 {safety_notice}
 """
+
+    # Hash matches what the importer will verify:
+    # The importer extracts everything after the closing --- in the saved file,
+    # which includes the \n separator between frontmatter and body.
+    content_hash = compute_content_hash("\n" + body)
+
+    # Build frontmatter
+    frontmatter = {
+        "type": "capture_to_vault_proposal",
+        "schema_version": "1",
+        "proposal_id": proposal_id,
+        "proposal_version": "1",
+        "approval_required": "true",
+        "import_status": "not_imported",
+        "proposed_note_type": "knowledge",
+        "status": "pending",
+        "capture_id": capture_id,
+        "classification": classification.get("classification", "unknown"),
+        "classification_confidence": classification.get("confidence", "unknown"),
+        "classification_reasons": classification.get("reasons", []),
+        "content_hash": content_hash,
+        "proposed_vault_path": import_path,
+        "source": source,
+        "created_at": now_ts,
+        "importable": classification.get("classification") == "knowledge",
+    }
 
     return {
         "proposal_id": proposal_id,
@@ -712,6 +717,7 @@ def propose_knowledge(capture_ref: str, dry_run: bool = False,
         "classification": classification["classification"],
         "confidence": classification["confidence"],
         "proposed_vault_path": import_path,
+        "proposed_title": curated.get("title", ""),
     }
 
 
@@ -811,6 +817,10 @@ def _cmd_approve_import(args):
         _output_result(result, args.output)
         return
 
+    # load_proposal returns flat dict with no top-level status;
+    # lift it from frontmatter so verify_proposal can find it
+    proposal["status"] = proposal["frontmatter"].get("status", "")
+
     # Validate the proposal before approving
     from agents.qa_verifier import verify_proposal
     qa_result = verify_proposal(proposal)
@@ -853,6 +863,7 @@ def _cmd_approve_import(args):
         "qa_verdict": qa_result["verdict"],
         "qa_warnings": qa_result.get("warnings", []),
         "import_target": target_path,
+        "proposed_vault_path": target_path,
         "action_required": (
             f"To complete the import, create the file at: {target_path}"
             if target_path
