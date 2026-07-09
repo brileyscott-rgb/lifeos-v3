@@ -347,7 +347,7 @@ Next:
 18. ~~**Operator utility bundle added (2026-07-08)**~~ — Goal Prompt Generator (`lifeos_goal_prompt.py`) creates OpenCode-ready task prompts with safety boundaries, staging rules, and risk tiers. Capture Queue Summary CLI (`lifeos_capture_summary.py`) reports queue metadata only (sources, types, counts) without exposing capture content. Review Packet Builder V0 (`review_packet_builder.py`) wraps processed Markdown drafts into human-review packets in buffer vault only. Tool Registry (`LifeOS_Tool_Registry.md`) and Permission Tiers (`LifeOS_Tool_Permission_Tiers.md`) document all tools with A0-A5 tier assignments. Dashboard README updated with cross-links to Capture API, Tool Registry, and MCP docs. All new scripts are Python stdlib, read-only/buffer-only, pass TDD tests. 411 tests passing across all suites.
 
 - **Capture-to-Vault Orchestrator V0 implemented (2026-07-08)**: Full gated progression: capture → view → classify → specialist delegation → MCP-refined proposal → user confirmation/revision → controlled vault import.
-  - **Custom MCP Server V0** (`40_Services/mcp/lifeos_mcp_server.py`): stdio JSON-RPC, 5 read-only tools (status, capture_summary, capture_metadata, template_catalog, current_working_state_summary). Python stdlib only. 38 tests.
+  - **Custom MCP Server V0** (`40_Services/mcp/lifeos_mcp_server.py`): stdio JSON-RPC, 5 read-only tools (status, capture_summary, capture_metadata, template_catalog, current_working_state_summary). Python stdlib only. 27 tests.
   - **MCP Client Helper** (`40_Services/mcp/lifeos_mcp_client.py`): Context-managed stdio subprocess with typed helpers, timeout, process cleanup. 11 tests.
   - **Orchestrator** (`40_Services/orchestrator/`): CLI with propose-knowledge, view/reject/revise/approve-import. Resolves captures. 98 tests.
   - **Agent Modules** (`40_Services/orchestrator/agents/`): Deterministic Python (NOT AI/LLM). Classifier (8 types, knowledge-only gate), Knowledge Curator, Import Planner, QA Verifier.
@@ -355,7 +355,7 @@ Next:
   - **Controlled Importer** (`40_Services/capture_processors/approved_proposal_importer.py`): Sole vault writer. Validates type/schema/status/hash/path/staleness. Create-only. Atomic writes. 20 tests.
   - **Telegram /kt**: New commands: `/kt`, `/proposal_view`, `/proposal_approve`, `/proposal_import_confirm`, `/proposal_revise`, `/proposal_reject`. Two-step import confirmation. 221 Telegram tests.
   - **Safety**: MCP read-only. Agents are deterministic modules. Proposals buffer-only. Two-step approval required. Controlled importer sole vault writer. n8n workflows inactive (container running, tolerated drift). mcpo/OpenHands scaffold-only. No filesystem/shell/Docker MCP. No public exposure.
-  - **Tests**: 615 total (49 MCP + 98 orchestrator + 48 capture_processors + 221 Telegram + 103 Action API + 18 Status API + 45 scripts + 33 Capture API). Python stdlib only. Zero pip/npm deps.
+  - **Tests**: 604 total (38 MCP + 98 orchestrator + 48 capture_processors + 221 Telegram + 103 Action API + 18 Status API + 45 scripts + 33 Capture API). Python stdlib only. Zero pip/npm deps.
   - **Post-review fixes** (2026-07-08): Fixed `03_KNOWLEDGE` → `04_KNOWLEDGE` path. Fixed proposal format mismatch. Fixed `/proposal_view` JSON nesting.
   - **Integration stabilization** (2026-07-09): Fixed 3 integration blockers found during post-implementation review:
     1. Content hash mismatch (orchestrator hashed raw capture text, importer hashed proposal body — now both hash the same body section)
