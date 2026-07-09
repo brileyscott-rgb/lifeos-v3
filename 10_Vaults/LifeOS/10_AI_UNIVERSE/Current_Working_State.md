@@ -355,15 +355,18 @@ Next:
   - **Controlled Importer** (`40_Services/capture_processors/approved_proposal_importer.py`): Sole vault writer. Validates type/schema/status/hash/path/staleness. Create-only. Atomic writes. 20 tests.
   - **Telegram /kt**: New commands: `/kt`, `/proposal_view`, `/proposal_approve`, `/proposal_import_confirm`, `/proposal_revise`, `/proposal_reject`. Two-step import confirmation. 221 Telegram tests.
   - **Safety**: MCP read-only. Agents are deterministic modules. Proposals buffer-only. Two-step approval required. Controlled importer sole vault writer. n8n workflows inactive (container running, tolerated drift). mcpo/OpenHands scaffold-only. No filesystem/shell/Docker MCP. No public exposure.
-  - **Tests**: 604 total (38 MCP + 98 orchestrator + 48 capture_processors + 221 Telegram + 103 Action API + 18 Status API + 45 scripts + 33 Capture API). Python stdlib only. Zero pip/npm deps.
+  - **Tests**: 627 total (38 MCP + 104 orchestrator + 48 capture_processors + 227 Telegram + 103 Action API + 18 Status API + 45 scripts + 33 Capture API). Python stdlib only. Zero pip/npm deps.
   - **Post-review fixes** (2026-07-08): Fixed `03_KNOWLEDGE` → `04_KNOWLEDGE` path. Fixed proposal format mismatch. Fixed `/proposal_view` JSON nesting.
   - **Integration stabilization** (2026-07-09): Fixed 3 integration blockers found during post-implementation review:
     1. Content hash mismatch (orchestrator hashed raw capture text, importer hashed proposal body — now both hash the same body section)
     2. QA verifier status check always failing (load_proposal shape mismatch — now reads from frontmatter dict)
     3. Field name mismatch (orchestrator returned `import_target`, Telegram read `proposed_vault_path` — both keys now present)
     Also fixed: missing `__init__.py` in mcp/tests and capture_processors/tests. `#` added to filename sanitization. `approved_for_import` added to accepted QA status values.
-  - **Live validation status**: Telegram service restarted with fix code (22:37 CDT). Orchestrator dry-run validated successfully against latest capture (generated valid proposal with content hash, correct path). `/kt live` NOT yet exercised by user. No vault import performed. Vault unchanged. Buffer proposals directory empty.
-  - **Next user action**: Send `/kt latest` from authorized Telegram user (@my_lifeOS_08bot). Expected: proposal card with classification, title, buffer-only notice. DO NOT import unless explicitly confirmed.
+   - **First live `/kt latest` exercised by user (2026-07-09)**: Failed with argparse `unrecognized arguments: --output` error. Root cause: `--output` was only a global option on the parent parser; Telegram passed it after subcommand where subcommand parsers lacked it.
+   - **Live Telegram fix** (2026-07-09): Added `--output` to all 5 subcommand parsers (propose-knowledge, view-proposal, reject-proposal, revise-proposal, approve-import). All three CLI positional forms now accepted (global before subcommand, after `--capture`, before `--capture`). Telegram error handling hardened — no raw stderr/stdout/tracebacks exposed to users. Input validation added to reject shell metacharacters in capture references. Proposal card format improved with explicit "Vault: unchanged" field.
+   - **Tests**: 627 total (38 MCP + 104 orchestrator + 48 capture_processors + 227 Telegram + 103 Action API + 18 Status API + 45 scripts + 33 Capture API). Added 6 CLI positional tests + 6 Telegram /kt safety tests.
+   - **Live validation status**: Telegram service restarted with fix code (22:59 CDT). CLI buffer-only proposal smoke test passed (proposal generated, importer dry-run correctly refused pending proposal). Buffer: 1 proposal file. Vault: 0 files changed. **Live user retest still required** — user must send `/kt latest` again to confirm the fix works in Telegram.
+   - **Next user action**: Send `/kt latest` from @my_lifeOS_08bot. Expected: proposal card with Proposal ID, Capture ID, Classification, Destination, "Vault: unchanged", and confirmation commands.
 
 ## Known Stabilization Backlog
 

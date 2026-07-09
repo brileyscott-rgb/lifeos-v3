@@ -497,6 +497,56 @@ class TestGatherMCPContext(unittest.TestCase):
         self.assertIn("template_catalog", context)
         self.assertIn("working_state_summary", context)
 
+
+class TestCLIOutputArgPosition(unittest.TestCase):
+    """Verify --output is accepted both globally and per-subcommand."""
+
+    def _run_orch(self, *extra_args):
+        import subprocess as sp
+        proc = sp.run(
+            ["python3", orch.__file__, *extra_args],
+            capture_output=True, text=True,
+            cwd=os.path.dirname(orch.__file__) or ".",
+        )
+        return proc
+
+    def test_global_output_before_subcommand(self):
+        """--output json propose-knowledge --capture latest --dry-run"""
+        proc = self._run_orch("--output", "json", "propose-knowledge", "--capture", "latest", "--dry-run")
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn('"success"', proc.stdout)
+        self.assertNotIn("usage:", proc.stderr)
+
+    def test_subcommand_output_after_capture(self):
+        """propose-knowledge --capture latest --output json --dry-run"""
+        proc = self._run_orch("propose-knowledge", "--capture", "latest", "--output", "json", "--dry-run")
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn('"success"', proc.stdout)
+        self.assertNotIn("usage:", proc.stderr)
+
+    def test_subcommand_output_before_capture(self):
+        """propose-knowledge --output json --capture latest --dry-run"""
+        proc = self._run_orch("propose-knowledge", "--output", "json", "--capture", "latest", "--dry-run")
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn('"success"', proc.stdout)
+        self.assertNotIn("usage:", proc.stderr)
+
+    def test_view_proposal_accepts_output(self):
+        """view-proposal should accept --output (even with invalid ID)"""
+        proc = self._run_orch("view-proposal", "--proposal-id", "nonexistent", "--output", "text")
+        self.assertNotIn("unrecognized arguments", proc.stderr)
+
+    def test_approve_import_accepts_output(self):
+        """approve-import should accept --output (even with invalid ID)"""
+        proc = self._run_orch("approve-import", "--proposal-id", "nonexistent", "--output", "json")
+        self.assertNotIn("unrecognized arguments", proc.stderr)
+
+    def test_invalid_output_value_rejected(self):
+        """Invalid --output value should give a clear error."""
+        proc = self._run_orch("propose-knowledge", "--capture", "latest", "--output", "xml", "--dry-run")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("invalid choice", proc.stderr.lower())
+
     def test_mcp_unavailable_graceful(self):
         """When MCP is unavailable, should still return valid context."""
         capture_data = {"capture_id": "cap_test"}

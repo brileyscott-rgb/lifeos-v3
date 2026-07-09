@@ -1075,6 +1075,18 @@ def handle_kt(text, chat_id):
     parts = text.strip().split(maxsplit=1)
     target = parts[1].strip() if len(parts) > 1 else 'latest'
 
+    if not target:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: /kt <n|latest|capture_id>'})
+        return
+
+    if len(target) > 128:
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Invalid capture reference.'})
+        return
+
+    if any(c in target for c in ('\n', '\r', '\x00', '|', ';', '&', '$', '`')):
+        tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Invalid capture reference.'})
+        return
+
     tg_api('sendMessage', {
         'chat_id': chat_id,
         'text': 'Generating Knowledge proposal from capture buffer...'
@@ -1088,12 +1100,9 @@ def handle_kt(text, chat_id):
             cwd=LIFEOS_ROOT,
         )
         if result.returncode != 0:
-            error_msg = (result.stderr or result.stdout or 'Unknown error').strip()
-            if len(error_msg) > 300:
-                error_msg = error_msg[:300] + '...'
             tg_api('sendMessage', {
                 'chat_id': chat_id,
-                'text': f'Proposal generation failed: {error_msg}'
+                'text': 'Proposal generation failed. Check that the capture exists or try another reference.'
             })
             return
 
@@ -1101,58 +1110,66 @@ def handle_kt(text, chat_id):
     except subprocess.TimeoutExpired:
         tg_api('sendMessage', {
             'chat_id': chat_id,
-            'text': 'Proposal generation timed out (30s). Try a shorter capture.'
+            'text': 'Proposal generation timed out. Try a shorter capture or check the buffer.'
         })
         return
     except json.JSONDecodeError:
         tg_api('sendMessage', {
             'chat_id': chat_id,
-            'text': 'Proposal generation returned invalid response.'
+            'text': 'Proposal generation error. The orchestrator returned unexpected output.'
         })
         return
-    except Exception as e:
+    except Exception:
         tg_api('sendMessage', {
             'chat_id': chat_id,
-            'text': f'Proposal generation error: {str(e)[:200]}'
+            'text': 'Proposal generation failed. The orchestrator encountered an error.'
         })
         return
 
     if not data.get('success'):
         error = data.get('error', 'Unknown error')
+        # Never expose raw error if it looks like argparse/cli internals
+        safe_error = error if len(error) < 80 else error[:80] + '...'
+        if 'usage:' in error.lower() or 'unrecognized' in error.lower():
+            safe_error = 'An internal error occurred. Please try again.'
         tg_api('sendMessage', {
             'chat_id': chat_id,
-            'text': f'Could not generate proposal: {error}'
+            'text': f'Could not generate proposal: {safe_error}'
         })
         return
 
     proposal_id = data.get('proposal_id', 'unknown')
     classification = data.get('classification', 'unknown')
-    title = data.get('proposed_title', 'untitled')
-    proposed_path = data.get('proposed_vault_path', 'unknown')
-    proposal_path = data.get('proposal_path', '')
+    capture_id = data.get('capture_id', 'unknown')
+
+    # Try nested proposal key first, then top-level
+    proposal = data.get('proposal', data)
+    title = proposal.get('frontmatter', {}).get('title', proposal.get('proposed_title', 'untitled'))
+    proposed_path = proposal.get('proposed_vault_path', data.get('proposed_vault_path', 'unknown'))
 
     importer_note = ''
     if classification != 'knowledge':
-        importer_note = '\n\nNote: V0 only imports knowledge type. Import blocked.'
+        importer_note = '\nNote: V0 only imports knowledge type. Import blocked.'
 
-    text_reply = f"""Knowledge Proposal Generated
-ID: {proposal_id}
-Type: {classification}
-Title: {title[:100]}
-Path: {proposed_path}
+    short_path = proposed_path if len(proposed_path) < 60 else '...' + proposed_path[-57:]
+
+    text_reply = f"""Knowledge proposal created
+
+Proposal: {proposal_id}
+Capture: {capture_id}
+Classification: {classification}
+Destination: {short_path}
+Status: pending human review
+Vault: unchanged
 
 Proposal created in buffer. Obsidian vault unchanged.
 Import requires explicit confirmation.{importer_note}
 
-/proposal_view {proposal_id} - View full proposal
-/proposal_approve {proposal_id} - Approve for import
-/proposal_revise {proposal_id} <text> - Request revision
-/proposal_reject {proposal_id} - Reject"""
+/proposal_view {proposal_id}
+/proposal_approve {proposal_id}
+/proposal_reject {proposal_id}"""
 
-    tg_api('sendMessage', {
-        'chat_id': chat_id,
-        'text': text_reply
-    })
+    tg_api('sendMessage', {'chat_id': chat_id, 'text': text_reply})
 
 
 def handle_proposal_view(text, chat_id):

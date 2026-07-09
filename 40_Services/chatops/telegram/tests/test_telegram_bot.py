@@ -1456,6 +1456,75 @@ class TestKtCommand(unittest.TestCase):
         has_mcp = any('mcp' in t.lower() and 'tool' in t.lower() for t in texts)
         self.assertFalse(has_mcp, "Telegram must not accept arbitrary MCP tool names")
 
+    @patch('subprocess.run')
+    def test_kt_does_not_expose_argparse_usage(self, mock_run):
+        """Telegram must not expose argparse usage text on orchestrator failure."""
+        mock_run.return_value = MagicMock(returncode=2, stdout='', stderr='usage: capture_review_orchestrator.py ...\nerror: unrecognized arguments')
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if 'sendMessage' in str(c)]
+        for t in texts:
+            self.assertNotIn('usage:', t, "Must not expose argparse usage to Telegram")
+            self.assertNotIn('unrecognized', t, "Must not expose argparse error to Telegram")
+
+    @patch('subprocess.run')
+    def test_kt_does_not_expose_traceback(self, mock_run):
+        """Telegram must not expose raw Python tracebacks."""
+        mock_run.side_effect = RuntimeError('test error')
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if 'sendMessage' in str(c)]
+        for t in texts:
+            self.assertNotIn('Traceback', t, "Must not expose tracebacks")
+            self.assertNotIn('RuntimeError', t, "Must not expose exception types")
+
+    @patch('subprocess.run')
+    def test_kt_does_not_expose_raw_stderr(self, mock_run):
+        """Telegram must not send raw subprocess stderr to user."""
+        mock_run.return_value = MagicMock(returncode=1, stdout='', stderr='/home/lifeos/.env: Permission denied\nTraceback...')
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if 'sendMessage' in str(c)]
+        for t in texts:
+            self.assertNotIn('.env', t, "Must not expose file paths")
+            self.assertNotIn('Permission denied', t, "Must not expose raw errors")
+
+    def test_kt_rejects_shell_metachars_in_target(self):
+        """handle_kt should silently reject targets with shell metacharacters."""
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest;rm -rf /', CHAT_ID)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if 'sendMessage' in str(c)]
+        self.assertTrue(any('Invalid' in t for t in texts), "Should reject shell metachars")
+
+    @patch('subprocess.run')
+    def test_kt_uses_list_args_not_string(self, mock_run):
+        """handle_kt must use list args for subprocess, not a shell string."""
+        mock_run.return_value = MagicMock(returncode=0, stdout='{"success":true,"proposal_id":"p","classification":"knowledge","proposed_vault_path":"t.md"}', stderr='')
+        bot.handle_kt('/kt latest', CHAT_ID)
+        self.assertTrue(mock_run.called)
+        call_args = mock_run.call_args[0][0]
+        self.assertIsInstance(call_args, list, "subprocess.run must receive list args, not string")
+
+    @patch('subprocess.run')
+    def test_kt_proposal_card_contains_required_text(self, mock_run):
+        """Success response must include buffer/vault/import messages."""
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps({
+            'success': True,
+            'proposal_id': 'prop_test_001',
+            'classification': 'knowledge',
+            'capture_id': 'cap_test_123',
+            'proposed_title': 'Test',
+            'proposed_vault_path': '04_KNOWLEDGE/AI/Test.md',
+        }), stderr='')
+        with patch.object(bot, 'tg_api') as mock_tg:
+            bot.handle_kt('/kt latest', CHAT_ID)
+        # Get the final response (not the progress message)
+        texts = [c[0][1].get('text', '') for c in mock_tg.call_args_list if 'sendMessage' in str(c)]
+        final = texts[-1] if texts else ''
+        self.assertIn('buffer', final.lower(), "Must say buffer")
+        self.assertIn('vault unchanged', final.lower(), "Must say vault unchanged")
+        self.assertIn('import requires', final.lower(), "Must say import requires confirmation")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -918,6 +918,10 @@ Examples:
         help="Propose a knowledge note import from a capture",
     )
     propose_parser.add_argument(
+        "--output", choices=["json", "text"], default="json",
+        help="Output format (default: json)",
+    )
+    propose_parser.add_argument(
         "--capture", required=True,
         help="Capture reference: 'latest', numeric index (1-based), or capture_id",
     )
@@ -936,6 +940,10 @@ Examples:
         help="View a proposal by ID",
     )
     view_parser.add_argument(
+        "--output", choices=["json", "text"], default="json",
+        help="Output format (default: json)",
+    )
+    view_parser.add_argument(
         "--proposal-id", required=True,
         help="The proposal ID to view",
     )
@@ -944,6 +952,10 @@ Examples:
     reject_parser = subparsers.add_parser(
         "reject-proposal",
         help="Reject a proposal",
+    )
+    reject_parser.add_argument(
+        "--output", choices=["json", "text"], default="json",
+        help="Output format (default: json)",
     )
     reject_parser.add_argument(
         "--proposal-id", required=True,
@@ -960,6 +972,10 @@ Examples:
         help="Mark a proposal for revision",
     )
     revise_parser.add_argument(
+        "--output", choices=["json", "text"], default="json",
+        help="Output format (default: json)",
+    )
+    revise_parser.add_argument(
         "--proposal-id", required=True,
         help="The proposal ID to revise",
     )
@@ -972,6 +988,10 @@ Examples:
     approve_parser = subparsers.add_parser(
         "approve-import",
         help="Approve a proposal for import into the canonical vault",
+    )
+    approve_parser.add_argument(
+        "--output", choices=["json", "text"], default="json",
+        help="Output format (default: json)",
     )
     approve_parser.add_argument(
         "--proposal-id", required=True,
